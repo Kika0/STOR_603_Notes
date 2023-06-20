@@ -94,6 +94,8 @@ ggplot(df) + geom_point(aes(x=x,y=y,colour=factor(block_max)))
 
 fit <- gev.fit(df$y[df$block_max==TRUE])
 fit$mle
+
+gamGPDfit(df,datvar='y',threshold = 2.5,xiFrhs = )
 ```
 Compare the fit with the density.
 
@@ -130,12 +132,13 @@ for (i in 1:length(x_fit)) {
 }
 df_fit <- data.frame(x_fit,y_fit)
 ggplot() + geom_density(venice,mapping=aes(y)) + geom_line(df_fit,mapping = aes(x_fit,y_fit),color='#c11432') + theme_minimal()
+
 ```
 
 ```{r}
 N <- 1000
-norm <- rnorm(1000)
-ex <- rexp(1000)
+norm <- rnorm(N)
+ex <- rexp(N)
 
 plot(norm,ex)
 
