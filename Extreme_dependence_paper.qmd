@@ -1,0 +1,37 @@
+---
+title: "Extremal dependence paper"
+format: html
+---
+
+The aim is to recreate the analysis and plots from *Dependence Measures for Extreme Value Analysis* paper by Stuart Coles and Jonathan Tawn.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(tidyverse)
+library(latex2exp)
+library(ismev)
+```
+
+There are $3$ datasets in the paper. First, temperature data from Oxford and Worthing examines spatial dependence of extremely high temperatures. Second, precipitation data from Oxford to examine time dependence of precipitation. Third, dependence between surge levels and tides for extreme sea levels. 
+
+```{r}
+data(wavesurge)
+# plot the wavesurge data
+ggplot(wavesurge) + geom_point(aes(x=wave,y=surge))+ theme_minimal() + theme(aspect.ratio = 1) + xlab("Wave height") + ylab("Surge level")
+
+```
+Using the probability integral transform (PIT), plot the quantiles.
+
+```{r}
+# create x and y quantile variables
+U <- wavesurge %>% select(wave) %>% arrange(wave) %>% mutate(u=row_number()/(nrow(wavesurge)+1))
+V <- wavesurge %>% select(surge) %>% arrange(surge) %>% mutate(u=row_number()/(nrow(wavesurge)+1)) 
+# examine top and bottom
+U %>% head()
+U %>% tail()
+V %>% head()
+V %>% tail()
+```
+
