@@ -27,11 +27,19 @@ Using the probability integral transform (PIT), plot the quantiles.
 ```{r}
 # create x and y quantile variables
 U <- wavesurge %>% select(wave) %>% arrange(wave) %>% mutate(u=row_number()/(nrow(wavesurge)+1))
-V <- wavesurge %>% select(surge) %>% arrange(surge) %>% mutate(u=row_number()/(nrow(wavesurge)+1)) 
+V <- wavesurge %>% select(surge) %>% arrange(surge) %>% mutate(v=row_number()/(nrow(wavesurge)+1)) 
 # examine top and bottom
 U %>% head()
 U %>% tail()
 V %>% head()
 V %>% tail()
+df <- wavesurge %>% left_join(U,by="wave") %>% left_join(V,by="surge")
+df
 ```
+Now plot the values on the $U(0,1)$ scale to replicate (c) of Figure $5$.
+
+```{r}
+ggplot(df)+ geom_point(aes(x=u,y=v))+ theme_minimal() + theme(aspect.ratio = 1) + xlab("Wave height") + ylab("Surge level")
+```
+
 
