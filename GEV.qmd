@@ -9,6 +9,7 @@ format: html
 #| warning: false
 library(tidyverse)
 library(latex2exp)
+theme_set(theme_minimal())
 ```
 
 ## Block maxima 
@@ -158,5 +159,15 @@ plot(n_1,n_2)
 par_1 <- 1/(1-u_1)
 par_2 <- 1/(1-u_2)
 plot(par_1,par_2)
+```
+## Plot Gumbel distribution using PIT
+
+```{r}
+mu <- 1
+sig <- 1
+U <- runif(1000)
+z <- mu - sig*log(-log(U))
+df <- data.frame(z,U)
+ggplot(df) + geom_point(aes(x=z,y=U))
 ```
 
