@@ -42,4 +42,17 @@ Now plot the values on the $U(0,1)$ scale to replicate (c) of Figure $5$.
 ggplot(df)+ geom_point(aes(x=u,y=v))+ theme_minimal() + theme(aspect.ratio = 1) + xlab("Wave height") + ylab("Surge level")
 ```
 
+Now, try to replicate Figure $10$ to plot the dependence measures $\chi(u)$ and $\Bar{\chi(u)}$.We need to calculate the empirical estimate of $C(u,u)$. Each marginal distribution is estimated by its empirical distribution function. The confidence intervals are constructed using the delta method.
+
+```{r}
+
+```
+
+### Dependence measures
+
+Theoretical part of the paper involves plotting the dependence measures $\chi(u)$ and $\Bar{\chi(u)}$.
+
+```{r}
+
+```
 
