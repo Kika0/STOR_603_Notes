@@ -119,50 +119,331 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </header>
 
 <div class="cell">
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: package 'ggplot2' was built under R version 4.2.2</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: package 'stringr' was built under R version 4.2.2</code></pre>
-</div>
+
 </div>
 <section id="block-maxima" class="level2">
 <h2 class="anchored" data-anchor-id="block-maxima">Block maxima</h2>
 <p>Suppose we generate from normal distribution. And we have block maxima from every <span class="math inline">\(100\)</span> observations.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x=</span><span class="dv">1</span><span class="sc">:</span><span class="dv">10000</span>, <span class="at">y=</span><span class="fu">rnorm</span>(<span class="dv">10000</span>,<span class="dv">0</span>,<span class="dv">1</span>))</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>block_max <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">FALSE</span>,<span class="dv">10000</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>) {</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>block_max[df<span class="sc">$</span>y<span class="sc">==</span>(<span class="fu">max</span>(df<span class="sc">$</span>y[(<span class="dv">100</span><span class="sc">*</span>(i<span class="dv">-1</span>)<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span>(<span class="dv">100</span><span class="sc">*</span>i)]))] <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>x,<span class="at">y=</span>y,<span class="at">colour=</span><span class="fu">factor</span>(block_max)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x=</span><span class="dv">1</span><span class="sc">:</span><span class="dv">10000</span>, <span class="at">y=</span><span class="fu">rnorm</span>(<span class="dv">10000</span>,<span class="dv">0</span>,<span class="dv">1</span>))</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>block_max <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">FALSE</span>,<span class="dv">10000</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>block_max[df<span class="sc">$</span>y<span class="sc">==</span>(<span class="fu">max</span>(df<span class="sc">$</span>y[(<span class="dv">100</span><span class="sc">*</span>(i<span class="dv">-1</span>)<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span>(<span class="dv">100</span><span class="sc">*</span>i)]))] <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>x,<span class="at">y=</span>y,<span class="at">colour=</span><span class="fu">factor</span>(block_max)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="GEV_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Suppose we plot only the block maxima.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df <span class="sc">%&gt;%</span> <span class="fu">filter</span>(block_max<span class="sc">==</span><span class="cn">TRUE</span>)) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>x,<span class="at">y=</span>y))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df <span class="sc">%&gt;%</span> <span class="fu">filter</span>(block_max<span class="sc">==</span><span class="cn">TRUE</span>)) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>x,<span class="at">y=</span>y))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="GEV_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Model with GEV.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df <span class="sc">%&gt;%</span> <span class="fu">filter</span>(block_max<span class="sc">==</span><span class="cn">TRUE</span>),<span class="fu">aes</span>(y)) <span class="sc">+</span> <span class="fu">geom_density</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df <span class="sc">%&gt;%</span> <span class="fu">filter</span>(block_max<span class="sc">==</span><span class="cn">TRUE</span>),<span class="fu">aes</span>(y)) <span class="sc">+</span> <span class="fu">geom_density</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="GEV_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df,<span class="fu">aes</span>(y) ) <span class="sc">+</span> <span class="fu">geom_density</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df,<span class="fu">aes</span>(y) ) <span class="sc">+</span> <span class="fu">geom_density</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="GEV_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<section id="return-level-plots" class="level3">
+<h3 class="anchored" data-anchor-id="return-level-plots">Return level plots</h3>
+<p>Exercise recreating Fig. 3.1 from Coles’ book. Possible typo in the book as the <span class="math inline">\(x\)</span>-axis should be <span class="math inline">\(- \log(-\log(U))\)</span> and not <span class="math inline">\(\log(-\log(U))\)</span>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># set parameters</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>,<span class="dv">3</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>sigma <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>,<span class="dv">3</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>xi <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">0.2</span>,<span class="dv">0</span>,<span class="fl">0.2</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>U <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">10000</span>) <span class="sc">%&gt;%</span> <span class="fu">sort</span>()</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>z_p_neg <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>z_p_pos <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>z_p_0 <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># calculate z_p for different values of xi</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(U)) {</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  z_p_neg[i] <span class="ot">&lt;-</span>  <span class="sc">-</span>(<span class="dv">1</span><span class="sc">-</span> (<span class="sc">-</span><span class="fu">log</span>(U[i]))<span class="sc">^</span>(<span class="sc">-</span>xi[<span class="dv">1</span>])  )<span class="sc">*</span>(sigma[<span class="dv">1</span>]<span class="sc">/</span>xi[<span class="dv">1</span>])<span class="sc">+</span> mu[<span class="dv">1</span>]</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  z_p_pos[i] <span class="ot">&lt;-</span>  <span class="sc">-</span>(<span class="dv">1</span><span class="sc">-</span> (<span class="sc">-</span><span class="fu">log</span>(U[i]))<span class="sc">^</span>(<span class="sc">-</span>xi[<span class="dv">3</span>])  )<span class="sc">*</span>(sigma[<span class="dv">3</span>]<span class="sc">/</span>xi[<span class="dv">3</span>])<span class="sc">+</span> mu[<span class="dv">3</span>]</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  z_p_0[i] <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fu">log</span>(<span class="sc">-</span><span class="fu">log</span>(U[i]))<span class="sc">*</span>sigma[<span class="dv">2</span>]<span class="sc">+</span>mu[<span class="dv">2</span>]</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>z_p <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(U,z_p_neg,z_p_0,z_p_pos)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>z_p <span class="sc">%&gt;%</span> <span class="fu">ggplot</span>() <span class="sc">+</span> <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x=</span><span class="sc">-</span><span class="fu">log</span>(<span class="sc">-</span><span class="fu">log</span>(U)),<span class="at">y=</span>(z_p_neg)),<span class="at">color=</span><span class="st">"#009ada"</span>,<span class="at">size=</span><span class="fl">1.5</span>) <span class="sc">+</span> <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x=</span><span class="sc">-</span><span class="fu">log</span>(<span class="sc">-</span><span class="fu">log</span>(U)),<span class="at">y=</span>(z_p_0)),<span class="at">size=</span><span class="fl">1.5</span>) <span class="sc">+</span> <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x=</span><span class="sc">-</span><span class="fu">log</span>(<span class="sc">-</span><span class="fu">log</span>(U)),<span class="at">y=</span>(z_p_pos)),<span class="at">color=</span><span class="st">"#c11432"</span>,<span class="at">size=</span><span class="fl">1.5</span>) <span class="sc">+</span> </span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="fu">TeX</span>(<span class="st">"$-</span><span class="sc">\\</span><span class="st">log(-</span><span class="sc">\\</span><span class="st">log(U))$"</span>)) <span class="sc">+</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="fu">TeX</span>(<span class="st">"$z_p$"</span> )) <span class="sc">+</span> <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="dv">8</span>, <span class="at">y =</span> <span class="dv">0</span>, <span class="at">label =</span> <span class="fu">TeX</span>(<span class="st">"$</span><span class="sc">\\</span><span class="st">xi=-.2$"</span>)) <span class="sc">+</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="dv">8</span>, <span class="at">y =</span> <span class="dv">10</span>, <span class="at">label =</span> <span class="fu">TeX</span>(<span class="st">"$</span><span class="sc">\\</span><span class="st">xi=0$"</span>)) <span class="sc">+</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="dv">8</span>, <span class="at">y =</span> <span class="dv">25</span>, <span class="at">label =</span> <span class="fu">TeX</span>(<span class="st">"$</span><span class="sc">\\</span><span class="st">xi=.2$"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+ℹ Please use `linewidth` instead.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in is.na(x): is.na() applied to non-(list or vector) of type
+'expression'
+
+Warning in is.na(x): is.na() applied to non-(list or vector) of type
+'expression'
+
+Warning in is.na(x): is.na() applied to non-(list or vector) of type
+'expression'</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
 <section id="maximum-likelihood-fitting-of-the-gev-distribution" class="level3">
 <h3 class="anchored" data-anchor-id="maximum-likelihood-fitting-of-the-gev-distribution">Maximum likelihood fitting of the GEV distribution</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("ismev")</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ismev)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'ismev' was built under R version 4.2.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: mgcv</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: nlme</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'nlme'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:dplyr':
+
+    collapse</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>This is mgcv 1.8-40. For overview type 'help("mgcv-package")'.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(venice)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Try some functions from the <code>ismev</code> package.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gev.fit</span>(venice[,<span class="dv">2</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$conv
+[1] 0
+
+$nllh
+[1] 222.7145
+
+$mle
+[1] 111.09925486  17.17548761  -0.07673265
+
+$se
+[1] 2.6280070 1.8033672 0.0735214</code></pre>
+</div>
+</div>
+<p>Try random exponential as it is known to have $=</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x=</span><span class="dv">1</span><span class="sc">:</span><span class="dv">10000</span>, <span class="at">y=</span><span class="fu">rnorm</span>(<span class="dv">10000</span>,<span class="dv">0</span>,<span class="dv">1</span>))</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>block_max <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">FALSE</span>,<span class="dv">10000</span>)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>) {</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>block_max[df<span class="sc">$</span>y<span class="sc">==</span>(<span class="fu">max</span>(df<span class="sc">$</span>y[(<span class="dv">100</span><span class="sc">*</span>(i<span class="dv">-1</span>)<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span>(<span class="dv">100</span><span class="sc">*</span>i)]))] <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>x,<span class="at">y=</span>y,<span class="at">colour=</span><span class="fu">factor</span>(block_max)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">gev.fit</span>(df<span class="sc">$</span>y[df<span class="sc">$</span>block_max<span class="sc">==</span><span class="cn">TRUE</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$conv
+[1] 0
+
+$nllh
+[1] 61.12676
+
+$mle
+[1]  2.3471042  0.4059131 -0.1023331
+
+$se
+[1] 0.04464080 0.03081738 0.05748782</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>fit<span class="sc">$</span>mle</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1]  2.3471042  0.4059131 -0.1023331</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">#gamGPDfit(x=df,datvar='y',threshold = 2.5,xiFrhs = xiFrhs)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Compare the fit with the density.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="dv">1</span><span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">2</span>] <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">+</span> fit<span class="sc">$</span>mle[<span class="dv">3</span>]<span class="sc">*</span>((x <span class="sc">-</span> fit<span class="sc">$</span>mle[<span class="dv">1</span>])<span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">2</span>] )   )<span class="sc">^</span>(<span class="sc">-</span>(<span class="dv">1</span><span class="sc">+</span><span class="dv">1</span><span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">3</span>]))<span class="sc">*</span> <span class="fu">exp</span>(<span class="sc">-</span>(<span class="dv">1</span> <span class="sc">+</span> fit<span class="sc">$</span>mle[<span class="dv">3</span>]<span class="sc">*</span>((x <span class="sc">-</span> fit<span class="sc">$</span>mle[<span class="dv">1</span>])<span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">2</span>] )   )<span class="sc">^</span>(<span class="sc">-</span><span class="dv">1</span><span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">3</span>]) )</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>x_fit <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">1</span>,<span class="dv">4</span>,<span class="fl">0.01</span>)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>y_fit <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(x_fit)) {</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  y_fit[i] <span class="ot">&lt;-</span> <span class="fu">g</span>(x_fit[i])</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a><span class="co">#plot(x_fit,y_fit)</span></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>df_fit <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(x_fit,y_fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span> <span class="fu">geom_density</span>(df <span class="sc">%&gt;%</span> <span class="fu">filter</span>(block_max<span class="sc">==</span><span class="cn">TRUE</span>),<span class="at">mapping=</span><span class="fu">aes</span>(y)) <span class="sc">+</span> <span class="fu">geom_line</span>(df_fit,<span class="at">mapping =</span> <span class="fu">aes</span>(x_fit,y_fit),<span class="at">color=</span><span class="st">'#c11432'</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Try same fit with Venice data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>venice <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x=</span><span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(venice[,<span class="dv">2</span>]),<span class="at">y=</span>venice[,<span class="dv">2</span>])</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">gev.fit</span>(df<span class="sc">$</span>y[df<span class="sc">$</span>block_max<span class="sc">==</span><span class="cn">TRUE</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$conv
+[1] 0
+
+$nllh
+[1] 61.12676
+
+$mle
+[1]  2.3471042  0.4059131 -0.1023331
+
+$se
+[1] 0.04464080 0.03081738 0.05748782</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>fit<span class="sc">$</span>mle</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1]  2.3471042  0.4059131 -0.1023331</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>x_fit <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">70</span>,<span class="dv">200</span>,<span class="dv">1</span>)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>y_fit <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="dv">1</span><span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">2</span>] <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">+</span> fit<span class="sc">$</span>mle[<span class="dv">3</span>]<span class="sc">*</span>((x <span class="sc">-</span> fit<span class="sc">$</span>mle[<span class="dv">1</span>])<span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">2</span>] )   )<span class="sc">^</span>(<span class="sc">-</span>(<span class="dv">1</span><span class="sc">+</span><span class="dv">1</span><span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">3</span>]))<span class="sc">*</span> <span class="fu">exp</span>(<span class="sc">-</span>(<span class="dv">1</span> <span class="sc">+</span> fit<span class="sc">$</span>mle[<span class="dv">3</span>]<span class="sc">*</span>((x <span class="sc">-</span> fit<span class="sc">$</span>mle[<span class="dv">1</span>])<span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">2</span>] )   )<span class="sc">^</span>(<span class="sc">-</span><span class="dv">1</span><span class="sc">/</span>fit<span class="sc">$</span>mle[<span class="dv">3</span>]) )</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(x_fit)) {</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  y_fit[i] <span class="ot">&lt;-</span> <span class="fu">g</span>(x_fit[i])</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>df_fit <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(x_fit,y_fit)</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span> <span class="fu">geom_density</span>(venice,<span class="at">mapping=</span><span class="fu">aes</span>(y)) <span class="sc">+</span> <span class="fu">geom_line</span>(df_fit,<span class="at">mapping =</span> <span class="fu">aes</span>(x_fit,y_fit),<span class="at">color=</span><span class="st">'#c11432'</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 131 rows containing missing values (`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>norm <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(N)</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>ex <span class="ot">&lt;-</span> <span class="fu">rexp</span>(N)</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(norm,ex)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(norm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-14-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(ex)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-14-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>u_1 <span class="ot">&lt;-</span> <span class="fu">pnorm</span>(norm)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>u_2 <span class="ot">&lt;-</span> <span class="fu">pexp</span>(ex)</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>u_1 <span class="sc">%&gt;%</span> <span class="fu">head</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.009910534 0.514955756 0.451964083 0.555154163 0.803930940 0.158245728</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(u_1,u_2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-14-4.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>n_1 <span class="ot">&lt;-</span> <span class="fu">qnorm</span>(u_1)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>n_2 <span class="ot">&lt;-</span> <span class="fu">qnorm</span>(u_2)</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(n_1,n_2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-14-5.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>par_1 <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span>(<span class="dv">1</span><span class="sc">-</span>u_1)</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>par_2 <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span>(<span class="dv">1</span><span class="sc">-</span>u_2)</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(par_1,par_2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-14-6.png" class="img-fluid" width="672"></p>
+</div>
+</div>
 </section>
+</section>
+<section id="plot-gumbel-distribution-using-pit" class="level2">
+<h2 class="anchored" data-anchor-id="plot-gumbel-distribution-using-pit">Plot Gumbel distribution using PIT</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>sig <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>U <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">1000</span>)</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>z <span class="ot">&lt;-</span> mu <span class="sc">-</span> sig<span class="sc">*</span><span class="fu">log</span>(<span class="sc">-</span><span class="fu">log</span>(U))</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(z,U)</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>z,<span class="at">y=</span>U))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="try-port-pirie-sea-levels-diagnostic-plots" class="level2">
+<h2 class="anchored" data-anchor-id="try-port-pirie-sea-levels-diagnostic-plots">Try Port Pirie sea-levels diagnostic plots</h2>
+<p>Port Pirie data not available in the package, maybe try with Venice sea-levels data?</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(portpirie)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>venice[,<span class="dv">2</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 103  78 121 116 115 147 119 114  89 102  99  91  97 106 105 136 126 132 104
+[20] 117 151 116 107 112  97  95 119 124 118 145 122 114 118 107 110 194 138 144
+[39] 138 123 122 120 114  96 125 124 120 132 166 134 138</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>x<span class="ot">=</span><span class="fu">gev.fit</span>(portpirie[,<span class="dv">2</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$conv
+[1] 0
+
+$nllh
+[1] -4.339058
+
+$mle
+[1]  3.87474692  0.19804120 -0.05008773
+
+$se
+[1] 0.02793211 0.02024610 0.09825633</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gev.diag</span>(x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Try to recreate the likelihood function.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> portpirie[,<span class="dv">2</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The function gets longer as initial values of the parameters are either pre-specified or calculated from the data. Therefore, <code>gev_fit.R</code> script contains the function.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gev.diag</span>(<span class="fu">gev_fit</span>(x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in log(sig): NaNs produced</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in log(1 + xi * ((x - mu)/sig)): NaNs produced
+
+Warning in log(1 + xi * ((x - mu)/sig)): NaNs produced</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># the function could return very high values </span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="co"># that cannot be minimum negative likelihood like 10^6</span></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a><span class="co"># would include in further development</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Success! The plotting function works with the likelihood function and produces desired output.</p>
 </section>
 
 </main>

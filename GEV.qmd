@@ -9,6 +9,7 @@ format: html
 #| warning: false
 library(tidyverse)
 library(latex2exp)
+source("gev_fit.R")
 theme_set(theme_minimal())
 ```
 
@@ -96,7 +97,7 @@ ggplot(df) + geom_point(aes(x=x,y=y,colour=factor(block_max)))
 fit <- gev.fit(df$y[df$block_max==TRUE])
 fit$mle
 
-gamGPDfit(df,datvar='y',threshold = 2.5,xiFrhs = )
+#gamGPDfit(x=df,datvar='y',threshold = 2.5,xiFrhs = xiFrhs)
 ```
 Compare the fit with the density.
 
@@ -149,7 +150,7 @@ hist(ex)
 u_1 <- pnorm(norm)
 u_2 <- pexp(ex)
 
-u_1
+u_1 %>% head()
 plot(u_1,u_2)
 
 n_1 <- qnorm(u_1)
@@ -170,4 +171,28 @@ z <- mu - sig*log(-log(U))
 df <- data.frame(z,U)
 ggplot(df) + geom_point(aes(x=z,y=U))
 ```
+## Try Port Pirie sea-levels diagnostic plots
 
+Port Pirie data not available in the package, maybe try with Venice sea-levels data?
+
+```{r}
+data(portpirie)
+venice[,2]
+x=gev.fit(portpirie[,2])
+gev.diag(x)
+```
+Try to recreate the likelihood function.
+
+```{r}
+x <- portpirie[,2]
+```
+
+The function gets longer as initial values of the parameters are either pre-specified or calculated from the data. Therefore, `gev_fit.R` script contains the function.
+
+```{r}
+gev.diag(gev_fit(x))
+# the function could return very high values 
+# that cannot be minimum negative likelihood like 10^6
+# would include in further development
+```
+Success! The plotting function works with the likelihood function and produces desired output.
