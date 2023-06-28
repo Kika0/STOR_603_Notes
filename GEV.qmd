@@ -9,8 +9,10 @@ format: html
 #| warning: false
 library(tidyverse)
 library(latex2exp)
+library(ismev)
 source("gev_fit.R")
 theme_set(theme_minimal())
+theme_update(plot.title = element_text(hjust = 0.5))
 ```
 
 ## Block maxima 
@@ -72,8 +74,6 @@ z_p %>% ggplot() + geom_line(aes(x=-log(-log(U)),y=(z_p_neg)),color="#009ada",si
 ### Maximum likelihood fitting of the GEV distribution
 
 ```{r}
-#install.packages("ismev")
-library(ismev)
 data(venice)
 ```
 
@@ -196,3 +196,74 @@ gev.diag(gev_fit(x))
 # would include in further development
 ```
 Success! The plotting function works with the likelihood function and produces desired output.
+
+### GEV plot outputs
+
+Now, try to replicate the four plots given above, starting with the probability plot. The model probability is a straight line, but empirical data will deviate from this line.
+
+```{r}
+# calculate GEV inverse CDF
+GEV_inv <- function(U,mle) {
+  mu <- mle[1]
+  sig <- mle[2]
+  xi <- mle[3]
+ z <-  (sig/xi) * (  (-log(U))^(-xi) -1) + mu 
+ return(z)
+}
+# calculate GEV CDF
+GEV <- function(z,mle) {
+  mu <- mle[1]
+  sig <- mle[2]
+  xi <- mle[3]
+  G <- c()
+  for (i in 1:length(z))
+ G[i] <- exp(  -(1 + xi*((z[i]-mu)/sig) )^(-1/xi)  )
+ return(G)
+}
+mle <- gev_fit(x)$mle
+Model <- portpirie %>% select(SeaLevel) %>% mutate(Model=GEV(z=SeaLevel,mle=mle))
+Empirical <- portpirie %>% select(SeaLevel) %>% arrange(SeaLevel) %>% mutate(Empirical=row_number()/(nrow(portpirie)+1)) 
+df <- portpirie %>% left_join(Empirical,by="SeaLevel") %>% left_join(Model,by="SeaLevel")
+df %>% head()
+df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) + ggtitle("Probability Plot") + xlab("Empirical distribution") + ylab("Model distribution")
+```
+Next is Q-Q plot.Q-Q plot compares two probability distributions by plotting their quantiles. In this example, it plots two GEV distributions with different parameters: empirical calculated though a formula used for the initial parameters in the optimisation and the model parameters (MLE).
+
+```{r}
+GEV_QQ <- function(x) {
+  
+# empirical distribution estimates
+    sig_init <- sqrt(6 * var(x))/pi
+    mu_init <- mean(x) - 0.57722 * sig_init
+    xi_init <- 0.1
+est_par <- c(mu_init,sig_init,xi_init)
+# model (MLE) estimates
+model_par <- gev_fit(x)$mle
+# generate z using PIT for each case
+q <- seq(from=1/(length(x)+1),to=length(x)/(length(x)+1),length.out=length(x)) #quantile
+model <- GEV_inv(U=q,mle=model_par) #z generated from the model
+est <- GEV_inv(U=q,mle=est_par) #z generated from GEV empirical estimates
+dat <- x %>% sort()
+return(data.frame(q=q,Model=model,Empirical=est,Data=dat))
+}
+# plot
+df <- GEV_QQ(portpirie[,2])
+df %>% head()
+df %>% ggplot()  + 
+  geom_segment(aes(x = 3.5, y = 3.5, xend = 4.9, yend = 4.9), color = "#C11432",size=1.5,alpha=0.5)+
+  geom_point(aes(x=Empirical,y=Model)) + ggtitle("Q-Q Plot (from empirical estimates, not data)") + xlab("Empirical") + ylab("Model") 
+```
+The plot shows that empirical estimates are good since it is almost linear but shape parameter is a bit off, hence the slight curve. 
+
+```{r}
+df %>% ggplot()  + 
+  geom_segment(aes(x = 3.5, y = 3.5, xend = 4.75, yend = 4.75), color = "#C11432",size=1.5,alpha=0.5)+
+  geom_point(aes(y=Data,x=Model)) + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model")
+```
+The next plot is return level plot.
+
+```{r}
+
+```
+
+
