@@ -7,6 +7,9 @@ library(mapdata)
 library(PCICt)
 
 flist  <- "/data/users/hadsx/model_data/cpm/halfhourly/leeds_msc/r001i1p00000_19991201-19991230_pr.nc"
+# update file path
+flist  <- "data/tasmax_rcp85_land-cpm_uk_2.2km_01_day_19991201-20001130.nc"
+
 
 # function to translate from normal pole coordinates to rotated pole coordinates
 pp.ll.to.rg <- function(lat,long,pole.lat,pole.long) {
@@ -57,8 +60,9 @@ nc1 <- nc_open(flist[1])
     time1att <- ncatt_get(nc1,'time')
     # rainfall rate
     # read one days worth of 1/2 hourly data
-    v1    <- ncvar_get(nc1,'precipitation_flux',start=c(1,1,1), count=c(-1,-1,48))
-    v1att <- ncatt_get(nc1,'precipitation_flux')
+    v1    <- ncvar_get(nc1,'tasmax',start=c(1,1,1,1), count=c(-1,-1,48,1))
+    # names(vlist) contains list of variables 
+    v1att <- ncatt_get(nc1,'tasmax')
     # lat long of grid
     rlon     <- apply(ncvar_get(nc1,"grid_longitude_bnds"),2,mean)
     rlat     <- apply(ncvar_get(nc1,"grid_latitude_bnds"),2,mean)
@@ -85,9 +89,15 @@ for (i in 1:length(r.map$x)){
 
 
 ### plot a single field
-image.plot( x=rlon, y=rlat, z=v1[,,1], zlim=c(0,20), main=pcictime[1])
+fields::image.plot( x=rlon, y=rlat, z=v1[,,2], zlim=c(0,20), main=pcictime[2])
 points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 
+## try to just plot a subset
+image.plot( x=rlon[250:350], y=rlat, z=v1[,,1][250:350,], zlim=c(0,20), main=pcictime[1])
+points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
+
+image.plot( x=rlon, y=rlat[400:606], z=v1[,,1][,400:606], zlim=c(0,20), main=pcictime[1])
+points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 
 ### data structure
 # > str(v1)
@@ -95,3 +105,5 @@ points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 # dim1 is x/longitude
 # dim2 is y/latitude
 # dim3 is time
+
+
