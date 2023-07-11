@@ -10,6 +10,7 @@ format: html
 library(tidyverse)
 library(latex2exp)
 library(ismev)
+library(gridExtra)
 source("gev_fit.R")
 theme_set(theme_minimal())
 theme_update(plot.title = element_text(hjust = 0.5))
@@ -333,7 +334,9 @@ for (i in 2:50) {
   X[i] <- max(Y[i-1],Y[i])
 }
 df <- data.frame(X,Y,ite=1:50)
-ggplot(df) + geom_point(aes(x=ite, y=X))
+x <- ggplot(df) + geom_point(aes(x=ite, y=X))
+y <- ggplot(df) + geom_point(aes(x=ite, y=Y))
+grid.arrange(x,y,ncol=2)
 ```
 
 ```{r}
@@ -350,7 +353,9 @@ for (i in 2:50) {
   X[i] <- max(Y[i-1],Y[i])
 }
 df <- data.frame(X,Y,ite=1:50)
-ggplot(df) + geom_point(aes(x=ite, y=X))
+x <- ggplot(df) + geom_point(aes(x=ite, y=X))
+y <- ggplot(df) + geom_point(aes(x=ite, y=Y))
+grid.arrange(x,y,ncol=2)
 ```
 
 ```{r}
@@ -367,7 +372,9 @@ for (i in 2:50) {
   X[i] <- max(Y[i-1],Y[i])
 }
 df <- data.frame(X,Y,ite=1:50)
-ggplot(df) + geom_point(aes(x=ite, y=X))
+x <- ggplot(df) + geom_point(aes(x=ite, y=X))
+y <- ggplot(df) + geom_point(aes(x=ite, y=Y))
+grid.arrange(x,y,ncol=2)
 ```
 
 ```{r}
@@ -384,5 +391,7 @@ for (i in 2:50) {
   X[i] <- max(Y[i-1],Y[i])
 }
 df <- data.frame(X,Y,ite=1:50)
-ggplot(df) + geom_point(aes(x=ite, y=X))
+x <- ggplot(df) + geom_point(aes(x=ite, y=X))
+y <- ggplot(df) + geom_point(aes(x=ite, y=Y))
+grid.arrange(x,y,ncol=2)
 ```
