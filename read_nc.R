@@ -99,6 +99,10 @@ points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 image.plot( x=rlon, y=rlat[400:606], z=v1[,,1][,400:606], zlim=c(0,20), main=pcictime[1])
 points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 
+# filter by area
+library(tidyverse)
+r.map %>% filter(names=="UK:Great Britain")
+
 ### data structure
 # > str(v1)
 #  num [1:532, 1:654, 1:48] 0.172 0.164 0.151 0.133 0.116 ...
