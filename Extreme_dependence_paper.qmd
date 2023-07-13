@@ -3,15 +3,17 @@ title: "Extremal dependence paper"
 format: html
 ---
 
-The aim is to recreate the analysis and plots from *Dependence Measures for Extreme Value Analysis* paper by Stuart Coles and Jonathan Tawn.
+The aim is to recreate the analysis and plots from *Dependence Measures for Extreme Value Analysis* paper by Stuart Coles and Jonathan Tawn (1999).
 
-```{r}
+```{r setup, warning=FALSE}
 #| echo: false
 #| message: false
 #| warning: false
 library(tidyverse)
 library(latex2exp)
 library(ismev)
+library(VGAM)
+theme_set(theme_minimal())
 ```
 
 There are $3$ datasets in the paper. First, temperature data from Oxford and Worthing examines spatial dependence of extremely high temperatures. Second, precipitation data from Oxford to examine time dependence of precipitation. Third, dependence between surge levels and tides for extreme sea levels. 
@@ -34,12 +36,12 @@ U %>% tail()
 V %>% head()
 V %>% tail()
 df <- wavesurge %>% left_join(U,by="wave") %>% left_join(V,by="surge")
-df
+df %>% head()
 ```
 Now plot the values on the $U(0,1)$ scale to replicate (c) of Figure $5$.
 
 ```{r}
-ggplot(df)+ geom_point(aes(x=u,y=v))+ theme_minimal() + theme(aspect.ratio = 1) + xlab("Wave height") + ylab("Surge level")
+ggplot(df)+ geom_point(aes(x=u,y=v)) + theme(aspect.ratio = 1) + xlab("Wave height") + ylab("Surge level")
 ```
 
 Now, try to replicate Figure $10$ to plot the dependence measures $\chi(u)$ and $\Bar{\chi(u)}$.We need to calculate the empirical estimate of $C(u,u)$. Each marginal distribution is estimated by its empirical distribution function. The confidence intervals are constructed using the delta method.
@@ -49,6 +51,114 @@ Now, try to replicate Figure $10$ to plot the dependence measures $\chi(u)$ and 
 ```
 
 ### Dependence measures
+
+To illustrate the problem of dependence measure $\chi(u)$, we can plot the function for different values of correlation coefficient $\rho$ in the Gaussian dependence model.
+
+```{r}
+# for loop for diff values of rho
+U <- c()
+Chi <- c()
+Rho <- c()
+edge <- 10^(-6)
+u <- seq(0+edge,1-edge,0.01)
+rho_vec <- seq(-0.9,0.9,0.1)
+for (i in 1:length(rho_vec)) {
+rho <- rho_vec[i]
+# calculate the copula using VGAM package
+c_uu <- pbinormcop(q1=u,q2=u,rho=rho)
+# calculate chi(u)
+chi <- 2- (log(c_uu))/(log(u))
+u <- u[chi>-10^6]
+chi <- chi[chi>-10^6]
+# subset by Frechet bounds (lower bound is sufficient)
+lower_bound1 <- chi>(2-(log(2*u-1))/(log(u)))
+lower_bound <- lower_bound1 %>% replace(is.na(.), TRUE)
+# add items to a list
+U <- append(U,u[lower_bound])
+Chi <- append(Chi,chi[lower_bound])
+Rho <- append(Rho,rep(rho_vec[i],sum(lower_bound)))
+}
+#p <- p + geom_line(data=df,mapping = aes(x=u,y=chi))
+df <- data.frame(U,Chi,Rho=as.factor(Rho))
+# subset to remove \chi(u)<-1 to match Coles' paper
+df <- df[Chi>=-1,]
+# ggplot requires prepared data before plotting
+ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho))
+```
+Furthermore, plotting extra points close to $1$ makes the convergence more obvious.
+
+```{r}
+#| echo: false
+# for loop for diff values of rho
+U <- c()
+Chi <- c()
+Rho <- c()
+edge <- 10^(-6)
+u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,0.001))
+rho_vec <- seq(-0.9,0.9,0.1)
+for (i in 1:length(rho_vec)) {
+rho <- rho_vec[i]
+# calculate the copula using VGAM package
+c_uu <- pbinormcop(q1=u,q2=u,rho=rho)
+# calculate chi(u)
+chi <- 2- (log(c_uu))/(log(u))
+u <- u[chi>-10^6]
+chi <- chi[chi>-10^6]
+# subset by Frechet bounds (lower bound is sufficient)
+lower_bound1 <- chi>(2-(log(2*u-1))/(log(u)))
+lower_bound <- lower_bound1 %>% replace(is.na(.), TRUE)
+# add items to a list
+U <- append(U,u[lower_bound])
+Chi <- append(Chi,chi[lower_bound])
+Rho <- append(Rho,rep(rho_vec[i],sum(lower_bound)))
+}
+#p <- p + geom_line(data=df,mapping = aes(x=u,y=chi))
+df <- data.frame(U,Chi,Rho=as.factor(Rho))
+# subset to remove \chi(u)<-1 to match Coles' paper
+df <- df[Chi>=-1,]
+# ggplot requires prepared data before plotting
+ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho))
+```
+What happend if we do not restrict lower limit of $y$-axis to be $-1$?
+
+
+Furthermore, plotting extra points close to $1$ makes the convergence more obvious.
+
+```{r}
+#| echo: false
+# for loop for diff values of rho
+U <- c()
+Chi <- c()
+Rho <- c()
+edge <- 10^(-4)
+u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,0.001))
+rho_vec <- seq(-0.9,0.9,0.1)
+for (i in 1:length(rho_vec)) {
+rho <- rho_vec[i]
+# calculate the copula using VGAM package
+c_uu <- pbinormcop(q1=u,q2=u,rho=rho)
+# calculate chi(u)
+chi <- 2- (log(c_uu))/(log(u))
+u <- u[chi>-10^6]
+chi <- chi[chi>-10^6]
+# subset by Frechet bounds (lower bound is sufficient)
+lower_bound1 <- chi>(2-(log(2*u-1))/(log(u)))
+lower_bound <- lower_bound1 %>% replace(is.na(.), TRUE)
+# add items to a list
+U <- append(U,u[lower_bound])
+Chi <- append(Chi,chi[lower_bound])
+Rho <- append(Rho,rep(rho_vec[i],sum(lower_bound)))
+}
+#p <- p + geom_line(data=df,mapping = aes(x=u,y=chi))
+df <- data.frame(U,Chi,Rho=as.factor(Rho))
+# subset to remove \chi(u)<-1 to match Coles' paper
+#df <- df[Chi>=-1,]
+# ggplot requires prepared data before plotting
+ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho))
+```
+
+
+### Dependence measure $\Bar{\chi}(u)$
 
 Theoretical part of the paper involves plotting the dependence measures $\chi(u)$ and $\Bar{\chi(u)}$.
 
