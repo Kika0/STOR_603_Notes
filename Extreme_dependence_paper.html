@@ -271,7 +271,7 @@ Warning in log(2 * u - 1): NaNs produced</code></pre>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># subset to remove \chi(u)&lt;-1 to match Coles' paper</span></span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> df[Chi<span class="sc">&gt;=-</span><span class="dv">1</span>,]</span>
 <span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co"># ggplot requires prepared data before plotting</span></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>U,<span class="at">y=</span>Chi,<span class="at">color=</span>Rho))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>U,<span class="at">y=</span>Chi,<span class="at">color=</span>Rho)) <span class="sc">+</span> <span class="fu">xlab</span>(<span class="fu">TeX</span>(<span class="st">"$u$"</span>)) <span class="sc">+</span> <span class="fu">ylab</span>(<span class="fu">TeX</span>(<span class="st">"$</span><span class="sc">\\</span><span class="st">chi(u)$"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="Extreme_dependence_paper_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -372,7 +372,41 @@ Warning in log(2 * u - 1): NaNs produced</code></pre>
 <h3 class="anchored" data-anchor-id="dependence-measure-barchiu">Dependence measure <span class="math inline">\(\Bar{\chi}(u)\)</span></h3>
 <p>Theoretical part of the paper involves plotting the dependence measures <span class="math inline">\(\chi(u)\)</span> and <span class="math inline">\(\Bar{\chi(u)}\)</span>.</p>
 <div class="cell">
-
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># for loop for diff values of rho</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>U <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>Chi <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>Rho <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>edge <span class="ot">&lt;-</span> <span class="dv">10</span><span class="sc">^</span>(<span class="sc">-</span><span class="dv">6</span>)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>rho_vec <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="sc">-</span><span class="fl">0.9</span>,<span class="fl">0.9</span>,<span class="fl">0.1</span>)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(rho_vec)) {</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>rho <span class="ot">&lt;-</span> rho_vec[i]</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>u <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">seq</span>(<span class="dv">0</span><span class="sc">+</span>edge,<span class="fl">0.95</span>,<span class="fl">0.01</span>),<span class="fu">seq</span>(<span class="fl">0.95</span>,<span class="dv">1</span><span class="sc">-</span>edge,<span class="fl">0.001</span>))</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co"># calculate the copula using VGAM package</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>c_uu <span class="ot">&lt;-</span> <span class="dv">1-2</span><span class="sc">*</span>u<span class="sc">+</span><span class="fu">pbinormcop</span>(<span class="at">q1=</span>u,<span class="at">q2=</span>u,<span class="at">rho=</span>rho)</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="co"># calculate chi(u)</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>chi <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span><span class="sc">+</span> (<span class="dv">2</span><span class="sc">*</span><span class="fu">log</span>(<span class="dv">1</span><span class="sc">-</span>u))<span class="sc">/</span>(<span class="fl">7.9999</span><span class="sc">^</span>(<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span><span class="fu">log</span>(c_uu<span class="sc">^</span>(<span class="fl">7.9999</span>)))</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="co">#u &lt;- u[chi&gt;-10^6]</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="co">#chi &lt;- chi[chi&gt;-10^6]</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="co"># subset by Frechet bounds (lower bound is sufficient)</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="co">#lower_bound1 &lt;- chi&gt;(2-(log(2*u-1))/(log(u)))</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a><span class="co">#lower_bound &lt;- lower_bound1 %&gt;% replace(is.na(.), TRUE)</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="co"># add items to a list</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>U <span class="ot">&lt;-</span> <span class="fu">append</span>(U,u)</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>Chi <span class="ot">&lt;-</span> <span class="fu">append</span>(Chi,chi)</span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>Rho <span class="ot">&lt;-</span> <span class="fu">append</span>(Rho,<span class="fu">rep</span>(rho_vec[i],<span class="fu">length</span>(u)))</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a><span class="co">#p &lt;- p + geom_line(data=df,mapping = aes(x=u,y=chi))</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(U,Chi,<span class="at">Rho=</span><span class="fu">as.factor</span>(Rho))</span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a><span class="co"># subset to remove \chi(u)&lt;-1 to match Coles' paper</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> df[Chi<span class="sc">&gt;=-</span><span class="dv">1</span>,]</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a><span class="co"># ggplot requires prepared data before plotting</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>U,<span class="at">y=</span>Chi,<span class="at">color=</span>Rho)) <span class="sc">+</span> <span class="fu">xlab</span>(<span class="fu">TeX</span>(<span class="st">"$u$"</span>)) <span class="sc">+</span> <span class="fu">ylab</span>(<span class="fu">TeX</span>(<span class="st">"$</span><span class="sc">\\</span><span class="st">Bar{</span><span class="sc">\\</span><span class="st">chi}(u)$"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 95 rows containing missing values (`geom_point()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Extreme_dependence_paper_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+</div>
 </div>
 </section>
 
