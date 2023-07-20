@@ -13,6 +13,7 @@ library(tidyverse)
 library(latex2exp)
 library(ismev)
 library(VGAM)
+library(latex2exp)
 theme_set(theme_minimal())
 ```
 
@@ -83,7 +84,7 @@ df <- data.frame(U,Chi,Rho=as.factor(Rho))
 # subset to remove \chi(u)<-1 to match Coles' paper
 df <- df[Chi>=-1,]
 # ggplot requires prepared data before plotting
-ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho))
+ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho)) + xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$"))
 ```
 Furthermore, plotting extra points close to $1$ makes the convergence more obvious.
 
@@ -117,7 +118,7 @@ df <- data.frame(U,Chi,Rho=as.factor(Rho))
 # subset to remove \chi(u)<-1 to match Coles' paper
 df <- df[Chi>=-1,]
 # ggplot requires prepared data before plotting
-ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho))
+ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho))+ xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$"))
 ```
 What happend if we do not restrict lower limit of $y$-axis to be $-1$?
 
@@ -154,7 +155,7 @@ df <- data.frame(U,Chi,Rho=as.factor(Rho))
 # subset to remove \chi(u)<-1 to match Coles' paper
 #df <- df[Chi>=-1,]
 # ggplot requires prepared data before plotting
-ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho))
+ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho)) + xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$"))
 ```
 
 
@@ -163,6 +164,34 @@ ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho))
 Theoretical part of the paper involves plotting the dependence measures $\chi(u)$ and $\Bar{\chi(u)}$.
 
 ```{r}
-
+# for loop for diff values of rho
+U <- c()
+Chi <- c()
+Rho <- c()
+edge <- 10^(-6)
+rho_vec <- seq(-0.9,0.9,0.1)
+for (i in 1:length(rho_vec)) {
+rho <- rho_vec[i]
+u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,0.001))
+# calculate the copula using VGAM package
+c_uu <- 1-2*u+pbinormcop(q1=u,q2=u,rho=rho)
+# calculate chi(u)
+chi <- -1+ (2*log(1-u))/(7.9999^(-1)*log(c_uu^(7.9999)))
+#u <- u[chi>-10^6]
+#chi <- chi[chi>-10^6]
+# subset by Frechet bounds (lower bound is sufficient)
+#lower_bound1 <- chi>(2-(log(2*u-1))/(log(u)))
+#lower_bound <- lower_bound1 %>% replace(is.na(.), TRUE)
+# add items to a list
+U <- append(U,u)
+Chi <- append(Chi,chi)
+Rho <- append(Rho,rep(rho_vec[i],length(u)))
+}
+#p <- p + geom_line(data=df,mapping = aes(x=u,y=chi))
+df <- data.frame(U,Chi,Rho=as.factor(Rho))
+# subset to remove \chi(u)<-1 to match Coles' paper
+df <- df[Chi>=-1,]
+# ggplot requires prepared data before plotting
+ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho)) + xlab(TeX("$u$")) + ylab(TeX("$\\Bar{\\chi}(u)$"))
 ```
 
