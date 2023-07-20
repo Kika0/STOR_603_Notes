@@ -79,7 +79,7 @@ pcictime <- as.PCICt( time1*(60*60), cal=time1att$calendar ,origin=origin)
 # the CPM grid has the pole in a different place to usual.  therefore need to transform the map coordinates
 gr_npole_lat <- cpm.pole$grid_north_pole_latitude
 gr_npole_lon <- cpm.pole$grid_north_pole_longitude
-n.map <- map('worldHires', xlim=c(-10,10),ylim=c(30,70),interior=F,plot=FALSE)
+n.map <- maps::map('worldHires', xlim=c(-10,10),ylim=c(30,70),interior=F,plot=FALSE)
 r.map <- n.map
 for (i in 1:length(r.map$x)){
         if(!is.na(n.map$y[i]) & !is.na(n.map$x[i])) r.latlon   <- pp.ll.to.rg(n.map$y[i],n.map$x[i], gr_npole_lat, gr_npole_lon)
@@ -109,5 +109,72 @@ r.map %>% filter(names=="UK:Great Britain")
 # dim1 is x/longitude
 # dim2 is y/latitude
 # dim3 is time
+library(sf)
+m <- st_read("cnty/infuse_cnty_lyr_2011.shp")
 
 
+## Get land mask based off of UKCP high-res shapefile
+install.packages("rgdal")
+library(rgdal)
+[(UK_shp_ll$geo_region == UK_shp_ll$geo_region[1]),]
+UK_shp = readOGR(dsn="cnty/infuse_cnty_lyr_2011.shp")
+
+latlong = "+init=epsg:4326"
+UK_shp_ll = spTransform(UK_shp, CRS(latlong))
+rm(UK_shp)
+UK_shp_plt = as(UK_shp_ll[(UK_shp_ll$geo_label == UK_shp_ll$geo_label[28]),],"SpatialPolygons")
+tmp = lonlat_df
+#lonlat_df (north pole orientated coordinates) is rotated boundary polygon
+colnames(tmp) = c("lon", "lat")#, "ind")
+coordinates(tmp) = ~lon+lat
+tmp@proj4string = CRS(latlong)
+over_land = over(tmp,as(UK_shp_plt,"SpatialPolygons"))
+tmp = tmp[!is.na(over_land),]
+rm(UK_shp_ll, tmp)
+
+
+library(tmap)
+tm_shape(m) + tm_polygons()
+
+CnvRttPol = function(latlon, spol_coor, option=1){
+  if(option==1){
+    lon = latlon[,1]
+    lat = latlon[,2]
+    
+    lon = (lon*pi)/180
+    lat = (lat*pi)/180
+    
+    spol_lon = spol_coor[1]
+    spol_lat = spol_coor[2]
+    
+    theta = 90+spol_lat# Rotation around y-axis
+    phi = spol_lon # Rotation around z-axis
+    
+    phi = (phi*pi)/180 # Convert degrees to radians
+    theta = (theta*pi)/180
+    
+    x = cos(lon)*cos(lat) # Convert from spherical to cartesian coordinates
+    y = sin(lon)*cos(lat)
+    z = sin(lat)
+    
+    phi = -phi
+    theta = -theta
+    
+    x_new = cos(theta)*cos(phi)*x + sin(phi)*y + sin(theta)*cos(phi)*z;
+    y_new = -cos(theta)*sin(phi)*x + cos(phi)*y - sin(theta)*sin(phi)*z;
+    z_new = -sin(theta)*x + cos(theta)*z;
+    
+    lon_new = atan2(y_new, x_new) # Convert cartesian back to spherical coordinates
+    lat_new = asin(z_new)
+    
+    lon_new = (lon_new*180)/pi
+    lat_new = (lat_new*180)/pi
+    
+    lonlat_df = data.frame(cbind(lon_new, lat_new, 1:length(lon_new)))
+    colnames(lonlat_df) = c("lon", "lat", "ind")
+    
+    return(lonlat_df)
+  }
+}
+
+has context menu
