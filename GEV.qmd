@@ -439,27 +439,35 @@ grid.arrange(x,y,ncol=2)
 ```
 Try different values of $d$.
 ```{r}
-d=seq(5,50,5)
+
+d <- 3
+N <- 50
+U <- runif(d*N)
+a <- rep(1,d)
+b <- 1:3
 # generate Y
 Y <- c()
-for (i in 1:50) {
-Y[i] <- -1/(log(U[i])*(a+1))  
-}
+Y <- -1/(log(U) ) 
+
 # generate X
-X <- data.frame(matrix(nrow=0,ncol=length(d)))
-for (j in 1:length(d)) {
-  X[1:(d-1),j] <- Y[1:(d-1)]
-for (i in d:50) {
-  X[i,j] <- max(Y[(i-(d-1)):i])
+X_1 <- c()
+X_2 <- c()
+
+for (j in 1:N) {
+X_1[j] <- max(Y[(d*(j-1)+1):(d*j)]*a)
+X_2[j] <- max(Y[(d*(j-1)+1):(d*j)]*b)
 }
-}
 
 
 
-df <- cbind(X,Y,ite=1:50)
-x <- ggplot(df) + geom_point(aes(x=ite, y=X))
-y <- ggplot(df) + geom_point(aes(x=ite, y=Y))
-grid.arrange(x,y,ncol=2)
+
+val <- c(X_1,X_2,Y)
+ite <- c(1:N,1:N,1:(N*d))
+var <- c(rep("X_1",N),rep("X_2",N),rep("Y",(N*d)))
+df <- data.frame(val,var,ite)
+ggplot(df) + geom_point(aes(x=ite, y=val,color=var),alpha=0.5)
+
+ggplot(df %>% filter(var != "Y")) + geom_point(aes(x=ite, y=val,color=var),alpha=0.5)
 ```
 
 
