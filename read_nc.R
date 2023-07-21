@@ -5,6 +5,9 @@ library(fields)
 library(maps)
 library(mapdata)
 library(PCICt)
+library(rgdal)
+library(tidyverse)
+library(sf)
 
 flist  <- "/data/users/hadsx/model_data/cpm/halfhourly/leeds_msc/r001i1p00000_19991201-19991230_pr.nc"
 # update file path
@@ -100,8 +103,7 @@ image.plot( x=rlon, y=rlat[400:606], z=v1[,,1][,400:606], zlim=c(0,20), main=pci
 points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 
 # filter by area
-library(tidyverse)
-r.map %>% filter(names=="UK:Great Britain")
+# r.map %>% filter(names=="UK:Great Britain")
 
 ### data structure
 # > str(v1)
@@ -109,15 +111,16 @@ r.map %>% filter(names=="UK:Great Britain")
 # dim1 is x/longitude
 # dim2 is y/latitude
 # dim3 is time
-library(sf)
-m <- st_read("cnty/infuse_cnty_lyr_2011.shp")
 
+m <- st_read("cnty/infuse_cnty_lyr_2011.shp")
+lad <- st_read("data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
+lanc <- lad %>% filter(LAD22NM=="Lancaster")
 
 ## Get land mask based off of UKCP high-res shapefile
 install.packages("rgdal")
-library(rgdal)
+
 [(UK_shp_ll$geo_region == UK_shp_ll$geo_region[1]),]
-UK_shp = readOGR(dsn="cnty/infuse_cnty_lyr_2011.shp")
+UK_shp = readOGR(dsn="data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 
 latlong = "+init=epsg:4326"
 UK_shp_ll = spTransform(UK_shp, CRS(latlong))
@@ -135,6 +138,8 @@ rm(UK_shp_ll, tmp)
 
 library(tmap)
 tm_shape(m) + tm_polygons()
+tm_shape(lad) + tm_polygons()
+tm_shape(lad %>% filter(LAD22NM=="Lancaster")) + tm_polygons()
 
 CnvRttPol = function(latlon, spol_coor, option=1){
   if(option==1){
