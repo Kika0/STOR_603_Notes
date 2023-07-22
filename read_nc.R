@@ -138,7 +138,7 @@ for (i in 1:length(r.map$x)){
   r.map$x[i] <- r.latlon[2]
   r.map$y[i] <- r.latlon[1]
 }
-n.map <- maps::map('worldHires', xlim=c(-10,10),ylim=c(30,70),interior=F,plot=FALSE)
+n.map <- maps::map('worldHires', xlim=c(-7,2.5),ylim=c(48,70),interior=F,plot=FALSE)
 r.map <- n.map
 for (i in 1:length(r.map$x)){
   if(!is.na(n.map$y[i]) & !is.na(n.map$x[i])) r.latlon   <- pp.ll.to.rg(n.map$y[i],n.map$x[i], gr_npole_lat, gr_npole_lon)
@@ -152,11 +152,12 @@ df <- rbind(df1,df2)
 ggplot() + geom_point(data=df1,mapping=aes(x=X,y=Y))+ geom_point(data=df2,mapping=aes(x=X,y=Y)) 
 
 # study by linking points
-df1 <- data.frame(X=n.map$x,Y=n.map$y,type=rep("Rotated",length(n.map$x)))
+df1 <- data.frame(X=n.map$x,Y=n.map$y,type=rep("Original",length(n.map$x)))
 df2 <- data.frame(X=r.map$x,Y=r.map$y,type=rep("Rotated",length(r.map$x)))
-df3 <- cbind(df1,df2)
+#df3 <- cbind(df1,df2)
+df <- rbind(df1,df2)
 ggplot() + geom_point(data=df1,mapping=aes(x=X,y=Y))
-ggplot(df) + geom_point(aes(x=X,y=Y,col=type))
+ggplot(df) + geom_point(aes(x=X,y=Y,col=type),lwd=0.1) + coord_fixed()
 rm(df)
 # can play further to only include UK shapefile
 
