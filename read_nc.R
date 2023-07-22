@@ -8,6 +8,7 @@ library(PCICt)
 library(rgdal)
 library(tidyverse)
 library(sf)
+library(gridExtra)
 
 flist  <- "/data/users/hadsx/model_data/cpm/halfhourly/leeds_msc/r001i1p00000_19991201-19991230_pr.nc"
 # update file path
@@ -54,7 +55,7 @@ pp.ll.to.rg <- function(lat,long,pole.lat,pole.long) {
 cr <- '\n'
 
 ### read netcdf file
-cat("loading",basename(flist[1]),cr)
+cat("loading",basename(flist[1]),cr) 
 nc1 <- nc_open(flist[1])
     # all variables and metadata in file
     vlist <- nc1$var
@@ -91,33 +92,75 @@ for (i in 1:length(r.map$x)){
 }
 
 
-### plot a single field
+### plot a single field -----
 fields::image.plot( x=rlon, y=rlat, z=v1[,,2], zlim=c(0,20), main=pcictime[2])
 points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 
 ## try to just plot a subset
-image.plot( x=rlon[250:350], y=rlat, z=v1[,,1][250:350,], zlim=c(0,20), main=pcictime[1])
-points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
-
 image.plot( x=rlon, y=rlat[400:606], z=v1[,,1][,400:606], zlim=c(0,20), main=pcictime[1])
 points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 
-# filter by area
-# r.map %>% filter(names=="UK:Great Britain")
 
-### data structure
+### data structure -----
 # > str(v1)
 #  num [1:532, 1:654, 1:48] 0.172 0.164 0.151 0.133 0.116 ...
 # dim1 is x/longitude
 # dim2 is y/latitude
 # dim3 is time
 
+# subset to show only Lancaster district
 m <- st_read("cnty/infuse_cnty_lyr_2011.shp")
 lad <- st_read("data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 lanc <- lad %>% filter(LAD22NM=="Lancaster")
 
+# rotate coordinates of lanc
+long <- st_coordinates(lanc %>% st_transform(4326))[,1]
+lat <- st_coordinates(lanc %>% st_transform(4326))[,2]
+
+# loop to replace coordinates with rotated
+lat_rot <- c()
+long_rot <- c()
+for (i in 1:length(long)){
+  r.latlon  <- pp.ll.to.rg(lat=lat[i],long=long[i], gr_npole_lat, gr_npole_lon)
+  lat_rot[i] <- r.latlon[1]
+  long_rot[i] <- r.latlon[2]
+}
+
+
+
+# compare results with random sample
+n.map <- maps::map('worldHires', xlim=c(-10,10),ylim=c(30,70),interior=F,plot=FALSE)
+n.map$x <- sample(n.map$x,20)
+n.map$y <- sample(n.map$y,20)
+r.map <- n.map
+for (i in 1:length(r.map$x)){
+  if(!is.na(n.map$y[i]) & !is.na(n.map$x[i])) r.latlon   <- pp.ll.to.rg(n.map$y[i],n.map$x[i], gr_npole_lat, gr_npole_lon)
+  r.map$x[i] <- r.latlon[2]
+  r.map$y[i] <- r.latlon[1]
+}
+n.map <- maps::map('worldHires', xlim=c(-10,10),ylim=c(30,70),interior=F,plot=FALSE)
+r.map <- n.map
+for (i in 1:length(r.map$x)){
+  if(!is.na(n.map$y[i]) & !is.na(n.map$x[i])) r.latlon   <- pp.ll.to.rg(n.map$y[i],n.map$x[i], gr_npole_lat, gr_npole_lon)
+  r.map$x[i] <- r.latlon[2]
+  r.map$y[i] <- r.latlon[1]
+}
+# study point rotation
+df1 <- data.frame(X=long_rot,Y=lat_rot,type=rep("Rotated",length(long_rot)))
+df2 <- data.frame(X=long,Y=lat,type=rep("Original",length(long)))
+df <- rbind(df1,df2)
+ggplot() + geom_point(data=df1,mapping=aes(x=X,y=Y))+ geom_point(data=df2,mapping=aes(x=X,y=Y)) 
+
+# study by linking points
+df1 <- data.frame(X=n.map$x,Y=n.map$y,type=rep("Rotated",length(n.map$x)))
+df2 <- data.frame(X=r.map$x,Y=r.map$y,type=rep("Rotated",length(r.map$x)))
+df3 <- cbind(df1,df2)
+ggplot() + geom_point(data=df1,mapping=aes(x=X,y=Y))
+ggplot(df) + geom_point(aes(x=X,y=Y,col=type))
+rm(df)
+# can play further to only include UK shapefile
+
 ## Get land mask based off of UKCP high-res shapefile
-install.packages("rgdal")
 
 [(UK_shp_ll$geo_region == UK_shp_ll$geo_region[1]),]
 UK_shp = readOGR(dsn="data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
@@ -125,7 +168,7 @@ UK_shp = readOGR(dsn="data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 latlong = "+init=epsg:4326"
 UK_shp_ll = spTransform(UK_shp, CRS(latlong))
 rm(UK_shp)
-UK_shp_plt = as(UK_shp_ll[(UK_shp_ll$geo_label == UK_shp_ll$geo_label[28]),],"SpatialPolygons")
+UK_shp_plt = as(UK_shp_ll[(UK_shp_ll$LAD22NM == "Lancaster"),],"SpatialPolygons")
 tmp = lonlat_df
 #lonlat_df (north pole orientated coordinates) is rotated boundary polygon
 colnames(tmp) = c("lon", "lat")#, "ind")
@@ -181,5 +224,3 @@ CnvRttPol = function(latlon, spol_coor, option=1){
     return(lonlat_df)
   }
 }
-
-has context menu
