@@ -3,9 +3,12 @@
 library(ncdf4)
 library(fields)
 library(maps)
+library(tmap)
 library(mapdata)
 library(PCICt)
 library(rgdal)
+# for palettes
+library(viridis)
 library(tidyverse)
 library(sf)
 library(gridExtra)
@@ -108,10 +111,11 @@ points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 # dim2 is y/latitude
 # dim3 is time
 
-# subset to show only Lancaster district
-m <- st_read("cnty/infuse_cnty_lyr_2011.shp")
+# subset to show only Lancaster district ----
+#m <- st_read("cnty/infuse_cnty_lyr_2011.shp")
 lad <- st_read("data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 lanc <- lad %>% filter(LAD22NM=="Lancaster")
+
 
 # rotate coordinates of lanc
 long <- st_coordinates(lanc %>% st_transform(4326))[,1]
@@ -125,6 +129,15 @@ for (i in 1:length(long)){
   lat_rot[i] <- r.latlon[1]
   long_rot[i] <- r.latlon[2]
 }
+
+df <- data.frame("lon"=long_rot,"lat"=lat_rot)
+# convert back to sf polygon
+lanc_rot <-  df %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  st_cast("POLYGON")
+# check by mapping
+tm_shape(lanc_rot) + tm_polygons()
 
 
 
@@ -161,9 +174,76 @@ ggplot(df) + geom_point(aes(x=X,y=Y,col=type),lwd=0.1) + coord_fixed()
 rm(df)
 # can play further to only include UK shapefile
 
-## Get land mask based off of UKCP high-res shapefile
+### subset rotated grid points overlapping with Lancaster -----
+# create grid points for long lat
+lon_lat <- expand.grid(rlon,rlat) 
+colnames(lon_lat) <- c("lon","lat")
+# extract first half-hour of the day (first out of 48 in dim3:time)
+temp <- c(v1[,,1])
+lon_lat_temp <- cbind(lon_lat,temp)
+# convert to sf points object
+temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
+tm_shape(temp_sf) + tm_dots(col="temp",style="cont")
+# subset to only include grid points in Lancaster
+lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
+tm_shape(lanc_temp_sf) + tm_dots(col="temp",style="cont",size=2)
 
-[(UK_shp_ll$geo_region == UK_shp_ll$geo_region[1]),]
+# try to plot for the whole day ----
+temp <- c(v1[,,1])
+lon_lat_temp <- cbind(lon_lat,temp)
+for (i in 2:dim(v1)[3]) {
+  lon_lat_temp <- cbind(lon_lat_temp,c(v1[,,i]))
+  colnames(lon_lat_temp)[length(lon_lat_temp)] <- as.character(i)
+}
+# convert to sf points object
+temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
+tm_shape(temp_sf) + tm_dots(col="temp",style="cont")
+
+# subset to only include grid points in Lancaster
+lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
+
+lanc_temp_sf_long <- lanc_temp_sf %>% select(temp) %>%
+  mutate("time_of_day"=as.factor(rep(1,nrow(lanc_temp_sf)))) %>% 
+  mutate("time"=rep(strftime(seq(from = as.POSIXct("1999-12-01 12:00"), 
+                        to = as.POSIXct("1999-12-02 11:30"), by = "30 min")[1],format="%H:%M"),nrow(lanc_temp_sf)))
+# subset only time
+strftime(seq(from=as.POSIXct("1999-12-01 12:00"), 
+         to = as.POSIXct("1999-12-02 11:30"), by = "30 min")[1], format="%H:%M")
+
+# for loop for all other half-hour intervals
+for (j in (2:48)) {
+  to_bind <- lanc_temp_sf  %>% select(all_of(j)) %>% 
+    mutate("time_of_day"=as.factor(rep(j,nrow(lanc_temp_sf)))) %>% 
+    mutate("time"=rep(strftime(seq(from = as.POSIXct("1999-12-01 12:00"), 
+        to = as.POSIXct("1999-12-02 11:30"), by = "30 min")[j],format="%H:%M"),nrow(lanc_temp_sf)))
+  names(to_bind)[1] <- "temp"
+  lanc_temp_sf_long <- rbind(lanc_temp_sf_long,to_bind)
+  
+}
+
+to_bind <- lanc_temp_sf  %>% select(2) %>% 
+  mutate("time_of_day"=as.factor(rep(2,nrow(lanc_temp_sf))))
+names(to_bind)[1] <- "temp"
+lanc_temp_sf_long <- rbind(lanc_temp_sf_long,to_bind)
+tm_shape(lanc_temp_sf_long) + 
+  tm_dots(col="temp",style="cont",size=0.9,palette="viridis") +
+  tm_facets(by="time_of_day",as.layers=TRUE,ncol=8,nrow=6)
+# facet by timestamp
+lanc_temp_sf_long$time <- factor(lanc_temp_sf_long$time,      # Reordering group factor levels
+                         levels = (lanc_temp_sf_long$time %>% unique()))
+tm_shape(lanc_temp_sf_long) + 
+  tm_dots(col="temp",style="cont",size=0.9,palette="viridis",title = "Temperature") +
+  tm_facets(by="time",as.layers=TRUE,ncol=8,nrow=6) 
+
+# to plot mean temperature in Lancaster
+t <- c()
+for (i in (1:48)) {
+  t[i] <- mean(lanc_temp_sf_long$temp[(132*(i-1)+1):(132*i)])
+}
+time <- 1:48
+plot(time,t,type="l")
+
+## Get land mask based off of UKCP high-res shapefile -----
 UK_shp = readOGR(dsn="data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 
 latlong = "+init=epsg:4326"
