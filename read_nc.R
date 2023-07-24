@@ -9,11 +9,12 @@ library(PCICt)
 library(rgdal)
 # for palettes
 library(viridis)
+library(ggthemes)
 library(tidyverse)
 library(sf)
 library(gridExtra)
 
-flist  <- "/data/users/hadsx/model_data/cpm/halfhourly/leeds_msc/r001i1p00000_19991201-19991230_pr.nc"
+#flist  <- "/data/users/hadsx/model_data/cpm/halfhourly/leeds_msc/r001i1p00000_19991201-19991230_pr.nc"
 # update file path
 flist  <- "data/tasmax_rcp85_land-cpm_uk_2.2km_01_day_19991201-20001130.nc"
 
@@ -96,7 +97,9 @@ for (i in 1:length(r.map$x)){
 
 
 ### plot a single field -----
-fields::image.plot( x=rlon, y=rlat, z=v1[,,2], zlim=c(0,20), main=pcictime[2])
+longitude <- rlon
+latitude <- rlat
+fields::image.plot( x=longitude, y=latitude, z=v1[,,2], zlim=c(0,20), main=pcictime[2])
 points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 
 ## try to just plot a subset
@@ -111,7 +114,7 @@ points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0.1)
 # dim2 is y/latitude
 # dim3 is time
 
-# subset to show only Lancaster district ----
+### subset to show only Lancaster district ----
 #m <- st_read("cnty/infuse_cnty_lyr_2011.shp")
 lad <- st_read("data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 lanc <- lad %>% filter(LAD22NM=="Lancaster")
@@ -142,16 +145,16 @@ tm_shape(lanc_rot) + tm_polygons()
 
 
 # compare results with random sample
-n.map <- maps::map('worldHires', xlim=c(-10,10),ylim=c(30,70),interior=F,plot=FALSE)
-n.map$x <- sample(n.map$x,20)
-n.map$y <- sample(n.map$y,20)
-r.map <- n.map
-for (i in 1:length(r.map$x)){
-  if(!is.na(n.map$y[i]) & !is.na(n.map$x[i])) r.latlon   <- pp.ll.to.rg(n.map$y[i],n.map$x[i], gr_npole_lat, gr_npole_lon)
-  r.map$x[i] <- r.latlon[2]
-  r.map$y[i] <- r.latlon[1]
-}
-n.map <- maps::map('worldHires', xlim=c(-7,2.5),ylim=c(48,70),interior=F,plot=FALSE)
+# n.map <- maps::map('worldHires', xlim=c(-10,10),ylim=c(30,70),interior=F,plot=FALSE)
+# n.map$x <- sample(n.map$x,20)
+# n.map$y <- sample(n.map$y,20)
+# r.map <- n.map
+# for (i in 1:length(r.map$x)){
+#   if(!is.na(n.map$y[i]) & !is.na(n.map$x[i])) r.latlon   <- pp.ll.to.rg(n.map$y[i],n.map$x[i], gr_npole_lat, gr_npole_lon)
+#   r.map$x[i] <- r.latlon[2]
+#   r.map$y[i] <- r.latlon[1]
+# }
+n.map <- maps::map('worldHires', xlim=c(-10,3),ylim=c(48,70),interior=F,plot=FALSE)
 r.map <- n.map
 for (i in 1:length(r.map$x)){
   if(!is.na(n.map$y[i]) & !is.na(n.map$x[i])) r.latlon   <- pp.ll.to.rg(n.map$y[i],n.map$x[i], gr_npole_lat, gr_npole_lon)
@@ -161,16 +164,16 @@ for (i in 1:length(r.map$x)){
 # study point rotation
 df1 <- data.frame(X=long_rot,Y=lat_rot,type=rep("Rotated",length(long_rot)))
 df2 <- data.frame(X=long,Y=lat,type=rep("Original",length(long)))
-df <- rbind(df1,df2)
+#df <- rbind(df1,df2)
 ggplot() + geom_point(data=df1,mapping=aes(x=X,y=Y))+ geom_point(data=df2,mapping=aes(x=X,y=Y)) 
 
-# study by linking points
-df1 <- data.frame(X=n.map$x,Y=n.map$y,type=rep("Original",length(n.map$x)))
-df2 <- data.frame(X=r.map$x,Y=r.map$y,type=rep("Rotated",length(r.map$x)))
+# study whole UK since Lancaster district only is squished
+df1 <- data.frame(X=n.map$x,Y=n.map$y,Type=rep("Original",length(n.map$x)))
+df2 <- data.frame(X=r.map$x,Y=r.map$y,Type=rep("Rotated",length(r.map$x)))
 #df3 <- cbind(df1,df2)
 df <- rbind(df1,df2)
 ggplot() + geom_point(data=df1,mapping=aes(x=X,y=Y))
-ggplot(df) + geom_point(aes(x=X,y=Y,col=type),lwd=0.1) + coord_fixed()
+ggplot(df) + geom_point(aes(x=X,y=Y,col=Type),lwd=0.1) + coord_fixed()
 rm(df)
 # can play further to only include UK shapefile
 
@@ -179,26 +182,18 @@ rm(df)
 lon_lat <- expand.grid(rlon,rlat) 
 colnames(lon_lat) <- c("lon","lat")
 # extract first half-hour of the day (first out of 48 in dim3:time)
-temp <- c(v1[,,1])
-lon_lat_temp <- cbind(lon_lat,temp)
+Temperature <- c(v1[,,1])
+lon_lat_temp <- cbind(lon_lat,Temperature)
 # convert to sf points object
 temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
-tm_shape(temp_sf) + tm_dots(col="temp",style="cont")
+tm_shape(temp_sf) + tm_dots(col="Temperature",style="cont",palette="viridis")
+tm_shape(temp_sf) + tm_dots(col="Temperature",style="cont",size=0.05,palette="-RdYlBu")+
+  tm_layout(legend.position = c(0.7, 0.55))
 # subset to only include grid points in Lancaster
 lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
 tm_shape(lanc_temp_sf) + tm_dots(col="temp",style="cont",size=2)
 
 # try to plot for the whole day ----
-temp <- c(v1[,,1])
-lon_lat_temp <- cbind(lon_lat,temp)
-for (i in 2:dim(v1)[3]) {
-  lon_lat_temp <- cbind(lon_lat_temp,c(v1[,,i]))
-  colnames(lon_lat_temp)[length(lon_lat_temp)] <- as.character(i)
-}
-# convert to sf points object
-temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
-tm_shape(temp_sf) + tm_dots(col="temp",style="cont")
-
 # subset to only include grid points in Lancaster
 lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
 
@@ -221,9 +216,6 @@ for (j in (2:48)) {
   
 }
 
-to_bind <- lanc_temp_sf  %>% select(2) %>% 
-  mutate("time_of_day"=as.factor(rep(2,nrow(lanc_temp_sf))))
-names(to_bind)[1] <- "temp"
 lanc_temp_sf_long <- rbind(lanc_temp_sf_long,to_bind)
 tm_shape(lanc_temp_sf_long) + 
   tm_dots(col="temp",style="cont",size=0.9,palette="viridis") +
@@ -243,6 +235,8 @@ for (i in (1:48)) {
 time <- 1:48
 plot(time,t,type="l")
 
+#----------------------------------------------------------------
+### additional code unused
 ## Get land mask based off of UKCP high-res shapefile -----
 UK_shp = readOGR(dsn="data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 
