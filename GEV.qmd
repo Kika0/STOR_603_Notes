@@ -460,24 +460,16 @@ X_1[j] <- max(Y[(d*(j-1)+1):(d*j)]*a)/N
 X_2[j] <- max(Y[(d*(j-1)+1):(d*j)]*b)/N
 }
 
-# val <- c(X_1,X_2,Y)
-# ite <- c(1:N,1:N,1:(N*d))
-# var <- c(rep("X_1",N),rep("X_2",N),rep("Y",(N*d)))
-# df <- data.frame(val,var,ite)
-# ggplot(df) + geom_point(aes(x=ite, y=val,color=var),alpha=0.5)
-
-# ggplot(df %>% filter(var != "Y")) + geom_point(aes(x=ite, y=val,color=var),alpha=0.5)
-
 # it is better to plot X_1/N against X_2/N
 plot(X_1,X_2)
 df1 <- data.frame(X_1=X_1,X_2=X_2,uni=seq(0.02,1,0.02),
-             uni_3=  seq(0.02,2/3,length.out=50), 
+             uni_3=  seq(0.02,5/6,length.out=50), 
              u_x=seq(0,0.1,length.out=50),
              u_y=0.1-seq(0,0.1,length.out=50),
-             line_1=seq(0.02,1,0.02)*(1/2),line_2=seq(0.02,1,0.02)*(1),line_3=seq(0.02,2/3,length.out=50)*(3/2))
-df1 <-df1 %>%  mutate(above_u=(X_1+X_2>0.1)) %>% mutate(N=rep(nrow(df1),nrow(df1)))
+             line_1=seq(0.02,1,0.02)*(1/2),line_2=seq(0.02,1,0.02)*(1),line_3=seq(0.02,5/6,length.out=50)*(3/2))
+df1 <-df1 %>%  mutate(above_u=(X_1+X_2>0.1)) %>% mutate(N=rep(paste0("n=",nrow(df1)),nrow(df1)))
 
-#repeat for larger sample size
+### repeat for larger sample size
 N <- 50000
 U <- runif(d*N)
 a <- rep(1/3,d)
@@ -495,34 +487,62 @@ X_1[j] <- max(Y[(d*(j-1)+1):(d*j)]*a)/N
 X_2[j] <- max(Y[(d*(j-1)+1):(d*j)]*b)/N
 }
 df2 <- data.frame(X_1=X_1,X_2=X_2,uni=seq(0.02,1,length.out=N),
-             uni_3=  seq(0.02,2/3,length.out=N), 
+             uni_3=  seq(0.02,5/6,length.out=N), 
              u_x=seq(0,0.1,length.out=N),
              u_y=0.1-seq(0,0.1,length.out=N),
-             line_1=seq(0.02,1,length.out=N)*(1/2),line_2=seq(0.02,1,length.out=N)*(1),line_3=seq(0.02,2/3,length.out=N)*(3/2))
-df2 <-df2 %>%  mutate(above_u=(X_1+X_2>0.1)) %>% mutate(N=rep(nrow(df2),nrow(df2)))
+             line_1=seq(0.02,1,length.out=N)*(1/2),line_2=seq(0.02,1,length.out=N)*(1),line_3=seq(0.02,5/6,length.out=N)*(3/2))
+df2 <-df2 %>%  mutate(above_u=(X_1+X_2>0.1)) %>% mutate(N=rep(paste0("n=",nrow(df2)),nrow(df2)))
 
-ggplot(df2) + geom_point(aes(x=X_1, y=X_2,col=above_u),alpha=0.5) +
+df_bind <- rbind(df1,df2) %>% mutate(N=as.factor(N))
+
+ggplot(df_bind) + geom_point(aes(x=X_1, y=X_2,col=above_u),alpha=0.5) +
   scale_color_manual(values = c("TRUE" = "black",
                                 "FALSE"="#C11432")) +
    labs(color=TeX('Above threshold $u$')) +
   xlab(TeX("$X_1/n$")) + ylab(TeX("$X_2/n$"))+
-  geom_line(aes(x=uni,y=line_1),alpha=0.1) +
-    geom_line(aes(x=uni,y=line_2),alpha=0.1) +
-    geom_line(aes(x=uni_3,y=line_3),alpha=0.1) +
-   geom_line(aes(x=u_x,y=u_y),col="#C11432",alpha=0.6) +
+  geom_line(aes(x=uni,y=line_1),alpha=0.3) +
+    geom_line(aes(x=uni,y=line_2),alpha=0.3) +
+    geom_line(aes(x=uni_3,y=line_3),alpha=0.3) +
+   geom_line(aes(x=u_x,y=u_y),col="#C11432",alpha=0.6,linetype="dashed") +
   annotate("text",x=0.12,y=0.05,label="u",col="#C11432") +
-  coord_fixed()
+  coord_fixed()+ facet_wrap(vars(N))   +
+  theme_bw() +
+  theme(panel.spacing = unit(2, "lines"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA))
 ```
+Plot only above threshold?
+
 Plot radial and angular components.
 
 ```{r}
-df3 <- data.frame(r=(X_1+X_2)*N,w=X_1/(X_1+X_2),above_u=df2$above_u)
-ggplot(df3) + geom_point(aes(x=w,y=log(r),col=above_u))+
+df3 <- data.frame(r=(df1$X_1+df1$X_2),w=df1$X_1/(df1$X_1+df1$X_2),above_u=df1$above_u)%>% mutate(N=rep(paste0("n=",nrow(df1)),nrow(df1))) %>% 
+  mutate(u_x=seq(0,1,length.out=nrow(df1))) %>% 
+  mutate(u_y=rep(0.1,nrow(df1)))
+
+df4 <- data.frame(r=(df2$X_1+df2$X_2),w=df2$X_1/(df2$X_1+df2$X_2),above_u=df2$above_u)%>% mutate(N=rep(paste0("n=",nrow(df2)),nrow(df2))) %>% 
+   mutate(u_x=seq(0,1,length.out=nrow(df2))) %>% 
+  mutate(u_y=rep(0.1,nrow(df2)))
+df_bind <- rbind(df3,df4)
+
+ggplot(df_bind) + geom_point(data=df_bind,aes(x=w,y=log(r),col=above_u),alpha=0.5)+
+  geom_line(data=df_bind,aes(x=u_x,y=log(u_y)),col="#C11432",alpha=0.6,linetype="dashed") +
+  annotate("segment",x=0.4,xend=0.4,y=min(log(df_bind$r))-0.2,yend=max(log(df_bind$r))+0.2,alpha=0.3) +
+    annotate("segment",x=1/2,xend=1/2,y=min(log(df_bind$r))-0.2,yend=max(log(df_bind$r))+0.2,alpha=0.3) +
+    annotate("segment",x=2/3,xend=2/3,y=min(log(df_bind$r))-0.2,yend=max(log(df_bind$r))+0.2,alpha=0.3) +
+  annotate("text",x=1,y=-2.7,label="u",col="#C11432") +
 scale_color_manual(values = c("TRUE" = "black",
                                 "FALSE"="#C11432")) +
-   labs(color=TeX('Above threshold $u$')) 
-# add second plot with higher sample size
-
+   labs(color=TeX('Above threshold $u$')) +
+facet_wrap(vars(N)) + 
+    theme_bw() +
+  theme(panel.spacing = unit(2, "lines"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA))
 ```
 
  
