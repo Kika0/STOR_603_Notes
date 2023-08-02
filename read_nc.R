@@ -129,7 +129,7 @@ lat_rot <- c()
 long_rot <- c()
 for (i in 1:length(long)){
   r.latlon  <- pp.ll.to.rg(lat=lat[i],long=long[i], gr_npole_lat, gr_npole_lon)
-  lat_rot[i] <- r.latlon[1]
+  lat_rot[i] <- r.latlon[1] 
   long_rot[i] <- r.latlon[2]
 }
 
@@ -191,13 +191,27 @@ tm_shape(temp_sf) + tm_dots(col="Temperature",style="cont",size=0.05,palette="-R
   tm_layout(legend.position = c(0.7, 0.55))
 # subset to only include grid points in Lancaster
 lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
-tm_shape(lanc_temp_sf) + tm_dots(col="temp",style="cont",size=2)
+tm_shape(lanc_temp_sf) + tm_dots(col="Temperature",style="cont",size=2)
+
+# try to plot for the whole day ----
+temp <- c(v1[,,1])
+lon_lat_temp <- cbind(lon_lat,temp)
+for (i in 2:dim(v1)[3]) {
+  lon_lat_temp <- cbind(lon_lat_temp,c(v1[,,i]))
+  colnames(lon_lat_temp)[length(lon_lat_temp)] <- as.character(i)
+}
+# convert to sf points object
+temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
+tm_shape(temp_sf) + tm_dots(col="temp",style="cont")
+
+# subset to only include grid points in Lancaster
+lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
 
 # try to plot for the whole day ----
 # subset to only include grid points in Lancaster
 lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
 
-lanc_temp_sf_long <- lanc_temp_sf %>% select(temp) %>%
+lanc_temp_sf_long <- lanc_temp_sf %>% select(Temperature) %>%
   mutate("time_of_day"=as.factor(rep(1,nrow(lanc_temp_sf)))) %>% 
   mutate("time"=rep(strftime(seq(from = as.POSIXct("1999-12-01 12:00"), 
                         to = as.POSIXct("1999-12-02 11:30"), by = "30 min")[1],format="%H:%M"),nrow(lanc_temp_sf)))
