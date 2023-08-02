@@ -6,7 +6,7 @@ library(mapdata)
 library(PCICt)
 library(rgdal)
 # for palettes
-#library(viridis)
+library(viridis)
 library(tidyverse)
 library(sf)
 #library(gridExtra)
@@ -96,13 +96,13 @@ for (i in 1:length(r.map$x)){
 longitude <- rlon
 latitude <- rlat
 ### subset the grid
-lon_subset <- seq(from=5,to=(length(longitude)-length(longitude)%%5),by=5)
-lat_subset <- seq(from=5,to=(length(latitude)-length(latitude)%%5),by=5)
+lon_subset <- seq(from=10,to=(length(longitude)-length(longitude)%%10),by=10)
+lat_subset <- seq(from=10,to=(length(latitude)-length(latitude)%%10),by=10)
 longitude <- longitude[lon_subset]
 latitude <- latitude[lat_subset]
-v1 <- v1[lon_subset,lat_subset,]
+v1_sub <- v1[lon_subset,lat_subset,]
 
-fields::image.plot( x=longitude, y=latitude, z=v1[,,2], zlim=c(0,20), main=pcictime[2])
+fields::image.plot( x=longitude, y=latitude, z=v1_sub[,,1], zlim=c(0,20), main=pcictime[2])
 points(r.map$x+360,r.map$y,pch=46,col='grey80', lwd=0)
 
 ### subset to show only Lancaster district ----
@@ -144,53 +144,48 @@ tm_shape(uk_rot) + tm_polygons()
 
 ### subset rotated grid points overlapping with UK -----
 # create grid points for long lat
-lon_lat <- expand.grid(rlon,rlat) 
+lon_lat <- expand.grid(longitude,latitude) 
 colnames(lon_lat) <- c("lon","lat")
 # extract first half-hour of the day (first out of 48 in dim3:time)
-Temperature <- c(v1[,,1])
+Temperature <- c(v1_sub[,,1])
 lon_lat_temp <- cbind(lon_lat,Temperature)
 # convert to sf points object
 temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
 tm_shape(temp_sf) + tm_dots(col="Temperature",style="cont",palette="viridis")
 tm_shape(temp_sf) + tm_dots(col="Temperature",style="cont",size=0.05,palette="-RdYlBu")+
   tm_layout(legend.position = c(0.7, 0.55))
-# subset to only include grid points in Lancaster
-lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
-tm_shape(lanc_temp_sf) + tm_dots(col="temp",style="cont",size=2)
+# subset to only include grid points in mainland UK
+uk_temp_sf <- st_filter(temp_sf,(uk_rot %>% st_cast("MULTIPOLYGON")))
+tm_shape(uk_temp_sf) + tm_dots(col="Temperature",style="cont",size=0.1)
 
-# try to plot for the whole day ----
+# try to plot for 30 days ----
 # subset to only include grid points in Lancaster
-lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
-
-lanc_temp_sf_long <- lanc_temp_sf %>% select(temp) %>%
-  mutate("time_of_day"=as.factor(rep(1,nrow(lanc_temp_sf)))) %>% 
-  mutate("time"=rep(strftime(seq(from = as.POSIXct("1999-12-01 12:00"), 
-                                 to = as.POSIXct("1999-12-02 11:30"), by = "30 min")[1],format="%H:%M"),nrow(lanc_temp_sf)))
-# subset only time
-strftime(seq(from=as.POSIXct("1999-12-01 12:00"), 
-             to = as.POSIXct("1999-12-02 11:30"), by = "30 min")[1], format="%H:%M")
+uk_temp_sf_long <- uk_temp_sf %>% select(Temperature) %>%
+  mutate("day"=as.factor(rep(1,nrow(uk_temp_sf)))) %>% 
+  mutate("date"=rep(pcictime[1],nrow(uk_temp_sf)))
+# December subset 
+pcictime[1:30]
 
 # for loop for all other half-hour intervals
-for (j in (2:48)) {
-  to_bind <- lanc_temp_sf  %>% select(all_of(j)) %>% 
-    mutate("time_of_day"=as.factor(rep(j,nrow(lanc_temp_sf)))) %>% 
-    mutate("time"=rep(strftime(seq(from = as.POSIXct("1999-12-01 12:00"), 
-                                   to = as.POSIXct("1999-12-02 11:30"), by = "30 min")[j],format="%H:%M"),nrow(lanc_temp_sf)))
-  names(to_bind)[1] <- "temp"
-  lanc_temp_sf_long <- rbind(lanc_temp_sf_long,to_bind)
+for (j in (2:30)) {
+  to_bind <- uk_temp_sf  %>% select(all_of(j)) %>% 
+    mutate("day"=as.factor(rep(j,nrow(uk_temp_sf)))) %>% 
+    mutate("date"=rep(pcictime[j],nrow(uk_temp_sf)))
+  names(to_bind)[1] <- "Temperature"
+  uk_temp_sf_long <- rbind(uk_temp_sf_long,to_bind)
   
 }
 
 lanc_temp_sf_long <- rbind(lanc_temp_sf_long,to_bind)
 tm_shape(lanc_temp_sf_long) + 
-  tm_dots(col="temp",style="cont",size=0.9,palette="viridis") +
-  tm_facets(by="time_of_day",as.layers=TRUE,ncol=8,nrow=6)
+  tm_dots(col="Temperature",style="cont",size=0.9,palette="viridis") +
+  tm_facets(by="day",as.layers=TRUE,ncol=8,nrow=6)
 # facet by timestamp
-lanc_temp_sf_long$time <- factor(lanc_temp_sf_long$time,      # Reordering group factor levels
-                                 levels = (lanc_temp_sf_long$time %>% unique()))
-tm_shape(lanc_temp_sf_long) + 
-  tm_dots(col="temp",style="cont",size=0.9,palette="viridis",title = "Temperature") +
-  tm_facets(by="time",as.layers=TRUE,ncol=8,nrow=6) 
+lanc_temp_sf_long$date <- factor(uk_temp_sf_long$date,      # Reordering group factor levels
+                                 levels = (uk_temp_sf_long$time %>% unique()))
+tm_shape(uk_temp_sf_long) + 
+  tm_dots(col="Temperature",style="cont",size=0.9,palette="viridis",title = "Temperature") +
+  tm_facets(by="time",as.layers=TRUE,ncol=6,nrow=5) 
 
 # to plot mean temperature in Lancaster
 t <- c()
