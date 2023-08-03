@@ -230,14 +230,16 @@ tm_shape(uk_birmingham_dist) +
 grid_birmingham <- uk_temp_sf[st_distance(uk_temp_sf,birmingham_rot_sf)[,1] %>% which.min(),]
 # st_distance(uk_temp_sf,grid_birmingham)[,1]
 # check
-uk_1999_sf <-  uk_temp_sf %>% mutate("dist"=st_distance(uk_temp_sf,grid_birmingham)[,1])  
+uk_1999_sf <-  uk_temp_sf %>% mutate("dist_birmingham"=st_distance(uk_temp_sf,grid_birmingham)[,1])  
 # check  
-# tm_shape(uk_1999_sf) + tm_dots("dist",style="cont")
-is_london <- rep("not_london",dim(uk_1999_sf)[1])
-is_london[uk_1999_sf$dist==set_units(0,m)] <- "birmingham"
+# tm_shape(uk_1999_sf) + tm_dots("dist_birmingham",style="cont")
+uk_1999_winter$is_london[uk_1999_sf$dist_birmingham==set_units(0,m)] <- "birmingham"
 uk_1999_winter <-( uk_1999_sf %>% as.data.frame() %>%
                      select(geometry,dist,everything()) %>%
                      mutate(is_london=is_london))[,1:92]
+uk_1999_winter <- uk_1999_winter %>%
+  mutate("dist_birmingham"=st_distance(uk_temp_sf,grid_birmingham)[,1]) %>% 
+  relocate(dist_birmingham, .before = Temperature)
 
 # calculate dependence between X(London) and Y(some other location)
 X <- uk_1999_winter[is_london=="london",3:ncol(uk_1999_winter)] 
