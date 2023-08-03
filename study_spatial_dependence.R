@@ -5,50 +5,12 @@ library(tmap)
 library(mapdata)
 library(PCICt)
 library(rgdal)
-# for palettes
-library(viridis)
+library(viridis) # for palettes
 library(tidyverse)
 library(sf)
 library(units)
 #library(gridExtra)
-
-# function to translate from normal pole coordinates to rotated pole coordinates
-pp.ll.to.rg <- function(lat,long,pole.lat,pole.long) {
-  while(pole.long>180) pole.long<-pole.long-360
-  l0  <- pole.long+180
-  dtr <- pi/180
-  sin.pole.lat <- sin(pole.lat*dtr)
-  cos.pole.lat <- cos(pole.lat*dtr)
-  if(pole.lat < 0) {
-    sin.pole.lat <- -sin.pole.lat
-    cos.pole.lat <- -cos.pole.lat
-  }
-  long <- long-l0
-  while(long >  180) long <- long-360
-  while(long < -180) long <- long+360
-  
-  lat.rotated <- asin(max(-1,min(1,-cos.pole.lat*
-                                   cos(long*dtr)*
-                                   cos(lat*dtr)+
-                                   sin.pole.lat*
-                                   sin(lat*dtr))))
-  
-  long.rotated <- 0
-  if(cos(lat.rotated) > 1.0e-6) {
-    long.rotated <- acos(max(-1,min(1,(cos.pole.lat*
-                                         sin(lat*dtr)+
-                                         sin.pole.lat*
-                                         cos(long*dtr)*
-                                         cos(lat*dtr))/
-                                      cos(lat.rotated))))
-  }
-  long.rotated <- long.rotated*sign(long)
-  lat.rotated  <- lat.rotated/dtr
-  long.rotated <- long.rotated/dtr
-  while(long.rotated >  180) long.rotated <- long.rotated-360
-  while(long.rotated < -180) long.rotated <- long.rotated+360
-  return(c(lat.rotated,long.rotated))
-}
+source("rotate_unrotate_coordinates.R")
 
 ### read one year of data ----
 flist  <- "data/tasmax_rcp85_land-cpm_uk_2.2km_01_day_19991201-20001130.nc"
@@ -172,7 +134,7 @@ max_1999 <- uk_temp_sf_long[uk_temp_sf_long$Temperature==max(uk_temp_sf_long$Tem
 long <- st_coordinates(max_1999 %>% st_transform(4326))[,1]
 lat <- st_coordinates(max_1999 %>% st_transform(4326))[,2]
 
-conv <- CnvRttPol(latlon = data.frame(long,lat),spol_coor = c(gr_npole_lon+180, -gr_npole_lat))
+conv <- CnvRttPol(latlon = data.frame(long,lat),spol_coor = c(gr_npole_lon, gr_npole_lat))
 max_point <- data.frame(lon=conv$lon,lat=conv$lat) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
   summarise(geometry = st_combine(geometry))
@@ -184,7 +146,7 @@ min_1999 <- uk_temp_sf_long[uk_temp_sf_long$Temperature==min(uk_temp_sf_long$Tem
 long <- st_coordinates(min_1999 %>% st_transform(4326))[,1]
 lat <- st_coordinates(min_1999 %>% st_transform(4326))[,2]
 
-conv <- CnvRttPol(latlon = data.frame(long,lat),spol_coor = c(gr_npole_lon+180, -gr_npole_lat))
+conv <- CnvRttPol(latlon = data.frame(long,lat),spol_coor = c(gr_npole_lon, gr_npole_lat))
 min_point <- data.frame(lon=conv$lon,lat=conv$lat) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
   summarise(geometry = st_combine(geometry))
@@ -197,7 +159,7 @@ tmap_mode("plot")
 long <- st_coordinates(uk_temp_sf %>% st_transform(4326))[,1]
 lat <- st_coordinates(uk_temp_sf %>% st_transform(4326))[,2]
 
-conv <- CnvRttPol(latlon = data.frame(long,lat),spol_coor = c(gr_npole_lon+180, -gr_npole_lat))
+conv <- CnvRttPol(latlon = data.frame(long,lat),spol_coor = c(gr_npole_lon, gr_npole_lat))
 uk_unrotated <- data.frame(lon=conv$lon,lat=conv$lat) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
   summarise(geometry = st_combine(geometry))
@@ -205,6 +167,7 @@ uk_unrotated <- data.frame(lon=conv$lon,lat=conv$lat) %>%
 tmap_mode("view")
 tm_shape(uk_unrotated) + tm_dots()
 tmap_mode("plot")
+
 
 ### create London dataset ----
 # coord for London centre (Alan Turing Institute)
