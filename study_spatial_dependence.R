@@ -36,7 +36,7 @@ uk_rot <-  df %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
   summarise(geometry = st_combine(geometry)) %>%
   st_cast("POLYGON") %>% st_make_valid()
-
+rm(df)
 
 ### read one year of data ----
 flist  <- "data/tasmax_rcp85_land-cpm_uk_2.2km_01_day_19991201-20001130.nc"
@@ -174,10 +174,12 @@ tmap_mode("plot")
 london_lat <- 51.529972
 london_lon <- -0.127676
 # plot to check
-london_sf <- data.frame(lon=london_lon,lat=london_lat) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-  summarise(geometry = st_combine(geometry))
-tm_shape(london_sf) + tm_dots()
+# london_sf <- data.frame(lon=london_lon,lat=london_lat) %>%
+#   st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+#   summarise(geometry = st_combine(geometry))
+# tmap_mode("view")
+# tm_shape(london_sf) + tm_dots()
+# tmap_mode("plot")
 # rotate coordinates
 london_lon_rot <- pp.ll.to.rg(lat=london_lat,long = london_lon,pole.lat =  gr_npole_lat,pole.long =  gr_npole_lon)[2]
 london_lat_rot <- pp.ll.to.rg(lat=london_lat,long = london_lon, gr_npole_lat, gr_npole_lon)[1]
@@ -342,11 +344,8 @@ for (i in 1:90) {
 uk_1999_2018_winter <- cbind(uk_1999_2018_winter,temp_to_cbind)
 
 }
-uk_1999_2018_winter %>% names()
-plot(x=6:ncol(uk_1999_2018_winter),y=uk_1999_2018_winter[1,6:ncol(uk_1999_2018_winter)])
-# calculate dependence between X(London) and Y(some other location)
-X <- uk_1999_2018_winter[uk_1999_2018_winter$is_location=="london",6:ncol(uk_1999_2018_winter)] %>% as_vector()
-Y <- uk_1999_2018_winter[1,6:ncol(uk_1999_2018_winter)] %>% as_vector()
-df <- data.frame(X=X,Y=Y) %>% remove_rownames()
-ggplot(df) + geom_point(aes(x=X,y=Y))
-
+# uk_1999_2018_winter %>% names()
+# plot(x=6:ncol(uk_1999_2018_winter),y=uk_1999_2018_winter[1,6:ncol(uk_1999_2018_winter)])
+# save as R object
+# saveRDS(uk_1999_2018_winter, "data/uk_1999_2018_winter.RDS")
+# readRDS("data/uk_1999_2018_winter.RDS")
