@@ -342,6 +342,11 @@ for (i in 1:90) {
 uk_1999_2018_winter <- cbind(uk_1999_2018_winter,temp_to_cbind)
 
 }
+uk_1999_2018_winter %>% names()
+plot(x=6:ncol(uk_1999_2018_winter),y=uk_1999_2018_winter[1,6:ncol(uk_1999_2018_winter)])
 # calculate dependence between X(London) and Y(some other location)
-X <- uk_1999_winter[is_london=="london",3:ncol(uk_1999_winter)] 
-Y <- uk_1999_winter[1,3:ncol(uk_1999_winter)] 
+X <- uk_1999_2018_winter[uk_1999_2018_winter$is_location=="london",6:ncol(uk_1999_2018_winter)] %>% as_vector()
+Y <- uk_1999_2018_winter[1,6:ncol(uk_1999_2018_winter)] %>% as_vector()
+df <- data.frame(X=X,Y=Y) %>% remove_rownames()
+ggplot(df) + geom_point(aes(x=X,y=Y))
+
