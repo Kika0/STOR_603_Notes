@@ -34,3 +34,11 @@ p2 <- ggplot(df) + geom_point(aes(x=u,y=v),size=0.1) + xlab("u") +
         panel.border = element_rect(colour = "black", fill = NA))
 grid.arrange(p1,p2,ncol=2)
 
+# calculate the dependence between X and Y
+threshold <- 0.95
+# create empirical chi(u) function
+chi <- function(df,threshold) {
+  2-log( mean(df$u < threshold & df$v < threshold))/log(mean(df$u < threshold))  
+}
+chi(df,threshold=0.95)
+    
