@@ -202,10 +202,10 @@ uk_1999_sf <-  uk_temp_sf %>% mutate("dist_london"=st_distance(uk_temp_sf,grid_l
 # tm_shape(uk_1999_sf) + tm_dots("dist",style="cont")
 is_location <- rep("no",dim(uk_1999_sf)[1])
 is_location[uk_1999_sf$dist_london==set_units(0,m)] <- "london"
-uk_1999_winter <-( uk_1999_sf %>% as.data.frame() %>%
+uk_1999 <-( uk_1999_sf %>% as.data.frame() %>%
                      select(geometry,dist_london,everything()) %>%
                      mutate(is_location=is_location)%>% 
-                     relocate(is_location,.before = dist_london))[,1:93]
+                     relocate(is_location,.before = dist_london))
 
 ### create birmingham dataset ----
 # coord for birmingham centre (Birmingham Art Gallery)
@@ -236,8 +236,8 @@ grid_birmingham <- uk_temp_sf[st_distance(uk_temp_sf,birmingham_rot_sf)[,1] %>% 
 uk_1999_sf <-  uk_temp_sf %>% mutate("dist_birmingham"=st_distance(uk_temp_sf,grid_birmingham)[,1])  
 # check  
 # tm_shape(uk_1999_sf) + tm_dots("dist_birmingham",style="cont")
-uk_1999_winter$is_location[uk_1999_sf$dist_birmingham==set_units(0,m)] <- "birmingham"
-uk_1999_winter <- uk_1999_winter %>%
+uk_1999$is_location[uk_1999_sf$dist_birmingham==set_units(0,m)] <- "birmingham"
+uk_1999 <- uk_1999 %>%
   mutate("dist_birmingham"=st_distance(uk_temp_sf,grid_birmingham)[,1]) %>% 
   relocate(dist_birmingham, .before = Temperature)
 
@@ -271,18 +271,22 @@ grid_glasgow <- uk_temp_sf[st_distance(uk_temp_sf,glasgow_rot_sf)[,1] %>% which.
 uk_1999_sf <-  uk_temp_sf %>% mutate("dist_glasgow"=st_distance(uk_temp_sf,grid_glasgow)[,1])  
 # check  
 # tm_shape(uk_1999_sf) + tm_dots("dist_glasgow",style="cont")
-uk_1999_winter$is_location[uk_1999_sf$dist_glasgow==set_units(0,m)] <- "glasgow"
-uk_1999_winter <- uk_1999_winter %>%
+uk_1999$is_location[uk_1999_sf$dist_glasgow==set_units(0,m)] <- "glasgow"
+uk_1999 <- uk_1999 %>%
   mutate("dist_glasgow"=st_distance(uk_temp_sf,grid_glasgow)[,1]) %>% 
   relocate(dist_glasgow, .before = Temperature)
 
 ### do for the other years -----
 # start with 1999 year
-no_col <- ncol(uk_1999_winter)
-for (i in (no_col-89):no_col) {
-names(uk_1999_winter)[i] <- paste0(names(uk_1999_winter)[i],"_",1990)
+no_col <- ncol(uk_1999)
+for (i in (no_col-359):no_col) {
+names(uk_1999)[i] <- paste0(names(uk_1999)[i],"_",1990)
 }
-uk_1999_2018_winter <- uk_1999_winter
+uk_1999_2018 <- uk_1999
+uk_1999_2018_winter <- uk_1999_2018[,c(1:5,6:(90+5))]
+uk_1999_2018_spring <- uk_1999_2018[,c(1:5,(6+90):(180+5))]
+uk_1999_2018_summer <- uk_1999_2018[,c(1:5,(6+180):(270+5))]
+uk_1999_2018_autumn <- uk_1999_2018[,c(1:5,(6+270):(360+5))]
 
 for (j in 2000:2018) {
 # load data
@@ -337,15 +341,39 @@ for (j in 2000:2018) {
   uk_temp_sf <- st_filter(temp_sf,(uk_rot %>% st_cast("MULTIPOLYGON")))
 
 # combine with data set
-temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% select(-geometry) %>% select(all_of(1:90))
+temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
+  select(-geometry) %>% select(all_of(1:90))
 for (i in 1:90) {
   names(temp_to_cbind)[i] <- paste0(names(temp_to_cbind)[i],"_",j)
 }
 uk_1999_2018_winter <- cbind(uk_1999_2018_winter,temp_to_cbind)
 
+temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
+  select(-geometry) %>% select(all_of(91:180))
+for (i in 91:180) {
+  names(temp_to_cbind)[(i-90)] <- paste0(names(temp_to_cbind)[i],"_",j)
+}
+uk_1999_2018_spring <- cbind(uk_1999_2018_spring,temp_to_cbind)
+
+temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
+  select(-geometry) %>% select(all_of(181:270))
+for (i in 181:270) {
+  names(temp_to_cbind)[(i-180)] <- paste0(names(temp_to_cbind)[i],"_",j)
+}
+uk_1999_2018_summer <- cbind(uk_1999_2018_summer,temp_to_cbind)
+
+temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
+  select(-geometry) %>% select(all_of(271:360))
+for (i in 271:360) {
+  names(temp_to_cbind)[(i-270)] <- paste0(names(temp_to_cbind)[i],"_",j)
+}
+uk_1999_2018_autumn <- cbind(uk_1999_2018_autumn,temp_to_cbind)
 }
 # uk_1999_2018_winter %>% names()
 # plot(x=6:ncol(uk_1999_2018_winter),y=uk_1999_2018_winter[1,6:ncol(uk_1999_2018_winter)])
 # save as R object
-# saveRDS(uk_1999_2018_winter, "data/uk_1999_2018_winter.RDS")
+ # saveRDS(uk_1999_2018_winter, "data/uk_1999_2018_winter.RDS")
+ # saveRDS(uk_1999_2018_spring, "data/uk_1999_2018_spring.RDS")
+ # saveRDS(uk_1999_2018_summer, "data/uk_1999_2018_summer.RDS")
+ # saveRDS(uk_1999_2018_autumn, "data/uk_1999_2018_autumn.RDS")
 # readRDS("data/uk_1999_2018_winter.RDS")

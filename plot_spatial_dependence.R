@@ -3,7 +3,7 @@ library(gridExtra)
 library(evd)
 library(latex2exp)
 library(gridExtra)
-uk_winter <- readRDS("data/uk_1999_2018_winter.RDS")
+uk_winter <- readRDS("data/uk_1999_2018_autumn.RDS")
 # calculate dependence between X(London) and Y(some other location)
 X <- uk_winter[uk_winter$is_location=="london",6:ncol(uk_winter)] %>% as_vector()
 Y <- uk_winter[1,6:ncol(uk_winter)] %>% as_vector()
@@ -186,3 +186,5 @@ p3 <- ggplot(df_X_Y) + ylim(c(-0.2,1)) + geom_point(aes(x=dist_glasgow,y=chi_X_Y
         panel.border = element_rect(colour = "black", fill = NA))
 
 grid.arrange(p1,p2,p3,ncol=3)
+
+# add other seasons
