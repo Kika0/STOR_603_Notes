@@ -1,5 +1,7 @@
 library(tidyverse)
 library(gridExtra)
+library(evd)
+library(latex2exp)
 uk_winter <- readRDS("data/uk_1999_2018_winter.RDS")
 # calculate dependence between X(London) and Y(some other location)
 X <- uk_winter[uk_winter$is_location=="london",6:ncol(uk_winter)] %>% as_vector()
@@ -36,9 +38,41 @@ grid.arrange(p1,p2,ncol=2)
 
 # calculate the dependence between X and Y
 threshold <- 0.95
+2-log( mean(df$u < threshold & df$v < threshold))/log(threshold)
 # create empirical chi(u) function
 chi <- function(df,threshold) {
   2-log( mean(df$u < threshold & df$v < threshold))/log(mean(df$u < threshold))  
 }
 chi(df,threshold=0.95)
-    
+
+threshold <- sort(df$u)[5:(length(df$u)-5)]
+threshold <- seq(0.1,0.995,length.out=1000)  
+chi_u <- c()
+var_chi_u <- c()
+for (i in 1:length(threshold)) {
+  chi_u[i] <- chi(df,threshold[i])
+  cu <- mean(df$u < threshold[i] & df$v < threshold[i])
+  cnst <- qnorm((1 + 0.95)/2)
+  varchi <- ((1/log(threshold[i])^2 * 1)/cu^2 * cu * (1 - cu))/length(df$u)
+  varchi <- cnst * sqrt(varchi)
+var_chi_u[i] <- varchi
+ 
+}
+
+df_chi <- data.frame(u=threshold,chi_u=chi_u,
+        CI_upper=chi_u+var_chi_u,CI_lower=chi_u-var_chi_u)
+ggplot(df_chi) + ylim(c(0,1)) + geom_line(aes(x=threshold,y=chi_u))+ 
+  geom_line(aes(x=threshold,y=CI_upper),lty=2,col="#C11432") +
+  ylab(TeX("$\\chi(u)$")) + xlab("u") +
+ geom_line(aes(x=threshold,y=CI_lower),lty=2,col="#C11432") + coord_fixed() +
+  theme_bw() +
+  theme(panel.spacing = unit(2, "lines"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA))
+
+  
+# calculate variance to give CI
+
+# pick 0.95 as representative and calculate for every other location
