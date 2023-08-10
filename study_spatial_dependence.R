@@ -115,7 +115,7 @@ for (j in (2:(dim(v1_sub)[3]/1))) {
 tm_shape(uk_temp_sf_long) + 
   tm_dots(col="Temperature",style="cont",size=0.05,palette="viridis") +
   tm_facets(by="day",as.layers=TRUE,ncol=30,nrow=12) +
-  tm_layout(panel.show = FALSE)
+  tm_layout(panel.show = FALSE,between.margin = 2)
 # facet by timestamp
 # uk_temp_sf_long$date <- factor(uk_temp_sf_long$date,      # Reordering group factor levels
 #                                  levels = (uk_temp_sf_long$date %>% unique()))
@@ -351,21 +351,21 @@ uk_1999_2018_winter <- cbind(uk_1999_2018_winter,temp_to_cbind)
 temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
   select(-geometry) %>% select(all_of(91:180))
 for (i in 91:180) {
-  names(temp_to_cbind)[(i-90)] <- paste0(names(temp_to_cbind)[i],"_",j)
+  names(temp_to_cbind)[(i-90)] <- paste0(names(temp_to_cbind)[(i-90)],"_",j)
 }
 uk_1999_2018_spring <- cbind(uk_1999_2018_spring,temp_to_cbind)
 
 temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
   select(-geometry) %>% select(all_of(181:270))
-for (i in 181:270) {
-  names(temp_to_cbind)[(i-180)] <- paste0(names(temp_to_cbind)[i],"_",j)
+for (i in 1:90) {
+  names(temp_to_cbind)[i] <- paste0(names(temp_to_cbind)[i],"_",j)
 }
 uk_1999_2018_summer <- cbind(uk_1999_2018_summer,temp_to_cbind)
 
 temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
   select(-geometry) %>% select(all_of(271:360))
-for (i in 271:360) {
-  names(temp_to_cbind)[(i-270)] <- paste0(names(temp_to_cbind)[i],"_",j)
+for (i in 1:90) {
+  names(temp_to_cbind)[i] <- paste0(names(temp_to_cbind)[i],"_",j)
 }
 uk_1999_2018_autumn <- cbind(uk_1999_2018_autumn,temp_to_cbind)
 }
