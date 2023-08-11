@@ -202,10 +202,15 @@ uk_1999_sf <-  uk_temp_sf %>% mutate("dist_london"=st_distance(uk_temp_sf,grid_l
 # tm_shape(uk_1999_sf) + tm_dots("dist",style="cont")
 is_location <- rep("no",dim(uk_1999_sf)[1])
 is_location[uk_1999_sf$dist_london==set_units(0,m)] <- "london"
+long <- st_coordinates(uk_1999_sf %>% st_transform(4326))[,1]
+lat <- st_coordinates(uk_1999_sf %>% st_transform(4326))[,2]
 uk_1999 <-( uk_1999_sf %>% as.data.frame() %>%
-                     select(geometry,dist_london,everything()) %>%
+                     select(-geometry) %>%
                      mutate(is_location=is_location)%>% 
-                     relocate(is_location,.before = dist_london))
+              mutate(Longitude=long) %>% 
+              mutate(Latitude=lat) %>% 
+              relocate(dist_london) %>% 
+                     relocate(c(Longitude,Latitude,is_location),.before = dist_london))
 
 ### create birmingham dataset ----
 # coord for birmingham centre (Birmingham Art Gallery)
@@ -283,10 +288,10 @@ for (i in (no_col-359):no_col) {
 names(uk_1999)[i] <- paste0(names(uk_1999)[i],"_",1990)
 }
 uk_1999_2018 <- uk_1999
-uk_1999_2018_winter <- uk_1999_2018[,c(1:5,6:(90+5))]
-uk_1999_2018_spring <- uk_1999_2018[,c(1:5,(6+90):(180+5))]
-uk_1999_2018_summer <- uk_1999_2018[,c(1:5,(6+180):(270+5))]
-uk_1999_2018_autumn <- uk_1999_2018[,c(1:5,(6+270):(360+5))]
+uk_1999_2018_winter <- uk_1999_2018[,c(1:6,7:(90+6))]
+uk_1999_2018_spring <- uk_1999_2018[,c(1:6,(7+90):(180+6))]
+uk_1999_2018_summer <- uk_1999_2018[,c(1:6,(7+180):(270+6))]
+uk_1999_2018_autumn <- uk_1999_2018[,c(1:6,(7+270):(360+6))]
 
 for (j in 2000:2018) {
 # load data
