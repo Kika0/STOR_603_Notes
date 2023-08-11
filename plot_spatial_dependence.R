@@ -3,10 +3,17 @@ library(gridExtra)
 library(evd)
 library(latex2exp)
 library(gridExtra)
-uk_winter <- readRDS("data/uk_1999_2018_autumn.RDS")
+library(xtable)
+uk_winter <- readRDS("data/uk_1999_2018_winter.RDS")
+uk_spring <- readRDS("data/uk_1999_2018_spring.RDS")
+# for a nice table in latex
+for_latex <- uk_spring[c(1:3,76:78,160:162,347:349,445),c(2:8,95:97,1803:1805)] %>%
+  rowid_to_column() 
+ xtable(for_latex,type="latex")
+ print(xtable(df), include.rownames=FALSE)
 # calculate dependence between X(London) and Y(some other location)
-X <- uk_winter[uk_winter$is_location=="london",6:ncol(uk_winter)] %>% as_vector()
-Y <- uk_winter[1,6:ncol(uk_winter)] %>% as_vector()
+X <- uk_winter[uk_winter$is_location=="london",7:ncol(uk_winter)] %>% as_vector()
+Y <- uk_winter[1,7:ncol(uk_winter)] %>% as_vector()
 df <- data.frame(X=X,Y=Y) %>% remove_rownames()
 # use PIT
 # create x and y quantile variables
