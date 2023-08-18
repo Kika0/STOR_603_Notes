@@ -382,3 +382,111 @@ uk_1999_2018_autumn <- cbind(uk_1999_2018_autumn,temp_to_cbind)
  # saveRDS(uk_1999_2018_summer, "data/uk_1999_2018_summer.RDS")
  # saveRDS(uk_1999_2018_autumn, "data/uk_1999_2018_autumn.RDS")
 # readRDS("data/uk_1999_2018_winter.RDS")
+
+# start with 1999 year and make a function of end year
+add_temperature_years <- function(uk_1999,last_year_start) {
+no_col <- ncol(uk_1999)
+tmp <- uk_1999
+for (i in (no_col-359):no_col) {
+  names(tmp)[i] <- paste0(names(tmp)[i],"_",1990)
+}
+
+uk_1999_end[[1]] <- tmp[,c(1:6,7:(90+6))]
+uk_1999_end[[2]] <- tmp[,c(1:6,(7+90):(180+6))]
+uk_1999_end[[3]] <- tmp[,c(1:6,(7+180):(270+6))]
+uk_1999_end[[4]] <- tmp[,c(1:6,(7+270):(360+6))]
+
+for (j in 2000:last_year_start) {
+  # load data
+  flist  <- paste0("data/tasmax_rcp85_land-cpm_uk_2.2km_01_day_",j,"1201-",j+1,"1130.nc")
+  ### read netcdf file
+  nc1 <- nc_open(flist[1])
+  # time coordinate
+  time1    <- ncvar_get(nc1,'time')
+  time1att <- ncatt_get(nc1,'time')
+  # read all 360 days
+  # time dimension is last in the start argument
+  v1    <- ncvar_get(nc1,'tasmax',start=c(1,1,1,1), count=c(-1,-1,360,1))
+  # lat long of grid
+  rlon     <- apply(ncvar_get(nc1,"grid_longitude_bnds"),2,mean)
+  rlat     <- apply(ncvar_get(nc1,"grid_latitude_bnds"),2,mean)
+  cpm.pole <- ncatt_get(nc1,'rotated_latitude_longitude')
+  nc_close(nc1)
+  # this climate model has a 360 day year so needs special treatment
+  # PCICt does this for us
+  origin   <- tail(unlist(strsplit(time1att$units,'hours since ')),1)
+  pcictime <- as.PCICt( time1*(60*60), cal=time1att$calendar ,origin=origin)
+  
+  # the CPM grid has the pole in a different place to usual.  therefore need to transform the map coordinates
+  gr_npole_lat <- cpm.pole$grid_north_pole_latitude
+  gr_npole_lon <- cpm.pole$grid_north_pole_longitude
+  
+  # sparse grid
+  longitude <- rlon
+  latitude <- rlat
+  ### subset the grid
+  lon_subset <- seq(from=10,to=(length(longitude)-length(longitude)%%10),by=10)
+  lat_subset <- seq(from=10,to=(length(latitude)-length(latitude)%%10),by=10)
+  longitude <- longitude[lon_subset]
+  latitude <- latitude[lat_subset]
+  v1_sub <- v1[lon_subset,lat_subset,]
+  #fields::image.plot( x=longitude, y=latitude, z=v1_sub[,,1], zlim=c(0,20), main=pcictime[2])
+  
+  ### subset rotated grid points overlapping with UK -----
+  # create grid points for long lat
+  lon_lat <- expand.grid(longitude,latitude) 
+  colnames(lon_lat) <- c("lon","lat")
+  # extract first day (first out of 360 in dim3:time)
+  Temperature <- c(v1_sub[,,1])
+  lon_lat_temp <- cbind(lon_lat,Temperature)
+  for (i in 2:(dim(v1_sub)[3]/1)) {
+    lon_lat_temp <- cbind(lon_lat_temp,c(v1_sub[,,i]))
+    colnames(lon_lat_temp)[length(lon_lat_temp)] <- as.character(i)
+  }
+  # convert to sf points object
+  temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
+  # subset to only include grid points in mainland UK
+  uk_temp_sf <- st_filter(temp_sf,(uk_rot %>% st_cast("MULTIPOLYGON")))
+  
+  # combine with data set
+  temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
+    select(-geometry) %>% select(all_of(1:90))
+  for (i in 1:90) {
+    names(temp_to_cbind)[i] <- paste0(names(temp_to_cbind)[i],"_",j)
+  }
+  uk_1999_end[[1]] <- cbind(uk_1999_end[[1]],temp_to_cbind)
+  
+  temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
+    select(-geometry) %>% select(all_of(91:180))
+  for (i in 91:180) {
+    names(temp_to_cbind)[(i-90)] <- paste0(names(temp_to_cbind)[(i-90)],"_",j)
+  }
+  uk_1999_end[[2]] <- cbind(uk_1999_end[[2]],temp_to_cbind)
+  
+  temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
+    select(-geometry) %>% select(all_of(181:270))
+  for (i in 1:90) {
+    names(temp_to_cbind)[i] <- paste0(names(temp_to_cbind)[i],"_",j)
+  }
+  uk_1999_end[[3]] <- cbind(uk_1999_end[[3]],temp_to_cbind)
+  
+  temp_to_cbind <- uk_temp_sf  %>% as.data.frame()%>% 
+    select(-geometry) %>% select(all_of(271:360))
+  for (i in 1:90) {
+    names(temp_to_cbind)[i] <- paste0(names(temp_to_cbind)[i],"_",j)
+  }
+  uk_1999_end[[4]] <- cbind(uk_1999_end[[4]],temp_to_cbind)
+}
+return(uk_1999_end)
+}
+t <- add_temperature_years(uk_1999,last_year_start = 2079)
+# t[[1]] %>% names()
+# plot(x=7:ncol(t[[3]]),y=t[[3]][1,7:ncol(t[[3]])])
+d <- t[[3]][1,7:ncol(t[[3]])]
+# save as R object
+# saveRDS(t[[1]], "data/uk_1999_2079_winter.RDS")
+# saveRDS(t[[2]], "data/uk_1999_2079_spring.RDS")
+# saveRDS(t[[3]], "data/uk_1999_2079_summer.RDS")
+# saveRDS(t[[4]], "data/uk_1999_2079_autumn.RDS")
+# readRDS("data/uk_1999_2079_winter.RDS")
+
