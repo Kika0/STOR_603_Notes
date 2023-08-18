@@ -240,17 +240,17 @@ $se
 [1] 0
 
 $nllh
-[1] 54.39127
+[1] 45.62547
 
 $mle
-[1]  2.4063985  0.3614291 -0.0294855
+[1]  2.25995963  0.33292887 -0.04189382
 
 $se
-[1] 0.04052278 0.02900888 0.07125537</code></pre>
+[1] 0.03763203 0.02716319 0.07596206</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit<span class="sc">$</span>mle</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1]  2.4063985  0.3614291 -0.0294855</code></pre>
+<pre><code>[1]  2.25995963  0.33292887 -0.04189382</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">#gamGPDfit(x=df,datvar='y',threshold = 2.5,xiFrhs = xiFrhs)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -282,17 +282,17 @@ $se
 [1] 0
 
 $nllh
-[1] 54.39127
+[1] 45.62547
 
 $mle
-[1]  2.4063985  0.3614291 -0.0294855
+[1]  2.25995963  0.33292887 -0.04189382
 
 $se
-[1] 0.04052278 0.02900888 0.07125537</code></pre>
+[1] 0.03763203 0.02716319 0.07596206</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>fit<span class="sc">$</span>mle</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1]  2.4063985  0.3614291 -0.0294855</code></pre>
+<pre><code>[1]  2.25995963  0.33292887 -0.04189382</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>x_fit <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">70</span>,<span class="dv">200</span>,<span class="dv">1</span>)</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>y_fit <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
@@ -333,7 +333,7 @@ $se
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>u_1 <span class="sc">%&gt;%</span> <span class="fu">head</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.6232682 0.1676835 0.5488885 0.6451381 0.1123330 0.1110303</code></pre>
+<pre><code>[1] 0.6121441 0.8158624 0.1795660 0.8663926 0.8094380 0.4737421</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(u_1,u_2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
@@ -584,19 +584,18 @@ Warning in log(1 + xi * ((x - mu)/sig)): NaNs produced</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>U_1 <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">10000</span>)</span>
-<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>X_1 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span><span class="sc">/</span>(<span class="fu">log</span>(U_1))</span>
-<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>U_2 <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">10000</span>)</span>
-<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>X_2 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span><span class="sc">/</span>(<span class="fu">log</span>(U_2))</span>
-<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(X_1<span class="sc">/</span><span class="dv">10000</span>,X_2<span class="sc">/</span><span class="dv">10000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>U_1 <span class="ot">&lt;-</span> <span class="fu">runif</span>(N)</span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>X_1 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span><span class="sc">/</span>(<span class="fu">log</span>(U_1))</span>
+<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>U_2 <span class="ot">&lt;-</span> <span class="fu">runif</span>(N)</span>
+<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>X_2 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span><span class="sc">/</span>(<span class="fu">log</span>(U_2))</span>
+<span id="cb64-6"><a href="#cb64-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(X_1<span class="sc">/</span><span class="dv">1000</span>,X_2<span class="sc">/</span><span class="dv">1000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="GEV_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid" width="672"></p>
 </div>
-<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">10000</span></span>
-<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a>R <span class="ot">&lt;-</span> X_1<span class="sc">/</span>N<span class="sc">+</span>X_2<span class="sc">/</span>N</span>
-<span id="cb65-4"><a href="#cb65-4" aria-hidden="true" tabindex="-1"></a>W <span class="ot">&lt;-</span> (X_1<span class="sc">/</span>N)<span class="sc">/</span>(R)</span>
-<span id="cb65-5"><a href="#cb65-5" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(R,W)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>R <span class="ot">&lt;-</span> X_1<span class="sc">/</span>N<span class="sc">+</span>X_2<span class="sc">/</span>N</span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>W <span class="ot">&lt;-</span> (X_1<span class="sc">/</span>N)<span class="sc">/</span>(R)</span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(R,W)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="GEV_files/figure-html/unnamed-chunk-23-2.png" class="img-fluid" width="672"></p>
 </div>
@@ -695,8 +694,184 @@ Warning in log(1 + xi * ((x - mu)/sig)): NaNs produced</code></pre>
 <div class="cell-output-display">
 <p><img src="GEV_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid" width="672"></p>
 </div>
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>X, <span class="at">y=</span>Y))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-27-2.png" class="img-fluid" width="672"></p>
+</div>
 </div>
 <p>This makes sense. For example, <span class="math inline">\(z=1\)</span> corresponds to 0.3678794 for <span class="math inline">\(a=0\)</span> and 0.6065307 for <span class="math inline">\(a=1\)</span>. Because the quantile is lower for <span class="math inline">\(a=0\)</span>, the distribution has more values larger then <span class="math inline">\(1\)</span> than the case when <span class="math inline">\(a=1\)</span>.</p>
+</section>
+<section id="extend-the-idea-to-a-series-of-coefficients" class="level3">
+<h3 class="anchored" data-anchor-id="extend-the-idea-to-a-series-of-coefficients">Extend the idea to a series of coefficients</h3>
+<p>Define <span class="math inline">\(X_1=\max \left\{ a_1Y_1,a_2Y_2,\dots, a_dY_d \right\}\)</span> and <span class="math inline">\(X_2=\max \left\{ b_1Y_1,b_2Y_2,\dots, b_dY_d \right\}\)</span>. Further assume that <span class="math inline">\(Y_i\)</span> are independent with Fréchet distribution. Varying parameters are length <span class="math inline">\(d\)</span> taking max over, sequences <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>d<span class="ot">=</span><span class="dv">5</span></span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a><span class="co"># generate Y</span></span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>) {</span>
+<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a>Y[i] <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span><span class="sc">/</span>(<span class="fu">log</span>(U[i])<span class="sc">*</span>(a<span class="sc">+</span><span class="dv">1</span>))  </span>
+<span id="cb72-6"><a href="#cb72-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb72-7"><a href="#cb72-7" aria-hidden="true" tabindex="-1"></a>X[<span class="dv">1</span><span class="sc">:</span>(d<span class="dv">-1</span>)] <span class="ot">&lt;-</span> Y[<span class="dv">1</span><span class="sc">:</span>(d<span class="dv">-1</span>)]</span>
+<span id="cb72-8"><a href="#cb72-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> d<span class="sc">:</span><span class="dv">50</span>) {</span>
+<span id="cb72-9"><a href="#cb72-9" aria-hidden="true" tabindex="-1"></a>  X[i] <span class="ot">&lt;-</span> <span class="fu">max</span>(Y[(i<span class="sc">-</span>(d<span class="dv">-1</span>))<span class="sc">:</span>i])</span>
+<span id="cb72-10"><a href="#cb72-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb72-11"><a href="#cb72-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-12"><a href="#cb72-12" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(X,Y,<span class="at">ite=</span><span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>)</span>
+<span id="cb72-13"><a href="#cb72-13" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>ite, <span class="at">y=</span>X))</span>
+<span id="cb72-14"><a href="#cb72-14" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>ite, <span class="at">y=</span>Y))</span>
+<span id="cb72-15"><a href="#cb72-15" aria-hidden="true" tabindex="-1"></a><span class="fu">grid.arrange</span>(x,y,<span class="at">ncol=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define a_1,...,a_50</span></span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a><span class="co">#a_seq &lt;- seq(1,0.1,length.out=50)</span></span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a><span class="co"># define b_1,...,b_50</span></span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a><span class="co">#b_seq &lt;- seq(1,0.5,length.out=50)</span></span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>X, <span class="at">y=</span>Y))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-28-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Try different values of <span class="math inline">\(d\)</span>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="dv">3</span></span>
+<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">50</span></span>
+<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a>U <span class="ot">&lt;-</span> <span class="fu">runif</span>(d<span class="sc">*</span>N)</span>
+<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>,d)</span>
+<span id="cb74-6"><a href="#cb74-6" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> (<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>)<span class="sc">/</span><span class="dv">6</span></span>
+<span id="cb74-7"><a href="#cb74-7" aria-hidden="true" tabindex="-1"></a><span class="co"># generate Y</span></span>
+<span id="cb74-8"><a href="#cb74-8" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb74-9"><a href="#cb74-9" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span><span class="sc">/</span>(<span class="fu">log</span>(U) ) </span>
+<span id="cb74-10"><a href="#cb74-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb74-11"><a href="#cb74-11" aria-hidden="true" tabindex="-1"></a><span class="co"># generate X</span></span>
+<span id="cb74-12"><a href="#cb74-12" aria-hidden="true" tabindex="-1"></a>X_1 <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb74-13"><a href="#cb74-13" aria-hidden="true" tabindex="-1"></a>X_2 <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb74-14"><a href="#cb74-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb74-15"><a href="#cb74-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
+<span id="cb74-16"><a href="#cb74-16" aria-hidden="true" tabindex="-1"></a>X_1[j] <span class="ot">&lt;-</span> <span class="fu">max</span>(Y[(d<span class="sc">*</span>(j<span class="dv">-1</span>)<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span>(d<span class="sc">*</span>j)]<span class="sc">*</span>a)<span class="sc">/</span>N</span>
+<span id="cb74-17"><a href="#cb74-17" aria-hidden="true" tabindex="-1"></a>X_2[j] <span class="ot">&lt;-</span> <span class="fu">max</span>(Y[(d<span class="sc">*</span>(j<span class="dv">-1</span>)<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span>(d<span class="sc">*</span>j)]<span class="sc">*</span>b)<span class="sc">/</span>N</span>
+<span id="cb74-18"><a href="#cb74-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb74-19"><a href="#cb74-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb74-20"><a href="#cb74-20" aria-hidden="true" tabindex="-1"></a><span class="co"># it is better to plot X_1/N against X_2/N</span></span>
+<span id="cb74-21"><a href="#cb74-21" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(X_1,X_2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-29-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>df1 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">X_1=</span>X_1,<span class="at">X_2=</span>X_2,<span class="at">uni=</span><span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">1</span>,<span class="fl">0.02</span>),</span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a>             <span class="at">uni_3=</span>  <span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">5</span><span class="sc">/</span><span class="dv">6</span>,<span class="at">length.out=</span><span class="dv">50</span>), </span>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>             <span class="at">u_x=</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="fl">0.1</span>,<span class="at">length.out=</span><span class="dv">50</span>),</span>
+<span id="cb75-4"><a href="#cb75-4" aria-hidden="true" tabindex="-1"></a>             <span class="at">u_y=</span><span class="fl">0.1</span><span class="sc">-</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="fl">0.1</span>,<span class="at">length.out=</span><span class="dv">50</span>),</span>
+<span id="cb75-5"><a href="#cb75-5" aria-hidden="true" tabindex="-1"></a>             <span class="at">line_1=</span><span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">1</span>,<span class="fl">0.02</span>)<span class="sc">*</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>),<span class="at">line_2=</span><span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">1</span>,<span class="fl">0.02</span>)<span class="sc">*</span>(<span class="dv">1</span>),<span class="at">line_3=</span><span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">5</span><span class="sc">/</span><span class="dv">6</span>,<span class="at">length.out=</span><span class="dv">50</span>)<span class="sc">*</span>(<span class="dv">3</span><span class="sc">/</span><span class="dv">2</span>))</span>
+<span id="cb75-6"><a href="#cb75-6" aria-hidden="true" tabindex="-1"></a>df1 <span class="ot">&lt;-</span>df1 <span class="sc">%&gt;%</span>  <span class="fu">mutate</span>(<span class="at">above_u=</span>(X_1<span class="sc">+</span>X_2<span class="sc">&gt;</span><span class="fl">0.1</span>)) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">N=</span><span class="fu">rep</span>(<span class="fu">paste0</span>(<span class="st">"n="</span>,<span class="fu">nrow</span>(df1)),<span class="fu">nrow</span>(df1)))</span>
+<span id="cb75-7"><a href="#cb75-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-8"><a href="#cb75-8" aria-hidden="true" tabindex="-1"></a><span class="do">### repeat for larger sample size</span></span>
+<span id="cb75-9"><a href="#cb75-9" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">50000</span></span>
+<span id="cb75-10"><a href="#cb75-10" aria-hidden="true" tabindex="-1"></a>U <span class="ot">&lt;-</span> <span class="fu">runif</span>(d<span class="sc">*</span>N)</span>
+<span id="cb75-11"><a href="#cb75-11" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>,d)</span>
+<span id="cb75-12"><a href="#cb75-12" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> (<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>)<span class="sc">/</span><span class="dv">6</span></span>
+<span id="cb75-13"><a href="#cb75-13" aria-hidden="true" tabindex="-1"></a><span class="co"># generate Y</span></span>
+<span id="cb75-14"><a href="#cb75-14" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb75-15"><a href="#cb75-15" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="sc">-</span><span class="dv">1</span><span class="sc">/</span>(<span class="fu">log</span>(U) ) </span>
+<span id="cb75-16"><a href="#cb75-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-17"><a href="#cb75-17" aria-hidden="true" tabindex="-1"></a><span class="co"># generate X</span></span>
+<span id="cb75-18"><a href="#cb75-18" aria-hidden="true" tabindex="-1"></a>X_1 <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb75-19"><a href="#cb75-19" aria-hidden="true" tabindex="-1"></a>X_2 <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb75-20"><a href="#cb75-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-21"><a href="#cb75-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
+<span id="cb75-22"><a href="#cb75-22" aria-hidden="true" tabindex="-1"></a>X_1[j] <span class="ot">&lt;-</span> <span class="fu">max</span>(Y[(d<span class="sc">*</span>(j<span class="dv">-1</span>)<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span>(d<span class="sc">*</span>j)]<span class="sc">*</span>a)<span class="sc">/</span>N</span>
+<span id="cb75-23"><a href="#cb75-23" aria-hidden="true" tabindex="-1"></a>X_2[j] <span class="ot">&lt;-</span> <span class="fu">max</span>(Y[(d<span class="sc">*</span>(j<span class="dv">-1</span>)<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span>(d<span class="sc">*</span>j)]<span class="sc">*</span>b)<span class="sc">/</span>N</span>
+<span id="cb75-24"><a href="#cb75-24" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb75-25"><a href="#cb75-25" aria-hidden="true" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">X_1=</span>X_1,<span class="at">X_2=</span>X_2,<span class="at">uni=</span><span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">1</span>,<span class="at">length.out=</span>N),</span>
+<span id="cb75-26"><a href="#cb75-26" aria-hidden="true" tabindex="-1"></a>             <span class="at">uni_3=</span>  <span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">5</span><span class="sc">/</span><span class="dv">6</span>,<span class="at">length.out=</span>N), </span>
+<span id="cb75-27"><a href="#cb75-27" aria-hidden="true" tabindex="-1"></a>             <span class="at">u_x=</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="fl">0.1</span>,<span class="at">length.out=</span>N),</span>
+<span id="cb75-28"><a href="#cb75-28" aria-hidden="true" tabindex="-1"></a>             <span class="at">u_y=</span><span class="fl">0.1</span><span class="sc">-</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="fl">0.1</span>,<span class="at">length.out=</span>N),</span>
+<span id="cb75-29"><a href="#cb75-29" aria-hidden="true" tabindex="-1"></a>             <span class="at">line_1=</span><span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">1</span>,<span class="at">length.out=</span>N)<span class="sc">*</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>),<span class="at">line_2=</span><span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">1</span>,<span class="at">length.out=</span>N)<span class="sc">*</span>(<span class="dv">1</span>),<span class="at">line_3=</span><span class="fu">seq</span>(<span class="fl">0.02</span>,<span class="dv">5</span><span class="sc">/</span><span class="dv">6</span>,<span class="at">length.out=</span>N)<span class="sc">*</span>(<span class="dv">3</span><span class="sc">/</span><span class="dv">2</span>))</span>
+<span id="cb75-30"><a href="#cb75-30" aria-hidden="true" tabindex="-1"></a>df2 <span class="ot">&lt;-</span>df2 <span class="sc">%&gt;%</span>  <span class="fu">mutate</span>(<span class="at">above_u=</span>(X_1<span class="sc">+</span>X_2<span class="sc">&gt;</span><span class="fl">0.1</span>)) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">N=</span><span class="fu">rep</span>(<span class="fu">paste0</span>(<span class="st">"n="</span>,<span class="fu">nrow</span>(df2)),<span class="fu">nrow</span>(df2)))</span>
+<span id="cb75-31"><a href="#cb75-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-32"><a href="#cb75-32" aria-hidden="true" tabindex="-1"></a>df_bind <span class="ot">&lt;-</span> <span class="fu">rbind</span>(df1,df2) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">N=</span><span class="fu">as.factor</span>(N))</span>
+<span id="cb75-33"><a href="#cb75-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-34"><a href="#cb75-34" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df_bind) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>X_1, <span class="at">y=</span>X_2,<span class="at">col=</span>above_u),<span class="at">alpha=</span><span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb75-35"><a href="#cb75-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"TRUE"</span> <span class="ot">=</span> <span class="st">"black"</span>,</span>
+<span id="cb75-36"><a href="#cb75-36" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"FALSE"</span><span class="ot">=</span><span class="st">"#C11432"</span>)) <span class="sc">+</span></span>
+<span id="cb75-37"><a href="#cb75-37" aria-hidden="true" tabindex="-1"></a>   <span class="fu">labs</span>(<span class="at">color=</span><span class="fu">TeX</span>(<span class="st">'Above threshold $u$'</span>)) <span class="sc">+</span></span>
+<span id="cb75-38"><a href="#cb75-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="fu">TeX</span>(<span class="st">"$X_1/n$"</span>)) <span class="sc">+</span> <span class="fu">ylab</span>(<span class="fu">TeX</span>(<span class="st">"$X_2/n$"</span>))<span class="sc">+</span></span>
+<span id="cb75-39"><a href="#cb75-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x=</span>uni,<span class="at">y=</span>line_1),<span class="at">alpha=</span><span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb75-40"><a href="#cb75-40" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x=</span>uni,<span class="at">y=</span>line_2),<span class="at">alpha=</span><span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb75-41"><a href="#cb75-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x=</span>uni_3,<span class="at">y=</span>line_3),<span class="at">alpha=</span><span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb75-42"><a href="#cb75-42" aria-hidden="true" tabindex="-1"></a>   <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x=</span>u_x,<span class="at">y=</span>u_y),<span class="at">col=</span><span class="st">"#C11432"</span>,<span class="at">alpha=</span><span class="fl">0.6</span>,<span class="at">linetype=</span><span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb75-43"><a href="#cb75-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>,<span class="at">x=</span><span class="fl">0.12</span>,<span class="at">y=</span><span class="fl">0.05</span>,<span class="at">label=</span><span class="st">"u"</span>,<span class="at">col=</span><span class="st">"#C11432"</span>) <span class="sc">+</span></span>
+<span id="cb75-44"><a href="#cb75-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_fixed</span>()<span class="sc">+</span> <span class="fu">facet_wrap</span>(<span class="fu">vars</span>(N))   <span class="sc">+</span></span>
+<span id="cb75-45"><a href="#cb75-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb75-46"><a href="#cb75-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.spacing =</span> <span class="fu">unit</span>(<span class="dv">2</span>, <span class="st">"lines"</span>),</span>
+<span id="cb75-47"><a href="#cb75-47" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.grid.major =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb75-48"><a href="#cb75-48" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb75-49"><a href="#cb75-49" aria-hidden="true" tabindex="-1"></a>        <span class="at">strip.background =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb75-50"><a href="#cb75-50" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.border =</span> <span class="fu">element_rect</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">fill =</span> <span class="cn">NA</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-29-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Plot only above threshold?</p>
+<p>Plot radial and angular components.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>df3 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">r=</span>(df1<span class="sc">$</span>X_1<span class="sc">+</span>df1<span class="sc">$</span>X_2),<span class="at">w=</span>df1<span class="sc">$</span>X_1<span class="sc">/</span>(df1<span class="sc">$</span>X_1<span class="sc">+</span>df1<span class="sc">$</span>X_2),<span class="at">above_u=</span>df1<span class="sc">$</span>above_u)<span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">N=</span><span class="fu">rep</span>(<span class="fu">paste0</span>(<span class="st">"n="</span>,<span class="fu">nrow</span>(df1)),<span class="fu">nrow</span>(df1))) <span class="sc">%&gt;%</span> </span>
+<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">u_x=</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="at">length.out=</span><span class="fu">nrow</span>(df1))) <span class="sc">%&gt;%</span> </span>
+<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">u_y=</span><span class="fu">rep</span>(<span class="fl">0.1</span>,<span class="fu">nrow</span>(df1)))</span>
+<span id="cb76-4"><a href="#cb76-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb76-5"><a href="#cb76-5" aria-hidden="true" tabindex="-1"></a>df4 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">r=</span>(df2<span class="sc">$</span>X_1<span class="sc">+</span>df2<span class="sc">$</span>X_2),<span class="at">w=</span>df2<span class="sc">$</span>X_1<span class="sc">/</span>(df2<span class="sc">$</span>X_1<span class="sc">+</span>df2<span class="sc">$</span>X_2),<span class="at">above_u=</span>df2<span class="sc">$</span>above_u)<span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">N=</span><span class="fu">rep</span>(<span class="fu">paste0</span>(<span class="st">"n="</span>,<span class="fu">nrow</span>(df2)),<span class="fu">nrow</span>(df2))) <span class="sc">%&gt;%</span> </span>
+<span id="cb76-6"><a href="#cb76-6" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(<span class="at">u_x=</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="at">length.out=</span><span class="fu">nrow</span>(df2))) <span class="sc">%&gt;%</span> </span>
+<span id="cb76-7"><a href="#cb76-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">u_y=</span><span class="fu">rep</span>(<span class="fl">0.1</span>,<span class="fu">nrow</span>(df2)))</span>
+<span id="cb76-8"><a href="#cb76-8" aria-hidden="true" tabindex="-1"></a>df_bind <span class="ot">&lt;-</span> <span class="fu">rbind</span>(df3,df4)</span>
+<span id="cb76-9"><a href="#cb76-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb76-10"><a href="#cb76-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df_bind) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="at">data=</span>df_bind,<span class="fu">aes</span>(<span class="at">x=</span>w,<span class="at">y=</span><span class="fu">log</span>(r),<span class="at">col=</span>above_u),<span class="at">alpha=</span><span class="fl">0.5</span>)<span class="sc">+</span></span>
+<span id="cb76-11"><a href="#cb76-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data=</span>df_bind,<span class="fu">aes</span>(<span class="at">x=</span>u_x,<span class="at">y=</span><span class="fu">log</span>(u_y)),<span class="at">col=</span><span class="st">"#C11432"</span>,<span class="at">alpha=</span><span class="fl">0.6</span>,<span class="at">linetype=</span><span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb76-12"><a href="#cb76-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"segment"</span>,<span class="at">x=</span><span class="fl">0.4</span>,<span class="at">xend=</span><span class="fl">0.4</span>,<span class="at">y=</span><span class="fu">min</span>(<span class="fu">log</span>(df_bind<span class="sc">$</span>r))<span class="sc">-</span><span class="fl">0.2</span>,<span class="at">yend=</span><span class="fu">max</span>(<span class="fu">log</span>(df_bind<span class="sc">$</span>r))<span class="sc">+</span><span class="fl">0.2</span>,<span class="at">alpha=</span><span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb76-13"><a href="#cb76-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">annotate</span>(<span class="st">"segment"</span>,<span class="at">x=</span><span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>,<span class="at">xend=</span><span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>,<span class="at">y=</span><span class="fu">min</span>(<span class="fu">log</span>(df_bind<span class="sc">$</span>r))<span class="sc">-</span><span class="fl">0.2</span>,<span class="at">yend=</span><span class="fu">max</span>(<span class="fu">log</span>(df_bind<span class="sc">$</span>r))<span class="sc">+</span><span class="fl">0.2</span>,<span class="at">alpha=</span><span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb76-14"><a href="#cb76-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">annotate</span>(<span class="st">"segment"</span>,<span class="at">x=</span><span class="dv">2</span><span class="sc">/</span><span class="dv">3</span>,<span class="at">xend=</span><span class="dv">2</span><span class="sc">/</span><span class="dv">3</span>,<span class="at">y=</span><span class="fu">min</span>(<span class="fu">log</span>(df_bind<span class="sc">$</span>r))<span class="sc">-</span><span class="fl">0.2</span>,<span class="at">yend=</span><span class="fu">max</span>(<span class="fu">log</span>(df_bind<span class="sc">$</span>r))<span class="sc">+</span><span class="fl">0.2</span>,<span class="at">alpha=</span><span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb76-15"><a href="#cb76-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>,<span class="at">x=</span><span class="dv">1</span>,<span class="at">y=</span><span class="sc">-</span><span class="fl">2.7</span>,<span class="at">label=</span><span class="st">"u"</span>,<span class="at">col=</span><span class="st">"#C11432"</span>) <span class="sc">+</span></span>
+<span id="cb76-16"><a href="#cb76-16" aria-hidden="true" tabindex="-1"></a><span class="fu">scale_color_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"TRUE"</span> <span class="ot">=</span> <span class="st">"black"</span>,</span>
+<span id="cb76-17"><a href="#cb76-17" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"FALSE"</span><span class="ot">=</span><span class="st">"#C11432"</span>)) <span class="sc">+</span></span>
+<span id="cb76-18"><a href="#cb76-18" aria-hidden="true" tabindex="-1"></a>   <span class="fu">labs</span>(<span class="at">color=</span><span class="fu">TeX</span>(<span class="st">'Above threshold $u$'</span>)) <span class="sc">+</span></span>
+<span id="cb76-19"><a href="#cb76-19" aria-hidden="true" tabindex="-1"></a><span class="fu">facet_wrap</span>(<span class="fu">vars</span>(N)) <span class="sc">+</span> </span>
+<span id="cb76-20"><a href="#cb76-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb76-21"><a href="#cb76-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.spacing =</span> <span class="fu">unit</span>(<span class="dv">2</span>, <span class="st">"lines"</span>),</span>
+<span id="cb76-22"><a href="#cb76-22" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.grid.major =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb76-23"><a href="#cb76-23" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb76-24"><a href="#cb76-24" aria-hidden="true" tabindex="-1"></a>        <span class="at">strip.background =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb76-25"><a href="#cb76-25" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.border =</span> <span class="fu">element_rect</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">fill =</span> <span class="cn">NA</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-30-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="transformation-to-gumbel-margins" class="level3">
+<h3 class="anchored" data-anchor-id="transformation-to-gumbel-margins">Transformation to Gumbel margins</h3>
+<p>Use PIT to transform Port Pirie data to have Gumbel margins (as motivated by Heffernan and Tawn (2004)).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="co"># create x and y quantile variables</span></span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a>U <span class="ot">&lt;-</span> portpirie <span class="sc">%&gt;%</span> <span class="fu">select</span>(SeaLevel,Year) <span class="sc">%&gt;%</span> <span class="fu">arrange</span>(SeaLevel) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">u=</span><span class="fu">row_number</span>()<span class="sc">/</span>(<span class="fu">nrow</span>(portpirie)<span class="sc">+</span><span class="dv">1</span>))</span>
+<span id="cb77-3"><a href="#cb77-3" aria-hidden="true" tabindex="-1"></a><span class="co"># generate Gumbel margins</span></span>
+<span id="cb77-4"><a href="#cb77-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb77-5"><a href="#cb77-5" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> portpirie <span class="sc">%&gt;%</span> <span class="fu">left_join</span>((U <span class="sc">%&gt;%</span> <span class="fu">select</span>(Year,u)),<span class="at">by=</span><span class="st">"Year"</span>) </span>
+<span id="cb77-6"><a href="#cb77-6" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">Gumbel=</span><span class="sc">-</span><span class="fu">log</span>(<span class="sc">-</span><span class="fu">log</span>(u)))</span>
+<span id="cb77-7"><a href="#cb77-7" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%&gt;%</span> <span class="fu">head</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  Year SeaLevel          u      Gumbel
+1 1923     4.03 0.63636364  0.79410601
+2 1924     3.83 0.25757576 -0.30486465
+3 1925     3.65 0.06060606 -1.03081883
+4 1926     3.88 0.36363636 -0.01153414
+5 1927     4.01 0.60606061  0.69159781
+6 1928     4.08 0.69696970  1.01884035</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df)<span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>Year,<span class="at">y=</span>SeaLevel)) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>Year,<span class="at">y=</span>u),<span class="at">col=</span><span class="st">"#C11432"</span>) <span class="sc">+</span></span>
+<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x=</span>Year,<span class="at">y=</span>Gumbel),<span class="at">col=</span><span class="st">"#009ADA"</span>) <span class="sc">+</span></span>
+<span id="cb79-3"><a href="#cb79-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">aspect.ratio =</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="fu">xlab</span>(<span class="st">"Year"</span>) <span class="sc">+</span> <span class="fu">ylab</span>(<span class="st">"Maximum Sea Level"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="GEV_files/figure-html/unnamed-chunk-31-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
 </section>
 </section>
 

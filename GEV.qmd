@@ -12,8 +12,13 @@ library(latex2exp)
 library(ismev)
 library(gridExtra)
 source("gev_fit.R")
-theme_set(theme_minimal())
-theme_update(plot.title = element_text(hjust = 0.5))
+theme_set(theme_bw())
+theme_update(plot.title = element_text(hjust = 0.5),
+             panel.spacing = unit(2, "lines"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA))
 ```
 
 ## Block maxima
@@ -65,12 +70,18 @@ for (i in 1:length(U)) {
   z_p_0[i] <- -log(-log(U[i]))*sigma[2]+mu[2]
 }
 z_p <- data.frame(U,z_p_neg,z_p_0,z_p_pos)
-z_p %>% ggplot() + geom_line(aes(x=-log(-log(U)),y=(z_p_neg)),color="#009ada",size=1.5) + geom_line(aes(x=-log(-log(U)),y=(z_p_0)),size=1.5) + geom_line(aes(x=-log(-log(U)),y=(z_p_pos)),color="#c11432",size=1.5) + 
+z_p %>% ggplot() + geom_line(aes(x=-log(-log(U)),y=(z_p_neg)),color="#009ada",linewidth=1.5) + geom_line(aes(x=-log(-log(U)),y=(z_p_0)),linewidth=1.5) + geom_line(aes(x=-log(-log(U)),y=(z_p_pos)),color="#c11432",linewidth=1.5) + 
   xlab(TeX("$-\\log(-\\log(U))$")) +
   ylab(TeX("$z_p$" )) + theme_minimal() +
   annotate("text", x = 8, y = 0, label = TeX("$\\xi=-.2$")) +
   annotate("text", x = 8, y = 10, label = TeX("$\\xi=0$")) +
-  annotate("text", x = 8, y = 25, label = TeX("$\\xi=.2$"))
+  annotate("text", x = 8, y = 25, label = TeX("$\\xi=.2$")) +
+  theme_bw() +
+  theme(panel.spacing = unit(2, "lines"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA))
 ```
 
 ### Maximum likelihood fitting of the GEV distribution
@@ -235,7 +246,7 @@ Model <- portpirie %>% select(SeaLevel) %>% mutate(Model=GEV(z=SeaLevel,mle=mle)
 Empirical <- portpirie %>% select(SeaLevel) %>% arrange(SeaLevel) %>% mutate(Empirical=row_number()/(nrow(portpirie)+1)) 
 df <- portpirie %>% left_join(Empirical,by="SeaLevel") %>% left_join(Model,by="SeaLevel")
 df %>% head()
-df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) + ggtitle("Probability Plot") + xlab("Empirical distribution") + ylab("Model distribution")
+p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) + ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model") 
 ```
 
 Next is Q-Q plot.Q-Q plot compares two probability distributions by plotting their quantiles. In this example, it plots two GEV distributions with different parameters: empirical calculated though a formula used for the initial parameters in the optimisation and the model parameters (MLE).
@@ -268,9 +279,10 @@ df %>% ggplot()  +
 The plot shows that empirical estimates are good since it is almost linear but shape parameter is a bit off, hence the slight curve.
 
 ```{r}
-df %>% ggplot()  + 
+p2 <- df %>% ggplot()  + 
   geom_segment(aes(x = 3.5, y = 3.5, xend = 4.75, yend = 4.75), color = "#C11432",size=1.5,alpha=0.5)+
-  geom_point(aes(y=Data,x=Model)) + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model")
+  geom_point(aes(y=Data,x=Model)) + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
+grid.arrange(p1,p2,ncol=2)
 ```
 
 The next plot is return level plot.
@@ -292,8 +304,9 @@ r <- 10
 # }
 # 
 # 
- p <- seq(0.99,0.01,-0.01)
-# var <- var_calc(p=p,par=fit$mle)
+ p <- seq(0.999,0.01,-0.001)
+          
+          # var <- var_calc(p=p,par=fit$mle)
 # # calculate the CI
 # CI_l <- z-qnorm(0.975)*var
 # CI_u <- z+qnorm(0.975)*var
@@ -307,8 +320,41 @@ df1 <- data.frame(dat,q)
 df %>% head()
 ggplot() + 
   geom_line(aes(x=-1/log(df$p),y=df$z)) +
-  geom_point(aes(x=-1/log(df1$q),y=df1$dat)) + coord_trans(x="log") + xlab("Return level in years?")
-plot(-1/log((1:length(dat))/(length(dat) + 1)), sort(dat),log='x')
+  geom_point(aes(x=-1/log(df1$q),y=df1$dat)) + coord_trans(x="log") + xlab("Return level (years)") +
+  ylab(TeX("$z_p$"))
+#plot(-1/log((1:length(dat))/(length(dat) + 1)), sort(dat),log='x')
+
+    eps <- 1e-06
+    a1 <- fit$mle
+    a2 <- fit$mle
+    a3 <- fit$mle
+    a1[1] <- fit$mle[1] + eps
+    a2[2] <- fit$mle[2] + eps
+    a3[3] <- fit$mle[3] + eps
+    f <- p
+    # f <- c(seq(0.01, 0.09, by = 0.01), 0.1, 0.2, 0.3, 0.4, 0.5, 
+        0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 0.995, 0.999)
+    q <- gevq(fit$mle, 1 - f)
+    d <- t(gev.rl.gradient(a = fit$mle, p = 1 - f))
+    v <- apply(d, 1, q.form, m = fit$cov)
+    # plot(-1/log(f), q, log = "x", type = "n", xlim = c(0.1, 1000), 
+    #     ylim = c(min(dat, q), max(dat, q)), xlab = "Return Period", 
+    #     ylab = "Return Level")
+    # title("Return Level Plot")
+    # lines(-1/log(f), q)
+    # lines(-1/log(f), q + 1.96 * sqrt(v), col = 4)
+    # lines(-1/log(f), q - 1.96 * sqrt(v), col = 4)
+    # points(-1/log((1:length(dat))/(length(dat) + 1)), sort(dat))
+    
+    CI <- data.frame(u= q + 1.96 * sqrt(v),l=q - 1.96 * sqrt(v))
+ggplot() + 
+  geom_line(aes(x=-1/log(df$p),y=df$z)) +
+   geom_line(aes(x=-1/log(df$p),y=CI$u),col="#C11432") +
+   geom_line(aes(x=-1/log(df$p),y=CI$l),col="#C11432") +
+  geom_point(aes(x=-1/log(df1$q),y=df1$dat)) + coord_trans(x="log") +
+  scale_x_continuous( breaks=c(10,100,500,1000)) +
+  xlab("Return level (years)") +
+  ylab(TeX("$z_p$"))    
 
 ```
 
