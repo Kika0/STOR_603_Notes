@@ -210,15 +210,17 @@ uk_winter <- readRDS("data/uk_1999_2079_winter.RDS")
 uk_spring <- readRDS("data/uk_1999_2079_spring.RDS")
 uk_summer <- readRDS("data/uk_1999_2079_summer.RDS")
 uk_autumn <- readRDS("data/uk_1999_2079_autumn.RDS")
+``` 
+
+```{r}
 # combine to 1 and take only London
 tmp <- c()
 for (i in 1:81) {
-  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_spring[is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_summer[is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_autumn[is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
+  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_spring[uk_spring$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
 }
-tmp <- cbind(uk_winter[7:ncol(uk_winter)],uk_spring[7:ncol(uk_winter)],uk_summer[7:ncol(uk_winter)],uk_autumn[7:ncol(uk_winter)]) %>% filter(is_location=="london") %>% as_vector()
 # calculate yearly maxima
 x <- c()
 for (i in 1:81) {
@@ -305,9 +307,10 @@ grid.arrange(p1,p2,ncol=2)
 ```
 Now the return level plot.
 ```{r}
+df1 <- df
 x <- portpirie[,2]
 fit <- gev_fit(x)
- p <- seq(0.999,0.01,-0.001)
+p <- seq(0.999,0.01,-0.001)
 z <- GEV_inv(U=p,mle=fit$mle)
 df <- data.frame(p,z)
     eps <- 1e-06
@@ -327,11 +330,10 @@ ggplot() +
    geom_line(aes(x=-1/log(df$p),y=CI$u),col="#C11432",linetype="dashed") +
    geom_line(aes(x=-1/log(df$p),y=CI$l),col="#C11432", linetype="dashed") +
       geom_ribbon(aes(x=-1/log(df$p),ymin=CI$u,ymax=CI$l), fill="#C11432", alpha=0.2)+
-  geom_point(aes(x=-1/log(df1$q),y=df1$dat)) + coord_trans(x="log") +
+  geom_point(aes(x=-1/log(df1$q),y=df1$Data)) + coord_trans(x="log") +
   scale_x_continuous( breaks=c(10,100,500,1000)) +
   xlab("Return level (years)") +
   ylab(TeX("$z_p$"))    
-
 ```
 
 Yearly maximum temperature data from the UKCP model.
@@ -356,42 +358,12 @@ grid.arrange(p1,p2,ncol=2)
 The next plot is return level plot.
 
 ```{r}
-### calculate 10 year return level ----
+df1 <- df
+x <- temp[,1]
 fit <- gev_fit(x)
-r <- 10
-# # calculate z
-# z <- GEV_inv(U=(1-1/r),mle=fit$mle)
-# # calculate variance
-# var_calc <- function(p,par) {
-# mu <- fit$mle[1]
-# sig <- fit$mle[2]
-# xi <- fit$mle[3]
-# 
-# z <- c(1)
-# var <- z_T*Cov*z
-# }
-# 
-# 
- p <- seq(0.999,0.01,-0.001)
-          
-          # var <- var_calc(p=p,par=fit$mle)
-# # calculate the CI
-# CI_l <- z-qnorm(0.975)*var
-# CI_u <- z+qnorm(0.975)*var
+p <- seq(0.999,0.01,-0.001)
 z <- GEV_inv(U=p,mle=fit$mle)
 df <- data.frame(p,z)
-x <- portpirie[,2]
-q <- seq(from=1/(length(x)+1),to=length(x)/(length(x)+1),length.out=length(x)) #quantile
-dat <- x %>% sort()
-
-df1 <- data.frame(dat,q)
-df %>% head()
-ggplot() + 
-  geom_line(aes(x=-1/log(df$p),y=df$z)) +
-  geom_point(aes(x=-1/log(df1$q),y=df1$dat)) + coord_trans(x="log") + xlab("Return level (years)") +
-  ylab(TeX("$z_p$"))
-#plot(-1/log((1:length(dat))/(length(dat) + 1)), sort(dat),log='x')
-
     eps <- 1e-06
     a1 <- fit$mle
     a2 <- fit$mle
@@ -400,31 +372,19 @@ ggplot() +
     a2[2] <- fit$mle[2] + eps
     a3[3] <- fit$mle[3] + eps
     f <- p
-    # f <- c(seq(0.01, 0.09, by = 0.01), 0.1, 0.2, 0.3, 0.4, 0.5, 
-  #      0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 0.995, 0.999)
     q <- gevq(fit$mle, 1 - f)
     d <- t(gev.rl.gradient(a = fit$mle, p = 1 - f))
     v <- apply(d, 1, q.form, m = fit$cov)
-    # plot(-1/log(f), q, log = "x", type = "n", xlim = c(0.1, 1000), 
-    #     ylim = c(min(dat, q), max(dat, q)), xlab = "Return Period", 
-    #     ylab = "Return Level")
-    # title("Return Level Plot")
-    # lines(-1/log(f), q)
-    # lines(-1/log(f), q + 1.96 * sqrt(v), col = 4)
-    # lines(-1/log(f), q - 1.96 * sqrt(v), col = 4)
-    # points(-1/log((1:length(dat))/(length(dat) + 1)), sort(dat))
-    
     CI <- data.frame(u= q + 1.96 * sqrt(v),l=q - 1.96 * sqrt(v))
 ggplot() + 
   geom_line(aes(x=-1/log(df$p),y=df$z)) +
-   geom_line(aes(x=-1/log(df$p),y=CI$u),col="#C11432",linetype="dashed") +
-   geom_line(aes(x=-1/log(df$p),y=CI$l),col="#C11432", linetype="dashed") +
-      geom_ribbon(aes(x=-1/log(df$p),ymin=CI$u,ymax=CI$l), fill="#C11432", alpha=0.2)+
-  geom_point(aes(x=-1/log(df1$q),y=df1$dat)) + coord_trans(x="log") +
+  geom_line(aes(x=-1/log(df$p),y=CI$u),col="#C11432",linetype="dashed") +
+  geom_line(aes(x=-1/log(df$p),y=CI$l),col="#C11432", linetype="dashed") +
+  geom_ribbon(aes(x=-1/log(df$p),ymin=CI$u,ymax=CI$l), fill="#C11432", alpha=0.2)+
+  geom_point(aes(x=-1/log(df1$q),y=df1$Data)) + coord_trans(x="log") +
   scale_x_continuous( breaks=c(10,100,500,1000)) +
   xlab("Return level (years)") +
-  ylab(TeX("$z_p$"))    
-
+  ylab(TeX("$z_p$"))   
 ```
 
 ```{r}
