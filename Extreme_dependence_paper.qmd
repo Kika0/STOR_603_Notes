@@ -25,6 +25,7 @@ data(wavesurge)
 ggplot(wavesurge) + geom_point(aes(x=wave,y=surge))+ theme_minimal() + theme(aspect.ratio = 1) + xlab("Wave height") + ylab("Surge level")
 
 ```
+
 Using the probability integral transform (PIT), plot the quantiles.
 
 ```{r}
@@ -157,7 +158,6 @@ df <- data.frame(U,Chi,Rho=as.factor(Rho))
 # ggplot requires prepared data before plotting
 ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho)) + xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$"))
 ```
-
 
 ### Dependence measure $\Bar{\chi}(u)$
 
