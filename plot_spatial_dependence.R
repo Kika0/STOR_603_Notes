@@ -6,12 +6,24 @@ library(gridExtra)
 library(xtable)
 uk_winter <- readRDS("data/uk_1999_2018_winter.RDS")
 uk_spring <- readRDS("data/uk_1999_2018_spring.RDS")
-# for a nice table in latex
-for_latex <- uk_spring[c(1:3,76:78,160:162,347:349,445),c(2:8,95:97,1803:1805)] %>%
-  rowid_to_column() 
- xtable(for_latex,type="latex")
- print(xtable(df), include.rownames=FALSE)
-# calculate dependence between X(London) and Y(some other location)
+uk_summer <- readRDS("data/uk_1999_2018_summer.RDS")
+uk_autumn <- readRDS("data/uk_1999_2018_autumn.RDS")
+# set theme defaults to be black rectangle
+theme_set(theme_bw())
+theme_replace(
+          panel.spacing = unit(2, "lines"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.background = element_blank(),
+          panel.border = element_rect(colour = "black", fill = NA) )
+
+# for a nice table in latex ----
+# for_latex <- uk_spring[c(1:3,76:78,160:162,347:349,445),c(1:7,1806)] %>%
+#   rowid_to_column() 
+#  print(xtable(for_latex), include.rownames=FALSE)
+
+
+# calculate dependence between X(London) and Y(some other location) ----
 X <- uk_winter[uk_winter$is_location=="london",7:ncol(uk_winter)] %>% as_vector()
 Y <- uk_winter[1,7:ncol(uk_winter)] %>% as_vector()
 df <- data.frame(X=X,Y=Y) %>% remove_rownames()
@@ -29,22 +41,12 @@ df %>% head()
 
 # plot
 p1 <- ggplot(df) + geom_point(aes(x=X,y=Y),size=0.1) + xlab("X (London temperature)") +
-  theme_bw() + ggtitle("Temperature time series") +
-  theme(panel.spacing = unit(2, "lines"),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        panel.border = element_rect(colour = "black", fill = NA))
+ ggtitle("Temperature time series") 
 p2 <- ggplot(df) + geom_point(aes(x=u,y=v),size=0.1) + xlab("u") +
-  theme_bw() + coord_fixed() + ggtitle("Uniform transform") +
-  theme(panel.spacing = unit(2, "lines"),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        panel.border = element_rect(colour = "black", fill = NA))
+ coord_fixed() + ggtitle("Uniform transform") +
 grid.arrange(p1,p2,ncol=2)
 
-# calculate the dependence between X and Y
+# calculate the dependence between X and Y -----
 threshold <- 0.95
 2-log( mean(df$u < threshold & df$v < threshold))/log(threshold)
 # create empirical chi(u) function
@@ -80,6 +82,7 @@ ggplot(df_chi) + ylim(c(0,1)) + geom_line(aes(x=threshold,y=chi_u))+
         strip.background = element_blank(),
         panel.border = element_rect(colour = "black", fill = NA))
 
+# do same for other seasons?
   
 # calculate variance to give CI
 
