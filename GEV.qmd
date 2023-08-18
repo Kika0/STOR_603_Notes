@@ -203,35 +203,11 @@ gev.diag(x)
 
 Try to recreate the likelihood function.
 
-```{r}
-x <- portpirie[,2]
-# calculate yearly maxima over 81 years
-uk_winter <- readRDS("data/uk_1999_2079_winter.RDS")
-uk_spring <- readRDS("data/uk_1999_2079_spring.RDS")
-uk_summer <- readRDS("data/uk_1999_2079_summer.RDS")
-uk_autumn <- readRDS("data/uk_1999_2079_autumn.RDS")
-``` 
-
-```{r}
-# combine to 1 and take only London
-tmp <- c()
-for (i in 1:81) {
-  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_spring[uk_spring$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
-}
-# calculate yearly maxima
-x <- c()
-for (i in 1:81) {
-  x[i] <- max(tmp[(360*(i-1)+1):(i*360)])
-}
-```
-
 The function gets longer as initial values of the parameters are either pre-specified or calculated from the data. Therefore, `gev_fit.R` script contains the function.
 
 ```{r}
-gev.diag(gev_fit(x[60:79]))
+x <- portpirie[,2]
+gev.diag(gev_fit(x))
 # the function could return very high values 
 # that cannot be minimum negative likelihood like 10^6
 # would include in further development
@@ -337,6 +313,30 @@ ggplot() +
 ```
 
 Yearly maximum temperature data from the UKCP model.
+```{r}
+# calculate yearly maxima over 81 years
+uk_winter <- readRDS("data/uk_1999_2079_winter.RDS")
+uk_spring <- readRDS("data/uk_1999_2079_spring.RDS")
+uk_summer <- readRDS("data/uk_1999_2079_summer.RDS")
+uk_autumn <- readRDS("data/uk_1999_2079_autumn.RDS")
+``` 
+
+```{r}
+# combine to 1 and take only London
+tmp <- c()
+for (i in 1:81) {
+  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_spring[uk_spring$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
+}
+# calculate yearly maxima
+x <- c()
+for (i in 1:81) {
+  x[i] <- max(tmp[(360*(i-1)+1):(i*360)])
+}
+```
+
 ```{r}
 mle <- gev_fit(x)$mle
 temp <- data.frame(Temperature=x)
