@@ -96,13 +96,69 @@ tm_shape(uk_temp_sf) + tm_dots(col="Temperature",style="cont",size=0.01,palette=
 
 # try to plot for 30 days ----
 # subset to only include grid points in Lancaster
+lanc <- lad %>% filter(LAD22NM=="Lancaster")
+# rotate coordinates of lanc
+long <- st_coordinates(lanc %>% st_transform(4326))[,1]
+lat <- st_coordinates(lanc %>% st_transform(4326))[,2]
+# loop to replace coordinates with rotated
+lat_rot <- c()
+long_rot <- c()
+for (i in 1:length(long)){
+  r.latlon  <- pp.ll.to.rg(lat=lat[i],long=long[i], gr_npole_lat, gr_npole_lon)
+  lat_rot[i] <- r.latlon[1]
+  long_rot[i] <- r.latlon[2]
+}
+df <- data.frame("lon"=long_rot,"lat"=lat_rot)
+# convert back to sf polygon
+lanc_rot <-  df %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  st_cast("POLYGON")
+# check by mapping
+tm_shape(lanc_rot) + tm_polygons()
+temp <- c(v1[,,1])
+lon_lat_temp <- cbind(lon_lat,temp)
+for (i in 2:30) {
+  lon_lat_temp <- cbind(lon_lat_temp,c(v1[,,i]))
+  colnames(lon_lat_temp)[length(lon_lat_temp)] <- as.character(i)
+}
+# convert to sf points object
+temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
+tm_shape(temp_sf) + tm_dots(col="temp",style="cont")
+
+# subset to only include grid points in Lancaster ----
+lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
+lanc_temp_sf_long <- lanc_temp_sf %>% select(temp) %>%
+  mutate("time_of_month"=as.factor(rep(1,nrow(lanc_temp_sf))))
+# for loop for all other half-hour intervals
+for (j in (2:30)) {
+  to_bind <- lanc_temp_sf  %>% select(all_of(j)) %>% 
+    mutate("time_of_month"=as.factor(rep(j,nrow(lanc_temp_sf)))) 
+  names(to_bind)[1] <- "temp"
+  lanc_temp_sf_long <- rbind(lanc_temp_sf_long,to_bind)
+}
+
+to_bind <- lanc_temp_sf  %>% select(2) %>% 
+  mutate("time_of_day"=as.factor(rep(2,nrow(lanc_temp_sf))))
+names(to_bind)[1] <- "temp"
+lanc_temp_sf_long <- rbind(lanc_temp_sf_long,to_bind)
+lanc_temp_sf_long$time <- factor(lanc_temp_sf_long$time,      # Reordering group factor levels
+                                 levels = (lanc_temp_sf_long$time %>% unique()))
+tm_shape(lanc_temp_sf_long) + 
+  tm_dots(col="temp",style="cont",size=0.7,palette="viridis",title = "Temperature",legend.col.reverse=TRUE) +
+  tm_facets(by="time_of_month",as.layers=TRUE,ncol=6,nrow=5) 
+
+
+
+
+# back to UK dataset----
 uk_temp_sf_long <- uk_temp_sf %>% select(Temperature) %>%
   mutate("day"=as.factor(rep(1,nrow(uk_temp_sf))))
 #  mutate("date"=rep(pcictime[1],nrow(uk_temp_sf)))
 # December subset 
 #pcictime[1:30] # last day is missing
 
-# for loop for all other half-hour intervals
+# for loop for all other days of year
 for (j in (2:(dim(v1_sub)[3]/1))) {
   to_bind <- uk_temp_sf  %>% select(all_of(j)) %>% 
     mutate("day"=as.factor(rep(j,nrow(uk_temp_sf)))) 
