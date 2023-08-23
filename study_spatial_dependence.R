@@ -87,9 +87,9 @@ for (i in 2:(dim(v1_sub)[3]/1)) {
 }
 # convert to sf points object
 temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
-tm_shape(temp_sf) + tm_dots(col="Temperature",style="cont",palette="viridis")
-tm_shape(temp_sf) + tm_dots(col="Temperature",style="cont",size=0.05,palette="-RdYlBu")+
-  tm_layout(legend.position = c(0.7, 0.55))
+tm_shape(temp_sf %>% select(Temperature)) + tm_dots(col="Temperature",style="cont",palette="viridis")
+tm_shape(temp_sf %>% select(Temperature)) + tm_dots(col="Temperature",style="cont",size=0.05,palette="-RdYlBu",legend.col.reverse=TRUE)+
+  tm_layout(legend.position = c(0.7, 0.6)) + tm_grid(alpha=0.3) + tm_xlab("Longitude") + tm_ylab("Latitude")
 # subset to only include grid points in mainland UK
 uk_temp_sf <- st_filter(temp_sf,(uk_rot %>% st_cast("MULTIPOLYGON")))
 tm_shape(uk_temp_sf) + tm_dots(col="Temperature",style="cont",size=0.01,palette="viridis")
