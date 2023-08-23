@@ -153,25 +153,27 @@ tm_shape(lanc_temp_sf_long) +
 
 # back to UK dataset----
 uk_temp_sf_long <- uk_temp_sf %>% select(Temperature) %>%
-  mutate("day"=as.factor(rep(1,nrow(uk_temp_sf))))
+  mutate("day"=as.factor(rep(1,nrow(uk_temp_sf)))) %>% 
+  mutate("month"=as.factor(rep(month[(((j-(j%%30))/30)+1)],nrow(uk_temp_sf))))
 #  mutate("date"=rep(pcictime[1],nrow(uk_temp_sf)))
 # December subset 
 #pcictime[1:30] # last day is missing
 
 # for loop for all other days of year
+month <- c("December","January","February","March","April","May","June","July","August","September","October","November")
+first_of_month <- seq(1,360,30)
 for (j in (2:(dim(v1_sub)[3]/1))) {
   to_bind <- uk_temp_sf  %>% select(all_of(j)) %>% 
-    mutate("day"=as.factor(rep(j,nrow(uk_temp_sf)))) 
-  #  mutate("date"=rep(pcictime[j],nrow(uk_temp_sf)))
+    mutate("day"=as.factor(rep(j,nrow(uk_temp_sf)))) %>% 
+    mutate("month"=as.factor(rep(month[(((j-(j%%30))/30)+1)],nrow(uk_temp_sf))))
   names(to_bind)[1] <- "Temperature"
   uk_temp_sf_long <- rbind(uk_temp_sf_long,to_bind)
   
 }
 
-tm_shape(uk_temp_sf_long) + 
-  tm_dots(col="Temperature",style="cont",size=0.05,palette="viridis") +
-  tm_facets(by="day",as.layers=TRUE,ncol=30,nrow=12) +
-  tm_layout(panel.show = FALSE,between.margin = 2)
+tm_shape(uk_temp_sf_long %>% filter(day %in% first_of_month)) + 
+  tm_dots(col="Temperature",style="cont",size=0.05,palette="viridis",legend.col.reverse=TRUE) +
+  tm_facets(by="month",as.layers=TRUE,ncol=3,nrow=4)
 # facet by timestamp
 # uk_temp_sf_long$date <- factor(uk_temp_sf_long$date,      # Reordering group factor levels
 #                                  levels = (uk_temp_sf_long$date %>% unique()))
