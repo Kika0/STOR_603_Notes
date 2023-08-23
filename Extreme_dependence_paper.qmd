@@ -11,10 +11,19 @@ The aim is to recreate the analysis and plots from *Dependence Measures for Extr
 #| warning: false
 library(tidyverse)
 library(latex2exp)
+library(gridExtra)
 library(ismev)
 library(VGAM)
 library(latex2exp)
-theme_set(theme_minimal())
+# set theme defaults to be black rectangle
+theme_set(theme_bw())
+theme_replace(
+          panel.spacing = unit(2, "lines"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.background = element_blank(),
+          panel.border = element_rect(colour = "black", fill = NA) )
+
 ```
 
 There are $3$ datasets in the paper. First, temperature data from Oxford and Worthing examines spatial dependence of extremely high temperatures. Second, precipitation data from Oxford to examine time dependence of precipitation. Third, dependence between surge levels and tides for extreme sea levels. 
@@ -96,7 +105,7 @@ U <- c()
 Chi <- c()
 Rho <- c()
 edge <- 10^(-6)
-u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,0.001))
+u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,length.out=100))
 rho_vec <- seq(-0.9,0.9,0.1)
 for (i in 1:length(rho_vec)) {
 rho <- rho_vec[i]
@@ -119,9 +128,11 @@ df <- data.frame(U,Chi,Rho=as.factor(Rho))
 # subset to remove \chi(u)<-1 to match Coles' paper
 df <- df[Chi>=-1,]
 # ggplot requires prepared data before plotting
-ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho))+ xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$"))
+# ,col= guide_legend(title= TeX("$\rho$"))
+p1 <- ggplot(df) + geom_line(aes(x=U,y=Chi,fill=Rho))+ xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$")) +  guides(colour = guide_legend(reverse=T)) + labs(fill=TeX("$\rho$"))
+p1
 ```
-What happend if we do not restrict lower limit of $y$-axis to be $-1$?
+What happens if we do not restrict lower limit of $y$-axis to be $-1$?
 
 
 Furthermore, plotting extra points close to $1$ makes the convergence more obvious.
@@ -168,15 +179,48 @@ Theoretical part of the paper involves plotting the dependence measures $\chi(u)
 U <- c()
 Chi <- c()
 Rho <- c()
-edge <- 10^(-6)
-rho_vec <- seq(-0.9,0.9,0.1)
+edge <- 10^(-3)
+rho_vec <- seq(0.9,-0.9,-0.1)
 for (i in 1:length(rho_vec)) {
 rho <- rho_vec[i]
-u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,0.001))
+u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,length.out=50))
 # calculate the copula using VGAM package
-c_uu <- 1-2*u+pbinormcop(q1=u,q2=u,rho=rho)
+c_uu <- c()
+# create x and y quantile variables
+# df <- rbinorm(n=1000000,cov12=-0.7)
+# colnames(df) <- c("X","Y")
+# df <- as.data.frame(df)
+# U <- df %>% select(X) %>% arrange(X) %>% mutate(u=row_number()/(nrow(df)+1))
+# V <- df %>% select(Y) %>% arrange(Y) %>% mutate(v=row_number()/(nrow(df)+1)) 
+# # examine top and bottom
+# U %>% head()
+# U %>% tail()
+# V %>% head()
+# V %>% tail()
+# df <- df %>% left_join(U,by="X") %>% left_join(V,by="Y")
+# df %>% head()
+# #c_uu <- 1-2*u+pbinormcop(q1=u,q2=u,rho=-0.8)
+# # create empirical chi(u) function
+# chi_bar <- function(df,threshold) {
+#  x <-( 2*log(1-threshold)/ (log( 1-2*threshold+mean(df$u < threshold & df$v < threshold)) )-1)
+#  return(x)
+# }
+# chi_bar(df,threshold=0.99)
+# 
+# threshold <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,length.out=10))
+# chi_bar_u <- c()
+# for (i in 1:length(threshold)) {
+#  chi_bar_u[i] <-  chi_bar(df=df,threshold=threshold[i])
+# }
+# plot(threshold,chi_bar_u)
+# rm(df)
+ c_uu <- c()
+ for (i in 1:length(u)) {
+  c_uu[i] <- 1-2*u[i]+pbinormcop(q1=u[i],q2=u[i],rho=rho)
+}
 # calculate chi(u)
-chi <- -1+ (2*log(1-u))/(7.9999^(-1)*log(c_uu^(7.9999)))
+ # chi <- -1+ (2*log(1-u))/(7.9999^(-1)*log(c_uu^(7.9999)))
+chi <- -1+ (2*log(1-u))/(1^(-1)*log(c_uu^(1)))
 #u <- u[chi>-10^6]
 #chi <- chi[chi>-10^6]
 # subset by Frechet bounds (lower bound is sufficient)
@@ -185,13 +229,31 @@ chi <- -1+ (2*log(1-u))/(7.9999^(-1)*log(c_uu^(7.9999)))
 # add items to a list
 U <- append(U,u)
 Chi <- append(Chi,chi)
-Rho <- append(Rho,rep(rho_vec[i],length(u)))
+Rho <- append(Rho,rep(rho,length(u)))
 }
+# rho <- -0.9
+# c_uu <- c()
+# chi <- c()
+# c_uu <- 1-2*u+pbinormcop(q1=u,q2=u,rho=rho)
+# # calculate chi(u)
+# for (j in 1:length(u)) {
+#   if (u[j]< 10^-10) {
+#     chi[j] <- -1+ (2*log(1-u))/(log(c_uu*(10^20))-20*log(10))
+#   }
+#    else {
+#      chi[j] <- -1+ (2*log(1-u))/log(c_uu)
+#    } 
+# }
+#  chi <- -1+ (2*log(1-u))/log(c_uu)
+#  plot(u,chi)
 #p <- p + geom_line(data=df,mapping = aes(x=u,y=chi))
 df <- data.frame(U,Chi,Rho=as.factor(Rho))
 # subset to remove \chi(u)<-1 to match Coles' paper
 df <- df[Chi>=-1,]
 # ggplot requires prepared data before plotting
-ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho)) + xlab(TeX("$u$")) + ylab(TeX("$\\Bar{\\chi}(u)$"))
+p2 <- ggplot(df %>% drop_na()) + geom_line(aes(x=U,y=Chi,fill=Rho)) + xlab(TeX("$u$")) + ylab(TeX("$\\bar{\\chi}(u)$")) + ylim(c(-1,1)) + xlim(c(0,1)) + geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), linetype="dashed") + geom_segment(aes(x = 0, y = -1, xend = 1, yend = -1),linetype="dashed")
+
+#+  guides(colour = guide_legend(reverse=T))
+grid.arrange(p1,p2,ncol=2)
 ```
 
