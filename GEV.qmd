@@ -330,14 +330,34 @@ for (i in 1:81) {
                                       (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
                                       (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
 }
+for (i in 1:81) {
+  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_spring[uk_spring$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_summer[uk_summer$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_autumn[uk_autumn$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
+}
 # calculate yearly maxima
 x <- c()
 for (i in 1:81) {
   x[i] <- max(tmp[(360*(i-1)+1):(i*360)])
 }
+I <- 1:length(x)
+gradient <- summary(lm(x~I))$coefficients[2,1]
+
+shift <- c()
+for (i in 1:length(x)) {
+  shift[i] <- x[i] - (i-1)*gradient 
+}
+
+plot(I,x)
+plot(I,shift)
+
+# try shifting all the data with the corresponding yearly coefficients
+
 ```
 
 ```{r}
+x <- shift
 mle <- gev_fit(x)$mle
 temp <- data.frame(Temperature=x)
 Model <- temp %>% select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle))
