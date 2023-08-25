@@ -31,7 +31,7 @@ chi <- function(df,threshold) {
     #mean(df$u > threshold))
 }
 
-plot_dependence <- function(city="London",Y=147,season=3) {
+plot_dependence <- function(city="london",Y=147,season=3) {
   #specify seasonal colour
   season_colour <- c("#009ADA","#66A64F","#C11432","#DF5D22")
   CI_col <- season_colour[season]
@@ -46,10 +46,10 @@ plot_dependence <- function(city="London",Y=147,season=3) {
   df <- df %>% select(rowid) %>%  left_join(U,by="rowid") %>% left_join(V,by="rowid")
   
   # plot
-  # p1 <- ggplot(df) + geom_point(aes(x=X,y=Y),size=0.1) + xlab("X (London temperature)") +
-  #   ggtitle("Temperature time series") 
+  # p1 <- ggplot(df) + geom_point(aes(x=X,y=Y),size=0.1) + xlab(TeX("$Y(s_1)$ (London temperature)")) + ylab(TeX("$Y(s_2)$"))+
+  #   ggtitle("Summer temperature time series")
   # p2 <- ggplot(df) + geom_point(aes(x=u,y=v),size=0.1) + xlab("u") +
-  #   coord_fixed() + ggtitle("Uniform transform") 
+  #   coord_fixed() + ggtitle("Uniform transform")
   # grid.arrange(p1,p2,ncol=2)
 
   threshold <- sort(df$u)[13:(length(df$u)-6)]
