@@ -4,6 +4,7 @@ library(evd)
 library(latex2exp)
 library(gridExtra)
 library(xtable)
+library(units)
 uk <- list()
 uk[[1]] <- readRDS("data/uk_1999_2018_winter.RDS")
 uk[[2]] <- readRDS("data/uk_1999_2018_spring.RDS")
@@ -91,7 +92,7 @@ p12 <- plot_dependence(city="glasgow",Y=310,season=4)
 grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,ncol=3,nrow=4)
 
 # plot dependence decaying with distance ----
-plot_X_dist_dependence <- function(city="London",season=3,threshold=0.95) {
+plot_X_dist_dependence <- function(city="London",season=3,threshold=0.95,y_low_limit=1) {
   #specify seasonal colour
   season_colour <- c("#009ADA","#66A64F","#C11432","#DF5D22")
   CI_col <- season_colour[season]
@@ -121,17 +122,17 @@ plot_X_dist_dependence <- function(city="London",season=3,threshold=0.95) {
   df_X_Y$dist_london <- drop_units(df_X_Y$dist_london)/1000
   df_X_Y$dist_birmingham <- drop_units(df_X_Y$dist_birmingham)/1000
   df_X_Y$dist_glasgow <- drop_units(df_X_Y$dist_glasgow)/1000
-  df_X_Y$CI_l[is.na( df_X_Y$CI_l)] <- 0
+  df_X_Y$CI_l[is.na( df_X_Y$CI_l)] <- y_low_limit
   df_X_Y$CI_u[is.na( df_X_Y$CI_u)] <- 1
-  df_X_Y$CI_l[df_X_Y$CI_l<(0)] <- rep(0,sum(df_X_Y$CI_l<(0)))
+  df_X_Y$CI_l[df_X_Y$CI_l<(y_low_limit)] <- rep(y_low_limit,sum(df_X_Y$CI_l<(y_low_limit)))
   df_X_Y$CI_u[df_X_Y$CI_u>1] <- rep(1,sum(df_X_Y$CI_u>1))
   dist_min <- min(c(df_X_Y$dist_london,df_X_Y$dist_birmingham,df_X_Y$dist_glasgow))
   dist_max <- max(c(df_X_Y$dist_london,df_X_Y$dist_birmingham,df_X_Y$dist_glasgow))
   km <- TeX(" $[km]$")
   dist_city <- paste0("dist_",tolower(city))
-  p1 <- ggplot(df_X_Y) + ylim(c(0,1)) + xlim(c(dist_min,dist_max))+ geom_point(aes(x=.data[[dist_city]],y=chi_X_Y),size=0.5)+ 
+  p1 <- ggplot(df_X_Y) + ylim(c(y_low_limit,1)) + xlim(c(dist_min,dist_max))+ geom_point(aes(x=.data[[dist_city]],y=chi_X_Y),size=0.5)+ 
     #geom_point(aes(x=dist_london,y=CI_u),size=0.5,col=CI_col) +
-    ylab(TeX("$\\chi_{.95}(s_1,s_2)$")) + xlab(TeX(paste0("Distance from ", city ," $[km]$"))) +
+    ylab(TeX(paste0("$\\chi_{.",threshold*100,"}(s_1,s_2)$"))) + xlab(TeX(paste0("Distance from ", city ," $[km]$"))) +
     #geom_point(aes(x=dist_london,y=CI_l),size=0.5,col=CI_col) +
     geom_line(aes(x=.data[[dist_city]] ,y=CI_l),lty=2,col=CI_col) +
     geom_line(aes(x=.data[[dist_city]],y=CI_u),lty=2,col=CI_col) +
@@ -139,17 +140,28 @@ plot_X_dist_dependence <- function(city="London",season=3,threshold=0.95) {
   return(p1)
 }
 
+y_low_limit <- -1
+threshold <- 0.99
+p1 <-plot_X_dist_dependence(city="London",season=1,threshold=threshold,y_low_limit=y_low_limit)
+p2 <-plot_X_dist_dependence(city="Birmingham",season=1,threshold=threshold,y_low_limit=y_low_limit)
+p3 <-plot_X_dist_dependence(city="Glasgow",season=1,threshold=threshold,y_low_limit=y_low_limit)
+p4 <-plot_X_dist_dependence(city="London",season=2,threshold=threshold,y_low_limit=y_low_limit)
+p5 <-plot_X_dist_dependence(city="Birmingham",season=2,threshold=threshold,y_low_limit=y_low_limit)
+p6 <-plot_X_dist_dependence(city="Glasgow",season=2,threshold=threshold,y_low_limit=y_low_limit)
+p7 <-plot_X_dist_dependence(city="London",season=3,threshold=threshold,y_low_limit=y_low_limit)
+p8 <-plot_X_dist_dependence(city="Birmingham",season=3,threshold=threshold,y_low_limit=y_low_limit)
+p9 <-plot_X_dist_dependence(city="Glasgow",season=3,threshold=threshold,y_low_limit=y_low_limit)
+p10 <-plot_X_dist_dependence(city="London",season=4,threshold=threshold,y_low_limit=y_low_limit)
+p11 <-plot_X_dist_dependence(city="Birmingham",season=4,threshold=threshold,y_low_limit=y_low_limit)
+p12 <-plot_X_dist_dependence(city="Glasgow",season=4,threshold=threshold,y_low_limit=y_low_limit)
+grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,ncol=3,nrow=4)
 
+# plot winter minima
+uk[[1]][,7:ncol(uk[[1]])] <- (-uk[[1]][,(7:ncol(uk[[1]]))] )
 p1 <-plot_X_dist_dependence(city="London",season=1)
 p2 <-plot_X_dist_dependence(city="Birmingham",season=1)
 p3 <-plot_X_dist_dependence(city="Glasgow",season=1)
-p4 <-plot_X_dist_dependence(city="London",season=2)
-p5 <-plot_X_dist_dependence(city="Birmingham",season=2)
-p6 <-plot_X_dist_dependence(city="Glasgow",season=2)
-p7 <-plot_X_dist_dependence(city="London",season=3)
-p8 <-plot_X_dist_dependence(city="Birmingham",season=3)
-p9 <-plot_X_dist_dependence(city="Glasgow",season=3)
-p10 <-plot_X_dist_dependence(city="London",season=4)
-p11 <-plot_X_dist_dependence(city="Birmingham",season=4)
-p12 <-plot_X_dist_dependence(city="Glasgow",season=4)
-grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,ncol=3,nrow=4)
+grid.arrange(p1,p2,p3,ncol=3)
+p1 <- plot_dependence(city="london",Y=147,season=1)
+p2 <- plot_dependence(city="birmingham",Y=228,season=1)
+p3 <- plot_dependence(city="glasgow",Y=310,season=1)
