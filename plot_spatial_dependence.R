@@ -31,13 +31,13 @@ chi <- function(df,threshold) {
     #mean(df$u > threshold))
 }
 
-plot_dependence <- function(city="london",Y=147,season=3) {
+plot_dependence <- function(city="London",Y=147,season=3) {
   #specify seasonal colour
   season_colour <- c("#009ADA","#66A64F","#C11432","#DF5D22")
   CI_col <- season_colour[season]
   tmp <- uk[[season]]
   X <- tmp[tmp$is_location==city,7:ncol(tmp)] %>% as_vector()
-  Y <- uk_summer[Y,7:ncol(tmp)] %>% as_vector()
+  Y <- tmp[Y,7:ncol(tmp)] %>% as_vector()
   df <- data.frame(X=X,Y=Y) %>% rowid_to_column()
   # use PIT
   # create x and y quantile variables
