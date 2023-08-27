@@ -548,8 +548,8 @@ ggplot(df) + geom_point(aes(x=X, y=Y))
 ```
 Try different values of $d$.
 ```{r}
-plot_dependence <- function(N) {
- set.seed(1)
+generate_dependent_X_Y <- function(N) {
+  set.seed(1)
 d <- 3
 U <- runif(d*N)
 a <- rep(1/3,d)
@@ -572,10 +572,14 @@ df1 <- data.frame(X_1=X_1,X_2=X_2,uni=seq(0.02,1,0.02),
              u_y=0.1-seq(0,0.1,length.out=50),
              line_1=seq(0.02,1,0.02)*(1/2),line_2=seq(0.02,1,0.02)*(1),line_3=seq(0.02,5/6,length.out=50)*(3/2))
 df1 <-df1 %>%  mutate(above_u=(X_1+X_2>0.1))  
+return(df1)
+}
+plot_dependence <- function(df) {
+N <- nrow(df)
 ggplot(df1) + geom_point(aes(x=X_1, y=X_2,col=above_u),alpha=0.5) +
   scale_color_manual(values = c("TRUE" = "#C11432",
                                 "FALSE"="black")) +
-   labs(color=TeX('Above threshold $u$')) +
+   labs(color=TeX('Above $u$')) +
    xlab(TeX(paste0("$X_1/",N,"$"))) +
   ylab(TeX(paste0("$X_2/",N,"$"))) +
   geom_line(aes(x=uni,y=line_1),alpha=0.3) +
@@ -587,10 +591,8 @@ ggplot(df1) + geom_point(aes(x=X_1, y=X_2,col=above_u),alpha=0.5) +
   coord_fixed()
 }
 
-p1 <- plot_dependence(N=50) +
-  theme(legend.position="none")
-p2 <- plot_dependence(N=50000)  +
-  theme(legend.position="none")
+p1 <- generate_dependent_X_Y(N=50) %>%  plot_dependence() 
+p2 <- generate_dependent_X_Y(N=50000) %>% plot_dependence() 
 grid.arrange(p1,p2,ncol=2)
 ```
 Plot only above threshold?
@@ -598,31 +600,26 @@ Plot only above threshold?
 Plot radial and angular components.
 
 ```{r}
-df3 <- data.frame(r=(df1$X_1+df1$X_2),w=df1$X_1/(df1$X_1+df1$X_2),above_u=df1$above_u)%>% mutate(N=rep(paste0("n=",nrow(df1)),nrow(df1))) %>% 
-  mutate(u_x=seq(0,1,length.out=nrow(df1))) %>% 
-  mutate(u_y=rep(0.1,nrow(df1)))
-
-df4 <- data.frame(r=(df2$X_1+df2$X_2),w=df2$X_1/(df2$X_1+df2$X_2),above_u=df2$above_u)%>% mutate(N=rep(paste0("n=",nrow(df2)),nrow(df2))) %>% 
-   mutate(u_x=seq(0,1,length.out=nrow(df2))) %>% 
-  mutate(u_y=rep(0.1,nrow(df2)))
-df_bind <- rbind(df3,df4)
-
-ggplot(df_bind) + geom_point(data=df_bind,aes(x=w,y=log(r),col=above_u),alpha=0.5)+
-  geom_line(data=df_bind,aes(x=u_x,y=log(u_y)),col="#C11432",alpha=0.6,linetype="dashed") +
-  annotate("segment",x=0.4,xend=0.4,y=min(log(df_bind$r))-0.2,yend=max(log(df_bind$r))+0.2,alpha=0.3) +
-    annotate("segment",x=1/2,xend=1/2,y=min(log(df_bind$r))-0.2,yend=max(log(df_bind$r))+0.2,alpha=0.3) +
-    annotate("segment",x=2/3,xend=2/3,y=min(log(df_bind$r))-0.2,yend=max(log(df_bind$r))+0.2,alpha=0.3) +
+plot_dependence_R_W <- function(df) {
+  df1 <- data.frame(r=(df$X_1+df$X_2),w=df$X_1/(df$X_1+df$X_2),above_u=df$above_u)%>% mutate(N=rep(paste0("n=",nrow(df)),nrow(df))) %>% 
+  mutate(u_x=seq(0,1,length.out=nrow(df))) %>% 
+  mutate(u_y=rep(0.1,nrow(df)))
+  ggplot(df1) + geom_point(data=df1,aes(x=w,y=log(r),col=above_u),alpha=0.5)+
+  geom_line(data=df1,aes(x=u_x,y=log(u_y)),col="#C11432",alpha=0.6,linetype="dashed") +
+  annotate("segment",x=0.4,xend=0.4,y=-12.5,yend=1,alpha=0.3) +
+    annotate("segment",x=1/2,xend=1/2,y=-12.5,yend=1,alpha=0.3) +
+    annotate("segment",x=2/3,xend=2/3,y=-12.5,yend=1,alpha=0.3) +
+  xlab(TeX("$W$")) +   ylab(TeX("$\\log (R)$")) +
+    ylim(c(-12.5,1))+
   annotate("text",x=1,y=-2.7,label="u",col="#C11432") +
-scale_color_manual(values = c("TRUE" = "black",
-                                "FALSE"="#C11432")) +
-   labs(color=TeX('Above threshold $u$')) +
-facet_wrap(vars(N)) + 
-    theme_bw() +
-  theme(panel.spacing = unit(2, "lines"),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        panel.border = element_rect(colour = "black", fill = NA))
+scale_color_manual(values = c("TRUE" = "#C11432",
+                                "FALSE"="black")) +
+   labs(color=TeX('Above $u$'))
+}
+
+p1 <- plot_dependence_R_W(df=generate_dependent_X_Y(N=50))
+p2 <- plot_dependence_R_W(df=generate_dependent_X_Y(N=50000))
+grid.arrange(p1,p2,ncol=2)
 ```
 
  

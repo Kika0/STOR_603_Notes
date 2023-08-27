@@ -105,7 +105,7 @@ U <- c()
 Chi <- c()
 Rho <- c()
 edge <- 10^(-6)
-u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,length.out=100))
+u <- c(seq(0.02+edge,0.95,0.01),seq(0.95,1-edge,length.out=100))
 rho_vec <- seq(-0.9,0.9,0.1)
 for (i in 1:length(rho_vec)) {
 rho <- rho_vec[i]
@@ -113,8 +113,8 @@ rho <- rho_vec[i]
 c_uu <- pbinormcop(q1=u,q2=u,rho=rho)
 # calculate chi(u)
 chi <- 2- (log(c_uu))/(log(u))
-u <- u[chi>-10^6]
-chi <- chi[chi>-10^6]
+# u <- u[chi>-10^6]
+# chi <- chi[chi>-10^6]
 # subset by Frechet bounds (lower bound is sufficient)
 lower_bound1 <- chi>(2-(log(2*u-1))/(log(u)))
 lower_bound <- lower_bound1 %>% replace(is.na(.), TRUE)
@@ -129,7 +129,7 @@ df <- data.frame(U,Chi,Rho=as.factor(Rho))
 df <- df[Chi>=-1,]
 # ggplot requires prepared data before plotting
 # ,col= guide_legend(title= TeX("$\rho$"))
-p1 <- ggplot(df) + geom_line(aes(x=U,y=Chi,fill=Rho))+ xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$")) +  guides(colour = guide_legend(reverse=T)) + labs(fill=TeX("$\rho$"))
+p1 <- ggplot(df) + geom_line(aes(x=U,y=Chi,fill=Rho))+ xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$")) +  guides(colour = guide_legend(reverse=T)) + labs(fill=TeX("$\rho$")) + geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), linetype="dashed")
 p1
 ```
 What happens if we do not restrict lower limit of $y$-axis to be $-1$?
@@ -179,11 +179,13 @@ Theoretical part of the paper involves plotting the dependence measures $\chi(u)
 U <- c()
 Chi <- c()
 Rho <- c()
-edge <- 10^(-3)
+edge <- 10^(-4)
+
 rho_vec <- seq(0.9,-0.9,-0.1)
 for (i in 1:length(rho_vec)) {
 rho <- rho_vec[i]
-u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,length.out=50))
+u <- c(seq(0+edge,0.95,0.01),seq(0.95,(1-edge),length.out=50))
+u[length(u)] <- (1-edge)
 # calculate the copula using VGAM package
 c_uu <- c()
 # create x and y quantile variables
@@ -221,8 +223,8 @@ c_uu <- c()
 # calculate chi(u)
  # chi <- -1+ (2*log(1-u))/(7.9999^(-1)*log(c_uu^(7.9999)))
 chi <- -1+ (2*log(1-u))/(1^(-1)*log(c_uu^(1)))
-#u <- u[chi>-10^6]
-#chi <- chi[chi>-10^6]
+u <- u[chi>-10^6]
+chi <- chi[chi>-10^6]
 # subset by Frechet bounds (lower bound is sufficient)
 #lower_bound1 <- chi>(2-(log(2*u-1))/(log(u)))
 #lower_bound <- lower_bound1 %>% replace(is.na(.), TRUE)
@@ -250,10 +252,11 @@ Rho <- append(Rho,rep(rho,length(u)))
 df <- data.frame(U,Chi,Rho=as.factor(Rho))
 # subset to remove \chi(u)<-1 to match Coles' paper
 df <- df[Chi>=-1,]
+#df$U[(df$U==1) &(df$Rho<0.6)] <- NA
 # ggplot requires prepared data before plotting
 p2 <- ggplot(df %>% drop_na()) + geom_line(aes(x=U,y=Chi,fill=Rho)) + xlab(TeX("$u$")) + ylab(TeX("$\\bar{\\chi}(u)$")) + ylim(c(-1,1)) + xlim(c(0,1)) + geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), linetype="dashed") + geom_segment(aes(x = 0, y = -1, xend = 1, yend = -1),linetype="dashed")
-
+p2
 #+  guides(colour = guide_legend(reverse=T))
-grid.arrange(p1,p2,ncol=2)
+#grid.arrange(p1,p2,ncol=2)
 ```
 
