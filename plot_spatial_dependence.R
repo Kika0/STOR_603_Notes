@@ -140,7 +140,7 @@ plot_X_dist_dependence <- function(city="London",season=3,threshold=0.95,y_low_l
   return(p1)
 }
 
-y_low_limit <- -1
+y_low_limit <- 0
 threshold <- 0.99
 p1 <-plot_X_dist_dependence(city="London",season=1,threshold=threshold,y_low_limit=y_low_limit)
 p2 <-plot_X_dist_dependence(city="Birmingham",season=1,threshold=threshold,y_low_limit=y_low_limit)
