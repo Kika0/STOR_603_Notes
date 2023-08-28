@@ -173,7 +173,7 @@ for (j in (2:(dim(v1_sub)[3]/1))) {
 
 tm_shape(uk_temp_sf_long %>% filter(day %in% first_of_month)) + 
   tm_dots(col="Temperature",style="cont",size=0.05,palette="viridis",legend.col.reverse=TRUE) +
-  tm_facets(by="month",as.layers=TRUE,ncol=6,nrow=2)
+  tm_facets(by="month",as.layers=TRUE,ncol=3,nrow=4)
 # facet by timestamp
 # uk_temp_sf_long$date <- factor(uk_temp_sf_long$date,      # Reordering group factor levels
 #                                  levels = (uk_temp_sf_long$date %>% unique()))
