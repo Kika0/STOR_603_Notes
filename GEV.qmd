@@ -353,6 +353,18 @@ plot(I,x)
 plot(I,shift)
 
 # try shifting all the data with the corresponding yearly coefficients
+# calculate yearly maxima
+y <- tmp
+I <- 1:length(y)
+gradient <- summary(lm(y~I))$coefficients[2,1]
+
+shift_tmp <- c()
+for (i in 1:length(y)) {
+  shift_tmp[i] <- y[i] - (i-1)*gradient 
+}
+
+plot(I,y)
+plot(I,shift_tmp)
 
 ```
 
@@ -406,6 +418,56 @@ ggplot() +
   xlab("Return level (years)") +
   ylab(TeX("$z_p$"))   
 ```
+#### Try the same for GPD
+
+```{r}
+x <- shift_tmp
+u <- 30
+mle <- gpd.fit(x,threshold=u)$mle
+temp <- data.frame(Temperature=x[x>u])
+# calculate GEV inverse CDF
+GPD_inv <- function(mle,threshold,p) {
+  sig <- mle[1]
+  xi <- mle[2]
+ z <- threshold + (sig * (p^(-xi) - 1))/xi
+ return(z)
+}
+# calculate GEV CDF
+GPD <- function(z,mle,threshold) {
+  sig <- mle[1]
+  xi <- mle[2]
+  G <- c()
+  for (i in 1:length(z))
+ G[i] <- 1 - (1 + (xi * (z[i] - threshold))/sig)^(-1/xi)
+ return(G)
+}
+
+GPD_QQ <- function(x,mle,threshold) {
+# model (MLE) estimates
+model_par <- mle
+u <- threshold
+# generate z using PIT for each case
+q <-1- seq(from=1/(length(x)+1),to=length(x)/(length(x)+1),length.out=length(x)) #quantile
+model <- GPD_inv(mle=model_par,threshold=u,p=q) #z generated from the model
+#est <- GEV_inv(U=q,mle=est_par) #z generated from GEV empirical estimates
+dat <- x %>% sort()
+return(data.frame(q=q,Model=model,Data=dat))
+}
+
+Model <- temp %>% select(Temperature) %>% mutate(Model=GPD(z=Temperature,mle=mle,threshold=u))
+Empirical <- temp %>% select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
+df <- temp %>% left_join(Empirical,by="Temperature") %>% left_join(Model,by="Temperature")
+df %>% head()
+p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) + ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
+df <- GPD_QQ(x=temp[,1],mle=mle,threshold=u)
+x <- temp[,1]
+p2 <- df %>% ggplot()  + 
+  geom_segment(aes(x = min(x), y = min(x), xend = max(x), yend = max(x)), color = "#C11432",size=1.5,alpha=0.5)+
+  geom_point(aes(y=Data,x=Model)) + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
+grid.arrange(p1,p2,ncol=2)
+
+```
+
 ### Time dependence study
 
 ```{r}

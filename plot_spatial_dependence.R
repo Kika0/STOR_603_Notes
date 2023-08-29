@@ -158,9 +158,9 @@ grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,ncol=3,nrow=4)
 
 # plot winter minima
 uk[[1]][,7:ncol(uk[[1]])] <- (-uk[[1]][,(7:ncol(uk[[1]]))] )
-p1 <-plot_X_dist_dependence(city="London",season=1)
-p2 <-plot_X_dist_dependence(city="Birmingham",season=1)
-p3 <-plot_X_dist_dependence(city="Glasgow",season=1)
+p1 <-plot_X_dist_dependence(city="London",season=1,threshold=threshold,y_low_limit=y_low_limit)
+p2 <-plot_X_dist_dependence(city="Birmingham",season=1,threshold=threshold,y_low_limit=y_low_limit)
+p3 <-plot_X_dist_dependence(city="Glasgow",season=1,threshold=threshold,y_low_limit=y_low_limit)
 grid.arrange(p1,p2,p3,ncol=3)
 p1 <- plot_dependence(city="london",Y=147,season=1)
 p2 <- plot_dependence(city="birmingham",Y=228,season=1)
