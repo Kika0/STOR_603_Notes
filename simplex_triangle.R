@@ -2,9 +2,13 @@ library(tidyverse)
 set.seed(123456789)
 library(MASS)
 library(gridExtra)
+library(latex2exp)
 
+# use this to block out the upper part
+upper_courner = tibble(x = c(0, 1, 1),
+                       y = c(1, 1, 0))
 
-# dependence between r.v. for husler reiss dist
+# dependence between r.v. for husler reiss dist ----
 dep_x1_x2 = 1
 dep_x2_x3 = 1
 
@@ -177,4 +181,60 @@ grid.arrange(h(0.01,0.9),h(0.01,0.99),h(0.01,0.999),
              h(10,0.9),h(10,0.99),h(10,0.999),
              ncol=3)
 
+# generate with coefficients with limiting point distributions ---
+# adapt function form GEV.qmd
+generate_dependent_X_Y_Z <- function(N) {
+  set.seed(1)
+  d <- 5
+  U <- runif(d*N)
+  # a <- c(2/3,1/12,0,1/12,1/6)
+  # b <- c(0,1/3,1/3,1/6,1/6)
+  # c <- c(0,0,1/3,1/3,1/3)
+  
+  # try another
+  a1 <- c(20,4,0,5,7.5)
+  a <- a1/sum(a1)
+  b1 <- c(0,10,12,5,1.5)
+  b <- b1/sum(b1)
+  c1 <- c(0,0,3,5,4)
+  c <- c1/sum(c1)
+  
+  # generate Y
+  Y <- c()
+  Y <- -1/(log(U) ) 
+  # generate X
+  X_1 <- c()
+  X_2 <- c()
+  X_3 <- c()
+  for (j in 1:N) {
+    X_1[j] <- max(Y[(d*(j-1)+1):(d*j)]*a)/N
+    X_2[j] <- max(Y[(d*(j-1)+1):(d*j)]*b)/N
+    X_3[j] <- max(Y[(d*(j-1)+1):(d*j)]*c)/N
+  }
+  return(data.frame(X_1,X_2,X_3))
+}
+sims_low_dependence <-  generate_dependent_X_Y_Z(50)
+# pseudo polar decomposition to find angular components
+dat = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
+  mutate(R = x1 + x2 + x3)  %>% 
+  mutate(u = quantile(R, 0.9)) %>%
+  filter(R>u) %>%
+  mutate(w1 = x1/R, 
+         w2 = x2/R,
+         w3 = x3/R) 
 
+
+dat %>%
+  ggplot()+ 
+  geom_density_2d_filled(aes(w1,w2,)) + 
+  geom_polygon(data = upper_courner, aes(x,y),col = 'white', fill = "white")+
+  theme_minimal()+
+  scale_y_continuous(limits = c(0, 1), breaks = c())+
+  scale_x_continuous(limits = c(0, 1), breaks = c())+
+  theme(panel.grid.major = element_blank(), 
+        legend.position = 'none',
+        panel.grid.minor = element_blank())+
+  labs(x = "", y = "")
+
+# plot only ones above threshold
+dat %>% filter(R>quantile(dat$R,0.9))
