@@ -192,9 +192,9 @@ generate_dependent_X_Y_Z <- function(N) {
   # c <- c(0,0,1/3,1/3,1/3)
   
   # try another
-  a1 <- c(20,4,0,5,7.5)
+  a1 <- c(40,6,0,5,7.5)
   a <- a1/sum(a1)
-  b1 <- c(0,10,12,5,1.5)
+  b1 <- c(0,15,12,5,1.5)
   b <- b1/sum(b1)
   c1 <- c(0,0,3,5,4)
   c <- c1/sum(c1)
@@ -213,7 +213,7 @@ generate_dependent_X_Y_Z <- function(N) {
   }
   return(data.frame(X_1,X_2,X_3))
 }
-sims_low_dependence <-  generate_dependent_X_Y_Z(50)
+sims_low_dependence <-  generate_dependent_X_Y_Z(50000)
 # pseudo polar decomposition to find angular components
 dat = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
   mutate(R = x1 + x2 + x3)  %>% 
@@ -236,5 +236,3 @@ dat %>%
         panel.grid.minor = element_blank())+
   labs(x = "", y = "")
 
-# plot only ones above threshold
-dat %>% filter(R>quantile(dat$R,0.9))
