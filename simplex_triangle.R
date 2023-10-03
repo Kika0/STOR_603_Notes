@@ -3,6 +3,7 @@ set.seed(123456789)
 library(MASS)
 library(gridExtra)
 library(latex2exp)
+library(mev)
 
 # use this to block out the upper part
 upper_courner = tibble(x = c(0, 1, 1),
@@ -183,22 +184,27 @@ grid.arrange(h(0.01,0.9),h(0.01,0.99),h(0.01,0.999),
 
 # generate with coefficients with limiting point distributions ---
 # adapt function form GEV.qmd
-generate_dependent_X_Y_Z <- function(N) {
-  set.seed(1)
+# try another
+a1 <- c(17,3,0,1,4)
+a <- a1/sum(a1)
+b1 <- c(0,11,6,2,1)
+b <- b1/sum(b1)
+c1 <- c(0,0,3,3,4)
+c <- c1/sum(c1)
+abc <- data.frame(a,b,c)
+
+
+generate_dependent_X_Y_Z <- function(N,abc=abc) {
+  set.seed(12)
   d <- 5
   U <- runif(d*N)
   # a <- c(2/3,1/12,0,1/12,1/6)
   # b <- c(0,1/3,1/3,1/6,1/6)
   # c <- c(0,0,1/3,1/3,1/3)
-  
-  # try another
-  a1 <- c(40,6,0,5,7.5)
-  a <- a1/sum(a1)
-  b1 <- c(0,15,12,5,1.5)
-  b <- b1/sum(b1)
-  c1 <- c(0,0,3,5,4)
-  c <- c1/sum(c1)
-  
+a <- abc[,1]
+b <- abc[,2]
+c <- abc[,3]
+
   # generate Y
   Y <- c()
   Y <- -1/(log(U) ) 
@@ -213,26 +219,35 @@ generate_dependent_X_Y_Z <- function(N) {
   }
   return(data.frame(X_1,X_2,X_3))
 }
-sims_low_dependence <-  generate_dependent_X_Y_Z(50000)
-# pseudo polar decomposition to find angular components
-dat = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
-  mutate(R = x1 + x2 + x3)  %>% 
-  mutate(u = quantile(R, 0.9)) %>%
-  filter(R>u) %>%
-  mutate(w1 = x1/R, 
-         w2 = x2/R,
-         w3 = x3/R) 
 
+plot_clusters <- function(sims,u=0.9) {
+  sims_low_dependence <- sims
+  dat = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
+    mutate(R = x1 + x2 + x3)  %>% 
+    mutate(u = quantile(R, u)) %>%
+    filter(R>u) %>%
+    mutate(w1 = x1/R, 
+           w2 = x2/R,
+           w3 = x3/R) 
+  
+  dat %>%
+    ggplot()+ 
+    geom_density_2d_filled(aes(w1,w2),bins=7) + 
+    geom_polygon(data = upper_courner, aes(x,y),col = 'white', fill = "white")+
+    theme_minimal()+
+    scale_y_continuous(limits = c(0, 1))+
+    scale_x_continuous(limits = c(0, 1))+
+    theme(panel.grid.major = element_blank(), 
+          # legend.position = 'none',
+          panel.grid.minor = element_blank())+
+    labs(x = "", y = "") + ggtitle(TeX(paste0("$u=\\hat{F}_R^{-1}($",u,"$)$"))) +
+    guides(fill=guide_legend(title="Density estimate")) 
+}
 
-dat %>%
-  ggplot()+ 
-  geom_density_2d_filled(aes(w1,w2,)) + 
-  geom_polygon(data = upper_courner, aes(x,y),col = 'white', fill = "white")+
-  theme_minimal()+
-  scale_y_continuous(limits = c(0, 1), breaks = c())+
-  scale_x_continuous(limits = c(0, 1), breaks = c())+
-  theme(panel.grid.major = element_blank(), 
-        legend.position = 'none',
-        panel.grid.minor = element_blank())+
-  labs(x = "", y = "")
+# plot for different thresholds
+p1 <- generate_dependent_X_Y_Z(N=50000,abc=abc) %>% plot_clusters(u=0.9)
+p2 <- generate_dependent_X_Y_Z(N=50000,abc=abc) %>% plot_clusters(u=0.99)
+p3 <- generate_dependent_X_Y_Z(N=50000,abc=abc) %>% plot_clusters(u=0.999)
+grid.arrange(p1,p2,p3,ncol=3)
+# give true mass in fourth plot?
 
