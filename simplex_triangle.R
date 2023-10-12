@@ -317,9 +317,8 @@ return(p)
 }
 generate_dep_X_Y_Z(N=50000,abc=abc,U=c(0.9,0.99,0.999))
 
-# give true mass in fourth plot?
 
-# create density along edges instead of point mass
+# create density along edges instead of point mass ----
 generate_dependent_X_Y_Z <- function(N,abc=abc,dep) {
   set.seed(12)
   d <- 5
@@ -334,15 +333,15 @@ generate_dependent_X_Y_Z <- function(N,abc=abc,dep) {
   # generate Y
   # asy<-list(.4,.1,.6,c(.3,.2),c(.1,.1),c(.4,.1),c(.2,.3,.2))
   # Y <- rmvevd(n=N*d,dep=c(0.6,0.5,0.2,0.9),d=3,asy=asy,model="alog",mar=c(1,1,1)) 
- Y <-  rmvevd(n=N*d,dep=dep,model="log",d=3)
+ Y <-  exp(rmvevd(n=N*d,dep=dep,model="log",d=3))
   # generate X
   X_1 <- c()
   X_2 <- c()
   X_3 <- c()
   for (j in 1:N) {
-    X_1[j] <- max(Y[(d*(j-1)+1):(d*j),1]*a)/N
-    X_2[j] <- max(Y[(d*(j-1)+1):(d*j),2]*b)/N
-    X_3[j] <- max(Y[(d*(j-1)+1):(d*j),3]*c)/N
+    X_1[j] <- max(Y[(d*(j-1)+1):(d*j),1]*a)
+    X_2[j] <- max(Y[(d*(j-1)+1):(d*j),2]*b)
+    X_3[j] <- max(Y[(d*(j-1)+1):(d*j),3]*c)
   }
   return(data.frame(X_1,X_2,X_3))
 }
@@ -383,6 +382,68 @@ p8 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=0.1) %>% plot_clusters(u=0.99
 p9 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=0.1) %>% plot_clusters(u=0.999,dep=0.1)
 grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
 
+# make density common scale using facet_wrap ----
+generate_dep_X_Y_Y_Z <- function(N,abc=abc,dep=1/2,U=c(0.9,0.99,0.999)) {
+  set.seed(12)
+  d <- 5
+  unif <- runif(d*N)
+  # a <- c(2/3,1/12,0,1/12,1/6)
+  # b <- c(0,1/3,1/3,1/6,1/6)
+  # c <- c(0,0,1/3,1/3,1/3)
+  a <- abc[,1]
+  b <- abc[,2]
+  c <- abc[,3]
+  dat <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+  
+  for (l in 1:length(dep)) {
+  # generate Y
+  Y <- c()
+  Y <-  exp(rmvevd(n=N*d,dep=dep,model="log",d=3))
+  # generate X
+  X_1 <- c()
+  X_2 <- c()
+  X_3 <- c()
+  for (j in 1:N) {
+    X_1[j] <- max(Y[(d*(j-1)+1):(d*j),1]*a)/N
+    X_2[j] <- max(Y[(d*(j-1)+1):(d*j),2]*b)/N
+    X_3[j] <- max(Y[(d*(j-1)+1):(d*j),3]*c)/N
+  }
+sims <- data.frame(X_1=X_1,X_2=X_2,X_3=X_3)
+  sims %>% head()
+  sims_low_dependence <- sims
+  
+  for (i in 1:length(U)) {
+    dat1 <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+    dat1 = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
+      mutate(R = x1 + x2 + x3)  %>% 
+      mutate(u = quantile(R, U[i])) %>%
+      mutate(q=rep(U[i],N)) %>% 
+      filter(R>u) %>%
+      mutate(w1 = x1/R, 
+             w2 = x2/R,
+             w3 = x3/R) 
+    dat <-  rbind(dat,dat1)
+    
+  }
+  
+  }
+  p <-   dat %>%
+    ggplot()+ 
+    geom_density_2d_filled(aes(w1,w2),bins=7) + 
+    geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
+    facet_wrap(~q) +
+    theme_minimal()+
+    scale_y_continuous(limits = c(0, 1))+
+    scale_x_continuous(limits = c(0, 1))+
+    theme(panel.grid.major = element_blank(), 
+          # legend.position = 'none',
+          panel.grid.minor = element_blank())+
+    labs(x = "", y = "") +
+    #ggtitle(TeX(paste0("$u=\\hat{F}_R^{-1}($",U,"$)$"))) +
+    guides(fill=guide_legend(title="Density estimate")) 
+  return(p)
+}
+generate_dep_X_Y_Y_Z(N=50000,abc=abc,U=c(0.9,0.99,0.999))
 
 
 # try asymmetric case ----
@@ -414,5 +475,7 @@ p1 <- ggplot(df) + geom_point(aes(x,Y))
 p2 <- ggplot(df) + geom_point(aes(z,Y))
 p3 <- ggplot(df) + geom_point(aes(x,z))
 grid.arrange(p1,p2,p3,ncol=3)
+
+# plot the triangles
 
 
