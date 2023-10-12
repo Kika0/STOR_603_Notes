@@ -4,9 +4,11 @@ library(MASS)
 library(gridExtra)
 library(latex2exp)
 library(mev)
+library(evd)
+library(xtable)
 
 # use this to block out the upper part
-upper_courner = tibble(x = c(0, 1, 1),
+upper_corner = tibble(x = c(0, 1, 1),
                        y = c(1, 1, 0))
 
 # dependence between r.v. for husler reiss dist ----
@@ -193,6 +195,10 @@ c1 <- c(0,0,3,3,4)
 c <- c1/sum(c1)
 abc <- data.frame(a,b,c)
 
+abcw1w2 <- abc %>%    mutate(R = a+b+c)  %>% 
+  mutate(w1 = a/R, 
+         w2 = b/R)
+
 
 generate_dependent_X_Y_Z <- function(N,abc=abc) {
   set.seed(12)
@@ -233,7 +239,7 @@ plot_clusters <- function(sims,u=0.9) {
   dat %>%
     ggplot()+ 
     geom_density_2d_filled(aes(w1,w2),bins=7) + 
-    geom_polygon(data = upper_courner, aes(x,y),col = 'white', fill = "white")+
+    geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
     theme_minimal()+
     scale_y_continuous(limits = c(0, 1))+
     scale_x_continuous(limits = c(0, 1))+
@@ -249,5 +255,164 @@ p1 <- generate_dependent_X_Y_Z(N=50000,abc=abc) %>% plot_clusters(u=0.9)
 p2 <- generate_dependent_X_Y_Z(N=50000,abc=abc) %>% plot_clusters(u=0.99)
 p3 <- generate_dependent_X_Y_Z(N=50000,abc=abc) %>% plot_clusters(u=0.999)
 grid.arrange(p1,p2,p3,ncol=3)
+
+# keep common scale across plots
+generate_dep_X_Y_Z <- function(N,abc=abc,U=c(0.9,0.99,0.999)) {
+  set.seed(12)
+  d <- 5
+  unif <- runif(d*N)
+  # a <- c(2/3,1/12,0,1/12,1/6)
+  # b <- c(0,1/3,1/3,1/6,1/6)
+  # c <- c(0,0,1/3,1/3,1/3)
+  a <- abc[,1]
+  b <- abc[,2]
+  c <- abc[,3]
+  
+  # generate Y
+  Y <- c()
+  Y <- -1/(log(unif) ) 
+  # generate X
+  X_1 <- c()
+  X_2 <- c()
+  X_3 <- c()
+  for (j in 1:N) {
+    X_1[j] <- max(Y[(d*(j-1)+1):(d*j)]*a)/N
+    X_2[j] <- max(Y[(d*(j-1)+1):(d*j)]*b)/N
+    X_3[j] <- max(Y[(d*(j-1)+1):(d*j)]*c)/N
+  }
+ sims <- data.frame(X_1,X_2,X_3)
+
+  sims_low_dependence <- sims
+  
+  dat <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+  for (i in 1:length(U)) {
+    dat1 <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+  dat1 = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
+    mutate(R = x1 + x2 + x3)  %>% 
+    mutate(u = quantile(R, U[i])) %>%
+    mutate(q=rep(U[i],N)) %>% 
+    filter(R>u) %>%
+    mutate(w1 = x1/R, 
+           w2 = x2/R,
+           w3 = x3/R) 
+ dat <-  rbind(dat,dat1)
+  
+}
+  
+p <-   dat %>%
+    ggplot()+ 
+    geom_density_2d_filled(aes(w1,w2),bins=7) + 
+    geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
+    facet_wrap(~q) +
+    theme_minimal()+
+    scale_y_continuous(limits = c(0, 1))+
+    scale_x_continuous(limits = c(0, 1))+
+    theme(panel.grid.major = element_blank(), 
+          # legend.position = 'none',
+          panel.grid.minor = element_blank())+
+    labs(x = "", y = "") +
+  #ggtitle(TeX(paste0("$u=\\hat{F}_R^{-1}($",U,"$)$"))) +
+    guides(fill=guide_legend(title="Density estimate")) 
+return(p)
+}
+generate_dep_X_Y_Z(N=50000,abc=abc,U=c(0.9,0.99,0.999))
+
 # give true mass in fourth plot?
+
+# create density along edges instead of point mass
+generate_dependent_X_Y_Z <- function(N,abc=abc,dep) {
+  set.seed(12)
+  d <- 5
+  U <- runif(d*N)
+  # a <- c(2/3,1/12,0,1/12,1/6)
+  # b <- c(0,1/3,1/3,1/6,1/6)
+  # c <- c(0,0,1/3,1/3,1/3)
+  a <- abc[,1]
+  b <- abc[,2]
+  c <- abc[,3]
+  
+  # generate Y
+  # asy<-list(.4,.1,.6,c(.3,.2),c(.1,.1),c(.4,.1),c(.2,.3,.2))
+  # Y <- rmvevd(n=N*d,dep=c(0.6,0.5,0.2,0.9),d=3,asy=asy,model="alog",mar=c(1,1,1)) 
+ Y <-  rmvevd(n=N*d,dep=dep,model="log",d=3)
+  # generate X
+  X_1 <- c()
+  X_2 <- c()
+  X_3 <- c()
+  for (j in 1:N) {
+    X_1[j] <- max(Y[(d*(j-1)+1):(d*j),1]*a)/N
+    X_2[j] <- max(Y[(d*(j-1)+1):(d*j),2]*b)/N
+    X_3[j] <- max(Y[(d*(j-1)+1):(d*j),3]*c)/N
+  }
+  return(data.frame(X_1,X_2,X_3))
+}
+
+plot_clusters <- function(sims,u=0.9,dep) {
+  sims_low_dependence <- sims
+  dat = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
+    mutate(R = x1 + x2 + x3)  %>% 
+    mutate(u = quantile(R, u)) %>%
+    filter(R>u) %>%
+    mutate(w1 = x1/R, 
+           w2 = x2/R,
+           w3 = x3/R) 
+  
+  dat %>%
+    ggplot()+ 
+    geom_density_2d_filled(aes(w1,w2),bins=7) + 
+    geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
+    theme_minimal()+
+    scale_y_continuous(limits = c(0, 1))+
+    scale_x_continuous(limits = c(0, 1))+
+    theme(panel.grid.major = element_blank(), 
+          # legend.position = 'none',
+          panel.grid.minor = element_blank())+
+    labs(x = "", y = "") + ggtitle(TeX(paste0("$u=\\hat{F}_R^{-1}($",u,"$)$",","," $\\alpha=$",dep))) +
+    guides(fill=guide_legend(title="Density estimate")) 
+}
+
+# plot for different thresholds
+p1 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=0.99) %>% plot_clusters(u=0.9,dep=0.99)
+p2 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=0.99) %>% plot_clusters(u=0.99,dep=0.99)
+p3 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=0.99) %>% plot_clusters(u=0.999,dep=0.99)
+p4 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=1/2) %>% plot_clusters(u=0.9,dep=1/2)
+p5 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=1/2) %>% plot_clusters(u=0.99,dep=1/2)
+p6 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=1/2) %>% plot_clusters(u=0.999,dep=1/2)
+p7 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=0.1) %>% plot_clusters(u=0.9,dep=0.1)
+p8 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=0.1) %>% plot_clusters(u=0.99,dep=0.1)
+p9 <- generate_dependent_X_Y_Z(N=50000,abc=abc,dep=0.1) %>% plot_clusters(u=0.999,dep=0.1)
+grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
+
+
+
+# try asymmetric case ----
+# generate x and y
+a <- 1/2
+x_y <- evd::rbvevd(100,dep=a,model="log")
+x <- exp(x_y[,1])/N
+Y <- exp(x_y[,2])/N
+# generate z
+to_opt <- function(z) {
+  (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-U)^2
+}
+z <- c()
+for (i in 1:nrow(x_y)){
+# generate U
+U <- runif(1)
+y <- Y[i]
+# F_Y_Z <- function(z) {
+#   -a *y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)
+# }
+z[i] <- optim(par=1,fn=to_opt)$par
+}
+
+plot(Y,z)
+plot(x,Y)
+plot(x,z)
+df <- data.frame(x,Y,z)
+p1 <- ggplot(df) + geom_point(aes(x,Y))
+p2 <- ggplot(df) + geom_point(aes(z,Y))
+p3 <- ggplot(df) + geom_point(aes(x,z))
+grid.arrange(p1,p2,p3,ncol=3)
+
 
