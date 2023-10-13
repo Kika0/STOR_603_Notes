@@ -423,13 +423,11 @@ sims <- data.frame(X_1=X_1,X_2=X_2,X_3=X_3)
              w2 = x2/R,
              w3 = x3/R) 
     dat <-  rbind(dat,dat1)
-    
   }
-  
   }
   p <-   dat %>%
     ggplot()+ 
-    geom_density_2d_filled(aes(w1,w2),bins=7) + 
+    geom_density_2d_filled(aes(w1,w2),bins=10) + 
     geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
     facet_wrap(~q) +
     theme_minimal()+
@@ -439,19 +437,21 @@ sims <- data.frame(X_1=X_1,X_2=X_2,X_3=X_3)
           # legend.position = 'none',
           panel.grid.minor = element_blank())+
     labs(x = "", y = "") +
-    #ggtitle(TeX(paste0("$u=\\hat{F}_R^{-1}($",U,"$)$"))) +
+    ggtitle(TeX(paste0("$\\alpha=$",dep))) +
     guides(fill=guide_legend(title="Density estimate")) 
   return(p)
 }
-generate_dep_X_Y_Y_Z(N=50000,abc=abc,U=c(0.9,0.99,0.999))
-
+p1 <- generate_dep_X_Y_Y_Z(N=50000,abc=abc,dep=0.99,U=c(0.9,0.99,0.999))
+p2<- generate_dep_X_Y_Y_Z(N=50000,abc=abc,dep=0.5,U=c(0.9,0.99,0.999))
+p3 <- generate_dep_X_Y_Y_Z(N=50000,abc=abc,dep=0.1,U=c(0.9,0.99,0.999))
+grid.arrange(p3,p2,p1,ncol=1)
 
 # try asymmetric case ----
 # generate x and y
-a <- 1/2
+a <- 0.1
 x_y <- evd::rbvevd(100,dep=a,model="log")
-x <- exp(x_y[,1])/N
-Y <- exp(x_y[,2])/N
+x <- exp(x_y[,1])
+Y <- exp(x_y[,2])
 # generate z
 to_opt <- function(z) {
   (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-U)^2
@@ -467,15 +467,71 @@ y <- Y[i]
 z[i] <- optim(par=1,fn=to_opt)$par
 }
 
-plot(Y,z)
-plot(x,Y)
-plot(x,z)
 df <- data.frame(x,Y,z)
 p1 <- ggplot(df) + geom_point(aes(x,Y))
 p2 <- ggplot(df) + geom_point(aes(z,Y))
 p3 <- ggplot(df) + geom_point(aes(x,z))
 grid.arrange(p1,p2,p3,ncol=3)
 
+
+
 # plot the triangles
+
+generate_dep_X_Y_Y_Z <- function(N,dep=1/2,U=c(0.9,0.99,0.999)) {
+  dat <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+  set.seed(12)
+  x_y <- evd::rbvevd(N,dep=dep,model="log")
+  x <- exp(x_y[,1])
+  Y <- exp(x_y[,2])
+  # generate z
+  to_opt <- function(z) {
+    (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
+  }
+  z <- c()
+  for (i in 1:nrow(x_y)){
+    # generate U
+    Unif <- runif(1)
+    y <- Y[i]
+    # F_Y_Z <- function(z) {
+    #   -a *y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)
+    # }
+    z[i] <- optim(par=1,fn=to_opt)$par
+  }
+    sims <- data.frame(X_1=x,X_2=Y,X_3=z)
+    sims_low_dependence <- sims
+    
+    for (i in 1:length(U)) {
+      dat1 <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+      dat1 = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
+        mutate(R = x1 + x2 + x3)  %>% 
+        mutate(u = quantile(R, U[i])) %>%
+        mutate(q=rep(U[i],N)) %>% 
+        filter(R>u) %>%
+        mutate(w1 = x1/R, 
+               w2 = x2/R,
+               w3 = x3/R) 
+      dat <-  rbind(dat,dat1)
+    }
+  
+  p <-   dat %>%
+    ggplot()+ 
+    geom_density_2d_filled(aes(w1,w2),bins=10) + 
+    geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
+    facet_wrap(~q) +
+    theme_minimal()+
+    scale_y_continuous(limits = c(0, 1))+
+    scale_x_continuous(limits = c(0, 1))+
+    theme(panel.grid.major = element_blank(), 
+          # legend.position = 'none',
+          panel.grid.minor = element_blank())+
+    labs(x = "", y = "") +
+    ggtitle(TeX(paste0("$\\alpha=$",dep))) +
+    guides(fill=guide_legend(title="Density estimate")) 
+  return(p)
+}
+p1 <- generate_dep_X_Y_Y_Z(N=50000,dep=0.99,U=c(0.9,0.99,0.999))
+p2<- generate_dep_X_Y_Y_Z(N=50000,dep=0.5,U=c(0.9,0.99,0.999))
+p3 <- generate_dep_X_Y_Y_Z(N=50000,dep=0.1,U=c(0.9,0.99,0.999))
+grid.arrange(p3,p2,p1,ncol=1)
 
 
