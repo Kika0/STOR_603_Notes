@@ -301,7 +301,7 @@ generate_dep_X_Y_Z <- function(N,abc=abc,U=c(0.9,0.99,0.999)) {
   
 p <-   dat %>%
     ggplot()+ 
-    geom_density_2d_filled(aes(w1,w2),bins=7) + 
+    geom_density_2d_filled(aes(w1,w2),bins=10,contour_var="ndensity") + 
     geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
     facet_wrap(~q) +
     theme_minimal()+
@@ -427,7 +427,7 @@ sims <- data.frame(X_1=X_1,X_2=X_2,X_3=X_3)
   }
   p <-   dat %>%
     ggplot()+ 
-    geom_density_2d_filled(aes(w1,w2),bins=10) + 
+    geom_density_2d_filled(aes(w1,w2),bins=10,contour_var="ndensity") + 
     geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
     facet_wrap(~q) +
     theme_minimal()+
@@ -483,6 +483,7 @@ generate_dep_X_Y_Y_Z <- function(N,dep=1/2,U=c(0.9,0.99,0.999)) {
   x_y <- evd::rbvevd(N,dep=dep,model="log")
   x <- exp(x_y[,1])
   Y <- exp(x_y[,2])
+  a <- dep
   # generate z
   to_opt <- function(z) {
     (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
@@ -515,7 +516,7 @@ generate_dep_X_Y_Y_Z <- function(N,dep=1/2,U=c(0.9,0.99,0.999)) {
   
   p <-   dat %>%
     ggplot()+ 
-    geom_density_2d_filled(aes(w1,w2),bins=10) + 
+    geom_density_2d_filled(aes(w1,w2),bins=10,contour_var = "ndensity") + 
     geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
     facet_wrap(~q) +
     theme_minimal()+
@@ -534,4 +535,54 @@ p2<- generate_dep_X_Y_Y_Z(N=50000,dep=0.5,U=c(0.9,0.99,0.999))
 p3 <- generate_dep_X_Y_Y_Z(N=50000,dep=0.1,U=c(0.9,0.99,0.999))
 grid.arrange(p3,p2,p1,ncol=1)
 
+# plot for different values of alpha but fixed threshold
+generate_deps_X_Y_Y_Z <- function(N,dep=c(1/2,1/2)) {
+  set.seed(12)
+  a_x_y <- dep[1]
+  x_y <- evd::rbvevd(N,dep=a_x_y,model="log")
+  x <- exp(x_y[,1])
+  Y <- exp(x_y[,2])
+  a <- dep[2]
+  # generate z
+  to_opt <- function(z) {
+    (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
+  }
+  z <- c()
+  for (i in 1:nrow(x_y)){
+    # generate U
+    Unif <- runif(1)
+    y <- Y[i]
+    # F_Y_Z <- function(z) {
+    #   -a *y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)
+    # }
+    z[i] <- optim(par=1,fn=to_opt)$par
+  }
+  sims <- data.frame(X_1=x,X_2=Y,X_3=z)
+  sims_low_dependence <- sims
+  
+    dat = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
+      mutate(R = x1 + x2 + x3)  %>% 
+      mutate(u = quantile(R, 0.999)) %>%
+      filter(R>u) %>%
+      mutate(w1 = x1/R, 
+             w2 = x2/R,
+             w3 = x3/R) 
+  
+  p <-   dat %>%
+    ggplot()+ 
+    geom_density_2d_filled(aes(w1,w2),bins=10,contour_var = "ndensity") + 
+    geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
+    theme_minimal()+
+    scale_y_continuous(limits = c(0, 1))+
+    scale_x_continuous(limits = c(0, 1))+
+    theme(panel.grid.major = element_blank(), 
+          # legend.position = 'none',
+          panel.grid.minor = element_blank())+
+    labs(x = "", y = "") +
+    ggtitle(TeX(paste0("$\\alpha_1=$",dep[1],", $\\alpha_2$=",dep[2]))) +
+    guides(fill=guide_legend(title="Density estimate")) 
+  return(p)
+}
+
+generate_deps_X_Y_Y_Z(N=50000,dep = c(0.9,1/2))
 
