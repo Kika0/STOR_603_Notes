@@ -586,3 +586,9 @@ generate_deps_X_Y_Y_Z <- function(N,dep=c(1/2,1/2)) {
 
 generate_deps_X_Y_Y_Z(N=50000,dep = c(0.9,1/2))
 
+# check formula for Laplace PIT
+# U <- runif(10000)
+# Y_1 <- log(2*U[U<0.5])
+# Y_2 <- -log(2*(1-U[U>0.5]))
+# Y <- c(Y_1,Y_2)
+# hist(Y,freq = FALSE)
