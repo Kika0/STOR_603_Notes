@@ -11,6 +11,7 @@ library(tidyverse)
 library(latex2exp)
 library(ismev)
 library(gridExtra)
+library(evd)
 source("gev_fit.R")
 theme_set(theme_bw())
 theme_update(plot.title = element_text(hjust = 0.5),
@@ -376,18 +377,17 @@ temp <- data.frame(Temperature=sort(x))
 Ulow<-sapply(1:length(x), function(i){qbeta(0.025, i, length(x)+1-i)})
 Uup<-sapply(1:length(x), function(i){qbeta(0.975, i, length(x)+1-i)})
 Model <- temp %>% select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle)) %>% 
-  mutate(Ulow=Ulow) %>% mutate(Uup=Uup)
+  mutate(Ulow=Ulow) %>% mutate(Uup=Uup) 
 
 Empirical <- temp %>% select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
 df <- temp %>% left_join(Empirical,by="Temperature") %>% left_join(Model,by="Temperature")
 df %>% head()
 p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.2)+ geom_point(aes(x=Empirical,y=Model)) + geom_line(aes(x=Empirical,y=Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Empirical,y=Ulow), linetype="dashed", color="#C11432")  + ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
-df <- GEV_QQ(temp[,1])
+df <- GEV_QQ(sort(x))%>% mutate(GEV_Ulow=qgev(p=Ulow,loc=mle[1],scale=mle[2],shape=mle[3])) %>%  mutate(Ulow=Ulow) %>% mutate(Uup=Uup)%>% mutate(GEV_Uup=qgev(p=Uup,loc=mle[1],scale=mle[2],shape=mle[3]))
 p2 <- df %>% ggplot()  + 
-  geom_segment(aes(x = min(x), y = min(x), xend = max(x), yend = max(x)), color = "#C11432",size=1.5,alpha=0.5)+
-  geom_point(aes(y=Data,x=Model)) + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
+  geom_segment(aes(x = min(x), y = min(x), xend = max(x), yend = max(x)), color = "#C11432",size=1.2,alpha=0.5)+
+  geom_point(aes(y=Data,x=Model)) + geom_line(aes(x=Model,y=GEV_Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Model,y=GEV_Ulow), linetype="dashed", color="#C11432")  + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
 grid.arrange(p1,p2,ncol=2)
-
 ```
 
 
@@ -472,6 +472,7 @@ p2 <- df %>% ggplot()  +
 grid.arrange(p1,p2,ncol=2)
 
 ```
+
 ```{r}
 df1 <- df
 x <- shift_tmp
