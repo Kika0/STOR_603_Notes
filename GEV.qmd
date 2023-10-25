@@ -371,12 +371,17 @@ plot(I,shift_tmp)
 ```{r}
 x <- shift
 mle <- gev_fit(x)$mle
-temp <- data.frame(Temperature=x)
-Model <- temp %>% select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle))
+temp <- data.frame(Temperature=sort(x))
+# calculate upper and lower bounds for 95% CI to add to the plots
+Ulow<-sapply(1:length(x), function(i){qbeta(0.025, i, length(x)+1-i)})
+Uup<-sapply(1:length(x), function(i){qbeta(0.975, i, length(x)+1-i)})
+Model <- temp %>% select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle)) %>% 
+  mutate(Ulow=Ulow) %>% mutate(Uup=Uup)
+
 Empirical <- temp %>% select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
 df <- temp %>% left_join(Empirical,by="Temperature") %>% left_join(Model,by="Temperature")
 df %>% head()
-p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) + ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
+p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.2)+ geom_point(aes(x=Empirical,y=Model)) + geom_line(aes(x=Empirical,y=Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Empirical,y=Ulow), linetype="dashed", color="#C11432")  + ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
 df <- GEV_QQ(temp[,1])
 p2 <- df %>% ggplot()  + 
   geom_segment(aes(x = min(x), y = min(x), xend = max(x), yend = max(x)), color = "#C11432",size=1.5,alpha=0.5)+
