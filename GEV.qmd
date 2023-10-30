@@ -382,11 +382,15 @@ Model <- temp %>% select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle
 Empirical <- temp %>% select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
 df <- temp %>% left_join(Empirical,by="Temperature") %>% left_join(Model,by="Temperature")
 df %>% head()
-p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.2)+ geom_point(aes(x=Empirical,y=Model)) + geom_line(aes(x=Empirical,y=Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Empirical,y=Ulow), linetype="dashed", color="#C11432")  + ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
+p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.2)+ geom_point(aes(x=Empirical,y=Model)) + geom_line(aes(x=Empirical,y=Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Empirical,y=Ulow), linetype="dashed", color="#C11432")  + 
+  geom_ribbon(aes(x=Empirical,ymin=Uup,ymax=Ulow), fill="#C11432", alpha=0.2)+
+  ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
 df <- GEV_QQ(sort(x))%>% mutate(GEV_Ulow=qgev(p=Ulow,loc=mle[1],scale=mle[2],shape=mle[3])) %>%  mutate(Ulow=Ulow) %>% mutate(Uup=Uup)%>% mutate(GEV_Uup=qgev(p=Uup,loc=mle[1],scale=mle[2],shape=mle[3]))
 p2 <- df %>% ggplot()  + 
   geom_segment(aes(x = min(x), y = min(x), xend = max(x), yend = max(x)), color = "#C11432",size=1.2,alpha=0.5)+
-  geom_point(aes(y=Data,x=Model)) + geom_line(aes(x=Model,y=GEV_Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Model,y=GEV_Ulow), linetype="dashed", color="#C11432")  + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
+  geom_point(aes(y=Data,x=Model)) + geom_line(aes(x=Model,y=GEV_Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Model,y=GEV_Ulow), linetype="dashed", color="#C11432")  +
+  geom_ribbon(aes(x=Model,ymin=GEV_Uup,ymax=GEV_Ulow), fill="#C11432", alpha=0.2)+
+  ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
 grid.arrange(p1,p2,ncol=2)
 ```
 
@@ -426,10 +430,10 @@ ggplot() +
 #### Try the same for GPD
 
 ```{r}
-x <- shift_tmp
 u <- 32
+x <- sort(shift_tmp[shift_tmp>u])
 mle <- gpd.fit(x,threshold=u)$mle
-temp <- data.frame(Temperature=x[x>u])
+temp <- data.frame(Temperature=x)
 # calculate GEV inverse CDF
 GPD_inv <- function(mle,threshold,p) {
   sig <- mle[1]
@@ -454,21 +458,36 @@ u <- threshold
 # generate z using PIT for each case
 q <-1- seq(from=1/(length(x)+1),to=length(x)/(length(x)+1),length.out=length(x)) #quantile
 model <- GPD_inv(mle=model_par,threshold=u,p=q) #z generated from the model
+# calculate upper and lower bounds for 95% CI to add to the plots
+Ulow<-sapply(1:length(x), function(i){qbeta(0.025, i, length(x)+1-i)})
+Uup<-sapply(1:length(x), function(i){qbeta(0.975, i, length(x)+1-i)})
+Model <- temp %>% select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle)) %>% 
+  mutate(Ulow=Ulow) %>% mutate(Uup=Uup) 
 #est <- GEV_inv(U=q,mle=est_par) #z generated from GEV empirical estimates
 dat <- x %>% sort()
-return(data.frame(q=q,Model=model,Data=dat))
+return(data.frame(q=q,Model=model,Data=dat,Ulow=Ulow,Uup=Uup))
 }
 
-Model <- temp %>% select(Temperature) %>% mutate(Model=GPD(z=Temperature,mle=mle,threshold=u))
+#Model <- temp %>% select(Temperature) %>% mutate(Model=GPD(z=Temperature,mle=mle,threshold=u))
+# calculate upper and lower bounds for 95% CI to add to the plots
+Ulow<-sapply(1:length(x), function(i){qbeta(0.025, i, length(x)+1-i)})
+Uup<-sapply(1:length(x), function(i){qbeta(0.975, i, length(x)+1-i)})
+Model <- temp %>%  select(Temperature) %>% mutate(Model=GPD(z=Temperature,mle=mle,threshold=u)) %>% 
+  mutate(Ulow=Ulow) %>% mutate(Uup=Uup) 
 Empirical <- temp %>% select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
 df <- temp %>% left_join(Empirical,by="Temperature") %>% left_join(Model,by="Temperature")
 df %>% head()
-p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) + ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
-df <- GPD_QQ(x=temp[,1],mle=mle,threshold=u)
+p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) +
+  geom_line(aes(x=Empirical,y=Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Empirical,y=Ulow), linetype="dashed", color="#C11432")  + 
+  geom_ribbon(aes(x=Empirical,ymin=Uup,ymax=Ulow), fill="#C11432", alpha=0.2)+
+  ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
+df <- GPD_QQ(x=temp[,1],mle=mle,threshold=u) %>% mutate(GPD_Ulow=qgpd(p=Ulow,loc=u,scale=mle[1],shape=mle[2])) %>%  mutate(Ulow=Ulow) %>% mutate(Uup=Uup)%>% mutate(GPD_Uup=qgpd(p=Uup,loc=u,scale=mle[1],shape=mle[2]))
 x <- temp[,1]
 p2 <- df %>% ggplot()  + 
   geom_segment(aes(x = min(x), y = min(x), xend = max(x), yend = max(x)), color = "#C11432",size=1.5,alpha=0.5)+
-  geom_point(aes(y=Data,x=Model)) + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
+  geom_point(aes(y=Data,x=Model)) +
+  geom_line(aes(x=Model,y=GPD_Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Model,y=GPD_Ulow), linetype="dashed", color="#C11432")  +
+  geom_ribbon(aes(x=Model,ymin=GPD_Uup,ymax=GPD_Ulow), fill="#C11432", alpha=0.2) + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
 grid.arrange(p1,p2,ncol=2)
 
 ```
@@ -548,6 +567,7 @@ ggplot() +
 
 ```{r}
 plot_frechet <- function(N) {
+  set.seed(1)
  U_1 <- runif(N)
 X_1 <- -1/(log(U_1))
 U_2 <- runif(N)
@@ -557,8 +577,24 @@ ggplot(data.frame(X_1=X_1/N,X_2=X_2/N)) + geom_point(aes(x=X_1,y=X_2),alpha=0.3,
   ylab(TeX(paste0("$X_2/",N,"$"))) 
 }
 
-p1 <- plot_frechet(N=50)
-p2 <- plot_frechet(N=50000)
+# plot radial and angular components
+plot_r_w_frechet <- function(N) {
+  set.seed(1)
+ U_1 <- runif(N)
+X_1 <- -1/(log(U_1))
+U_2 <- runif(N)
+X_2 <- -1/(log(U_2))
+R <- X_1/N+X_2/N
+W <- (X_1/N)/(R)
+ggplot(data.frame(R=R,W=W)) + geom_point(aes(x=R,y=W),alpha=0.3,size=2) +
+  xlab(TeX(paste0("$(X_1+X_2)/",N,"$"))) +
+  ylab(TeX(paste0("$X_1/(X_1+X_2)$"))) 
+}
+
+
+#p1 <- plot_frechet(N=50)
+p1 <- plot_frechet(N=50000)
+p2 <- plot_r_w_frechet(N=50000)
 grid.arrange(p1,p2,ncol=2)
 
 # plot radial and angular components
