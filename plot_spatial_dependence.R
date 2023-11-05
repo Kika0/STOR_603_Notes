@@ -48,7 +48,7 @@ plot_dependence <- function(city="london",Y=147,season=3) {
   # plot
   # p1 <- ggplot(df) + geom_point(aes(x=X,y=Y),size=0.1) + xlab(TeX("$Y(s_1)$ (London temperature)")) + ylab(TeX("$Y(s_2)$"))+
   #   ggtitle("Summer temperature time series")
-  # p2 <- ggplot(df) + geom_point(aes(x=u,y=v),size=0.1) + xlab("u") +
+  # p2 <- ggplot(df) + geom_point(aes(x=u,y=v),size=0.1)  + xlab(TeX("$X(s_1)$")) + ylab(TeX("$X(s_2)$"))+
   #   coord_fixed() + ggtitle("Uniform transform")
   # grid.arrange(p1,p2,ncol=2)
 
@@ -72,7 +72,7 @@ plot_dependence <- function(city="london",Y=147,season=3) {
   df_chi$CI_upper[df_chi$CI_upper>1] <- rep(1,sum(df_chi$CI_upper>1))
   p1 <- ggplot(df_chi)  + geom_line(aes(x=threshold,y=chi_u))+ 
     geom_line(aes(x=threshold,y=CI_upper),lty=2,col=CI_col) +
-    ylab(TeX("$\\chi_u(s_1,s_2)$")) + xlab("u") +
+    ylab(TeX("$\\hat{\\chi}_u(s_1,s_2)$")) + xlab("u") +
     geom_line(aes(x=threshold,y=CI_lower),lty=2,col=CI_col) + coord_fixed() +
     geom_ribbon(aes(x=u,ymin=CI_lower,ymax=CI_upper), fill=CI_col, alpha=0.2)+ ylim(c(0,1))
   return(p1)
@@ -132,7 +132,7 @@ plot_X_dist_dependence <- function(city="London",season=3,threshold=0.95,y_low_l
   dist_city <- paste0("dist_",tolower(city))
   p1 <- ggplot(df_X_Y) + ylim(c(y_low_limit,1)) + xlim(c(dist_min,dist_max))+ geom_point(aes(x=.data[[dist_city]],y=chi_X_Y),size=0.5)+ 
     #geom_point(aes(x=dist_london,y=CI_u),size=0.5,col=CI_col) +
-    ylab(TeX(paste0("$\\chi_{.",threshold*100,"}(s_1,s_2)$"))) + xlab(TeX(paste0("Distance from ", city ," $[km]$"))) +
+    ylab(TeX(paste0("$\\hat{\\chi}_{.",threshold*100,"}(s_1,s_2)$"))) + xlab(TeX(paste0("Distance from ", city ," $[km]$"))) +
     #geom_point(aes(x=dist_london,y=CI_l),size=0.5,col=CI_col) +
     geom_line(aes(x=.data[[dist_city]] ,y=CI_l),lty=2,col=CI_col) +
     geom_line(aes(x=.data[[dist_city]],y=CI_u),lty=2,col=CI_col) +
@@ -141,7 +141,7 @@ plot_X_dist_dependence <- function(city="London",season=3,threshold=0.95,y_low_l
 }
 
 y_low_limit <- 0
-threshold <- 0.99
+threshold <- 0.95
 p1 <-plot_X_dist_dependence(city="London",season=1,threshold=threshold,y_low_limit=y_low_limit)
 p2 <-plot_X_dist_dependence(city="Birmingham",season=1,threshold=threshold,y_low_limit=y_low_limit)
 p3 <-plot_X_dist_dependence(city="Glasgow",season=1,threshold=threshold,y_low_limit=y_low_limit)
