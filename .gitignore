@@ -3,7 +3,7 @@
 .Rapp.history
 
 # Quarto files
-*_files/
+*_files
 
 # Session Data files
 .RData
