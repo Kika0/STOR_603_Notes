@@ -198,7 +198,7 @@ Port Pirie data not available in the package, maybe try with Venice sea-levels d
 ```{r}
 data(portpirie)
 venice[,2]
-x=gev.fit(portpirie[,2])
+x=gev.fit(portpirie)
 gev.diag(x)
 ```
 
@@ -207,7 +207,7 @@ Try to recreate the likelihood function.
 The function gets longer as initial values of the parameters are either pre-specified or calculated from the data. Therefore, `gev_fit.R` script contains the function.
 
 ```{r}
-x <- portpirie[,2]
+x <- portpirie
 gev.diag(gev_fit(x))
 # the function could return very high values 
 # that cannot be minimum negative likelihood like 10^6
@@ -216,7 +216,7 @@ gev.diag(gev_fit(x))
 
 Success! The plotting function works with the likelihood function and produces desired output.
 
-### GEV plot outputs
+### GEV plot functions
 
 Now, try to replicate the four plots given above, starting with the probability plot. The model probability is a straight line, but empirical data will deviate from this line.
 
@@ -239,12 +239,6 @@ GEV <- function(z,mle) {
  G[i] <- exp(  -(1 + xi*((z[i]-mu)/sig) )^(-1/xi)  )
  return(G)
 }
-mle <- gev_fit(x)$mle
-Model <- portpirie %>%as.data.frame() %>%  select(SeaLevel) %>% mutate(Model=GEV(z=SeaLevel,mle=mle))
-Empirical <- portpirie %>% select(SeaLevel) %>% arrange(SeaLevel) %>% mutate(Empirical=row_number()/(nrow(portpirie)+1)) 
-df <- portpirie %>% left_join(Empirical,by="SeaLevel") %>% left_join(Model,by="SeaLevel")
-df %>% head()
-p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) + ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model") 
 ```
 
 Next is Q-Q plot.Q-Q plot compares two probability distributions by plotting their quantiles. In this example, it plots two GEV distributions with different parameters: empirical calculated though a formula used for the initial parameters in the optimisation and the model parameters (MLE).
@@ -266,52 +260,11 @@ est <- GEV_inv(U=q,mle=est_par) #z generated from GEV empirical estimates
 dat <- x %>% sort()
 return(data.frame(q=q,Model=model,Empirical=est,Data=dat))
 }
-# plot
-df <- GEV_QQ(portpirie[,2])
-df %>% head()
-df %>% ggplot()  + 
-  geom_segment(aes(x = 3.5, y = 3.5, xend = 4.9, yend = 4.9), color = "#C11432",size=1.5,alpha=0.5)+
-  geom_point(aes(x=Empirical,y=Model)) + ggtitle("Q-Q Plot (from empirical estimates, not data)") + xlab("Empirical") + ylab("Model") 
 ```
 
 The plot shows that empirical estimates are good since it is almost linear but shape parameter is a bit off, hence the slight curve.
 
-```{r}
-p2 <- df %>% ggplot()  + 
-  geom_segment(aes(x = 3.5, y = 3.5, xend = 4.75, yend = 4.75), color = "#C11432",size=1.5,alpha=0.5)+
-  geom_point(aes(y=Data,x=Model)) + ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
-grid.arrange(p1,p2,ncol=2)
-```
-Now the return level plot.
-```{r}
-df1 <- df
-x <- portpirie[,2]
-fit <- gev_fit(x)
-p <- seq(0.999,0.01,-0.001)
-z <- GEV_inv(U=p,mle=fit$mle)
-df <- data.frame(p,z)
-    eps <- 1e-06
-    a1 <- fit$mle
-    a2 <- fit$mle
-    a3 <- fit$mle
-    a1[1] <- fit$mle[1] + eps
-    a2[2] <- fit$mle[2] + eps
-    a3[3] <- fit$mle[3] + eps
-    f <- p
-    q <- gevq(fit$mle, 1 - f)
-    d <- t(gev.rl.gradient(a = fit$mle, p = 1 - f))
-    v <- apply(d, 1, q.form, m = fit$cov)
-    CI <- data.frame(u= q + 1.96 * sqrt(v),l=q - 1.96 * sqrt(v))
-ggplot() + 
-  geom_line(aes(x=-1/log(df$p),y=df$z)) +
-   geom_line(aes(x=-1/log(df$p),y=CI$u),col="#C11432",linetype="dashed") +
-   geom_line(aes(x=-1/log(df$p),y=CI$l),col="#C11432", linetype="dashed") +
-      geom_ribbon(aes(x=-1/log(df$p),ymin=CI$u,ymax=CI$l), fill="#C11432", alpha=0.2)+
-  geom_point(aes(x=-1/log(df1$q),y=df1$Data)) + coord_trans(x="log") +
-  scale_x_continuous( breaks=c(10,100,500,1000)) +
-  xlab("Return level (years)") +
-  ylab(TeX("$z_p$"))    
-```
+## Plot for UKCP data
 
 Yearly maximum temperature data from the UKCP model.
 ```{r}
@@ -586,7 +539,7 @@ U_2 <- runif(N)
 X_2 <- -1/(log(U_2))
 R <- X_1/N+X_2/N
 W <- (X_1/N)/(R)
-ggplot(data.frame(R=R,W=W)) + geom_point(aes(x=R,y=W),alpha=0.3,size=2) +
+ggplot(data.frame(R=R,W=W)) + geom_point(aes(x=W,y=R),alpha=0.3,size=2) +
   xlab(TeX(paste0("$(X_1+X_2)/",N,"$"))) +
   ylab(TeX(paste0("$X_1/(X_1+X_2)$"))) 
 }
@@ -745,12 +698,12 @@ df1 <- data.frame(X_1=X_1,X_2=X_2,uni=seq(0.02,1,0.02),
              u_x=seq(0,0.1,length.out=50),
              u_y=0.1-seq(0,0.1,length.out=50),
              line_1=seq(0.02,1,0.02)*(1/2),line_2=seq(0.02,1,0.02)*(1),line_3=seq(0.02,5/6,length.out=50)*(3/2))
-df1 <-df1 %>%  mutate(above_u=(X_1+X_2>0.1))  
-return(df1)
+df <-df1 %>%  mutate(above_u=(X_1+X_2>0.1))  
+return(df)
 }
 plot_dependence <- function(df) {
 N <- nrow(df)
-ggplot(df1) + geom_point(aes(x=X_1, y=X_2,col=above_u),alpha=0.5) +
+ggplot(df) + geom_point(aes(x=X_1, y=X_2,col=above_u),alpha=0.5) +
   scale_color_manual(values = c("TRUE" = "#C11432",
                                 "FALSE"="black")) +
    labs(color=TeX('Above $u$')) +
@@ -803,6 +756,8 @@ Use PIT to transform Port Pirie data to have Gumbel margins (as motivated by Hef
 
 ```{r}
 # create x and y quantile variables
+data(portpirie)
+portpirie <- data.frame(SeaLevel=portpirie,Year=seq(1,length(portpirie),1))
 U <- portpirie %>% select(SeaLevel,Year) %>% arrange(SeaLevel) %>% mutate(u=row_number()/(nrow(portpirie)+1))
 # generate Gumbel margins
 
