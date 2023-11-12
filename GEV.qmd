@@ -72,7 +72,7 @@ for (i in 1:length(U)) {
 }
 z_p <- data.frame(U,z_p_neg,z_p_0,z_p_pos)
 z_p %>% ggplot() + geom_line(aes(x=-log(-log(U)),y=(z_p_neg)),color="#009ada",linewidth=1.5) + geom_line(aes(x=-log(-log(U)),y=(z_p_0)),linewidth=1.5) + geom_line(aes(x=-log(-log(U)),y=(z_p_pos)),color="#c11432",linewidth=1.5) + 
-  xlab(TeX("$-\\log(-\\log(U))$")) +
+  xlab(TeX("$-\\log(y_p)$")) +
   ylab(TeX("$z_p$" )) + theme_minimal() +
   annotate("text", x = 8, y = 0, label = TeX("$\\xi=-.2$")) +
   annotate("text", x = 8, y = 10, label = TeX("$\\xi=0$")) +
@@ -386,6 +386,10 @@ ggplot() +
 u <- 32
 x <- sort(shift_tmp[shift_tmp>u])
 mle <- gpd.fit(x,threshold=u)$mle
+# CI for xi
+# f <- gpd.fit(x,threshold=u)
+# c(f$mle[2]-qnorm(p=0.975)*f$se[2],f$mle[2]+qnorm(p=0.975)*f$se[2])
+
 temp <- data.frame(Temperature=x)
 # calculate GEV inverse CDF
 GPD_inv <- function(mle,threshold,p) {
@@ -537,11 +541,11 @@ plot_r_w_frechet <- function(N) {
 X_1 <- -1/(log(U_1))
 U_2 <- runif(N)
 X_2 <- -1/(log(U_2))
-R <- X_1/N+X_2/N
+R <- (X_1+X_2)/N
 W <- (X_1/N)/(R)
 ggplot(data.frame(R=R,W=W)) + geom_point(aes(x=W,y=R),alpha=0.3,size=2) +
-  xlab(TeX(paste0("$(X_1+X_2)/",N,"$"))) +
-  ylab(TeX(paste0("$X_1/(X_1+X_2)$"))) 
+  ylab(TeX(paste0("$(X_1+X_2)/",N,"$"))) +
+  xlab(TeX(paste0("$X_1/(X_1+X_2)$"))) 
 }
 
 
