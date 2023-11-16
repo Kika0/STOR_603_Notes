@@ -53,7 +53,7 @@ ggplot(df,aes(y) ) + geom_density()
 
 ### Return level plots
 
-Exercise recreating Fig. 3.1 from Coles' book. Possible typo in the book as the $x$-axis should be $- \log(-\log(U))$ and not $\log(-\log(U))$.
+Exercise recreating Fig. 3.1 from Coles' book. Possible typo in the book as the $x$-axis should be $- \log(-\log(1-p))$ and not $\log(-\log(1-p))$.
 
 ```{r}
 # set parameters
@@ -65,7 +65,7 @@ z_p_neg <- c()
 z_p_pos <- c()
 z_p_0 <- c()
 # calculate z_p for different values of xi
-for (i in 1:length(U)) {
+for (i in seq_along(U)) {
   z_p_neg[i] <-  -(1- (-log(U[i]))^(-xi[1])  )*(sigma[1]/xi[1])+ mu[1]
   z_p_pos[i] <-  -(1- (-log(U[i]))^(-xi[3])  )*(sigma[3]/xi[3])+ mu[3]
   z_p_0[i] <- -log(-log(U[i]))*sigma[2]+mu[2]
@@ -125,7 +125,7 @@ g <- function(x) {
 }
 x_fit <- seq(1,4,0.01)
 y_fit <- c()
-for (i in 1:length(x_fit)) {
+for (i in seq_along(x_fit)) {
   y_fit[i] <- g(x_fit[i])
 }
 #plot(x_fit,y_fit)
@@ -139,7 +139,7 @@ ggplot() + geom_density(df %>% filter(block_max==TRUE),mapping=aes(y)) + geom_li
 Try same fit with Venice data.
 
 ```{r}
-venice <- data.frame(x=1:length(venice[,2]),y=venice[,2])
+venice <- data.frame(x=seq_along(venice[,2]),y=venice[,2])
 fit <- gev.fit(df$y[df$block_max==TRUE])
 fit$mle
 x_fit <- seq(70,200,1)
@@ -147,7 +147,7 @@ y_fit <- c()
 g <- function(x) {
   1/fit$mle[2] * (1 + fit$mle[3]*((x - fit$mle[1])/fit$mle[2] )   )^(-(1+1/fit$mle[3]))* exp(-(1 + fit$mle[3]*((x - fit$mle[1])/fit$mle[2] )   )^(-1/fit$mle[3]) )
 }
-for (i in 1:length(x_fit)) {
+for (i in seq_along(x_fit)) {
   y_fit[i] <- g(x_fit[i])
 }
 df_fit <- data.frame(x_fit,y_fit)
@@ -198,7 +198,7 @@ Port Pirie data not available in the package, maybe try with Venice sea-levels d
 ```{r}
 data(portpirie)
 venice[,2]
-x=gev.fit(portpirie)
+x=gev.fit(portpirie[,2])
 gev.diag(x)
 ```
 
@@ -207,7 +207,7 @@ Try to recreate the likelihood function.
 The function gets longer as initial values of the parameters are either pre-specified or calculated from the data. Therefore, `gev_fit.R` script contains the function.
 
 ```{r}
-x <- portpirie
+x <- portpirie[,2]
 gev.diag(gev_fit(x))
 # the function could return very high values 
 # that cannot be minimum negative likelihood like 10^6
@@ -226,7 +226,7 @@ GEV_inv <- function(U,mle) {
   mu <- mle[1]
   sig <- mle[2]
   xi <- mle[3]
- z <-  (sig/xi) * (  (-log(U))^(-xi) -1) + mu 
+ z <-  (sig/xi) * ((-log(U))^(-xi)-1) + mu 
  return(z)
 }
 # calculate GEV CDF
@@ -235,13 +235,13 @@ GEV <- function(z,mle) {
   sig <- mle[2]
   xi <- mle[3]
   G <- c()
-  for (i in 1:length(z))
+  for (i in seq_along(z))
  G[i] <- exp(  -(1 + xi*((z[i]-mu)/sig) )^(-1/xi)  )
  return(G)
 }
 ```
 
-Next is Q-Q plot.Q-Q plot compares two probability distributions by plotting their quantiles. In this example, it plots two GEV distributions with different parameters: empirical calculated though a formula used for the initial parameters in the optimisation and the model parameters (MLE).
+Next is QQ plot. QQ plot compares two probability distributions by plotting their quantiles. In this example, it plots two GEV distributions with different parameters: empirical calculated though a formula used for the initial parameters in the optimisation and the model parameters (MLE).
 
 ```{r}
 GEV_QQ <- function(x) {
@@ -262,7 +262,7 @@ return(data.frame(q=q,Model=model,Empirical=est,Data=dat))
 }
 ```
 
-The plot shows that empirical estimates are good since it is almost linear but shape parameter is a bit off, hence the slight curve.
+The plot shows that empirical estimates are good since it is almost linear but shape parameter is a bit off, hence the slight curve (is it really the shape parameter causing this or just sampling variance?).
 
 ## Plot for UKCP data
 
@@ -295,11 +295,11 @@ x <- c()
 for (i in 1:81) {
   x[i] <- max(tmp[(360*(i-1)+1):(i*360)])
 }
-I <- 1:length(x)
+I <- seq_along(X)
 gradient <- summary(lm(x~I))$coefficients[2,1]
 
 shift <- c()
-for (i in 1:length(x)) {
+for (i in seq_along(x)) {
   shift[i] <- x[i] - (i-1)*gradient 
 }
 
@@ -309,11 +309,11 @@ plot(I,shift)
 # try shifting all the data with the corresponding yearly coefficients
 # calculate yearly maxima
 y <- tmp
-I <- 1:length(y)
+I <- seq_along(y)
 gradient <- summary(lm(y~I))$coefficients[2,1]
 
 shift_tmp <- c()
-for (i in 1:length(y)) {
+for (i in seq_along(y)) {
   shift_tmp[i] <- y[i] - (i-1)*gradient 
 }
 
@@ -327,12 +327,12 @@ x <- shift
 mle <- gev_fit(x)$mle
 temp <- data.frame(Temperature=sort(x))
 # calculate upper and lower bounds for 95% CI to add to the plots
-Ulow<-sapply(1:length(x), function(i){qbeta(0.025, i, length(x)+1-i)})
-Uup<-sapply(1:length(x), function(i){qbeta(0.975, i, length(x)+1-i)})
-Model <- temp %>% select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle)) %>% 
+Ulow<-sapply(seq_along(x), function(i){qbeta(0.025, i, length(x)+1-i)})
+Uup<-sapply(seq_along(x), function(i){qbeta(0.975, i, length(x)+1-i)})
+Model <- temp %>% dplyr::select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle)) %>% 
   mutate(Ulow=Ulow) %>% mutate(Uup=Uup) 
 
-Empirical <- temp %>% select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
+Empirical <- temp %>% dplyr::select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
 df <- temp %>% left_join(Empirical,by="Temperature") %>% left_join(Model,by="Temperature")
 df %>% head()
 p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.2)+ geom_point(aes(x=Empirical,y=Model)) + geom_line(aes(x=Empirical,y=Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Empirical,y=Ulow), linetype="dashed", color="#C11432")  + 
@@ -354,24 +354,36 @@ The next plot is return level plot.
 ```{r}
 df1 <- df
 x <- temp[,1]
-fit <- gev_fit(x)
-p <- seq(0.999,0.01,-0.001)
+#fit <- gev_fit(x)
+fit <- as.vector(top_bottom[1,])
+f <- seq(0.999,0.01,-0.001)
 z <- GEV_inv(U=p,mle=fit$mle)
-df <- data.frame(p,z)
-    eps <- 1e-06
-    a1 <- fit$mle
-    a2 <- fit$mle
-    a3 <- fit$mle
-    a1[1] <- fit$mle[1] + eps
-    a2[2] <- fit$mle[2] + eps
-    a3[3] <- fit$mle[3] + eps
-    f <- p
-    q <- gevq(fit$mle, 1 - f)
-    d <- t(gev.rl.gradient(a = fit$mle, p = 1 - f))
-    v <- apply(d, 1, q.form, m = fit$cov)
-    CI <- data.frame(u= q + 1.96 * sqrt(v),l=q - 1.96 * sqrt(v))
+df <- data.frame(p=f,z)
+#f <- p
+q <- gevq(fit$mle, 1 - f)
+d <- t(gev.rl.gradient(a = fit$mle, p = 1 - f))
+v <- apply(d, 1, q.form, m = fit$cov)
+CI <- data.frame(u= q + 1.96 * sqrt(v),l=q - 1.96 * sqrt(v))
+# add also 95% bootstrap interval
+ boot <-   rgev(length(x),loc=fit$mle[1],scale=fit$mle[2],shape=fit$mle[3])
+ fit_boot <- gev_fit(boot)$mle
+ 
+#  fit_boot <- data.frame(mu=numeric(),sig=numeric(),xi=numeric())
+#   for (i in 1:1000) {
+#      boot <-   rgev(length(x),loc=fit$mle[1],scale=fit$mle[2],shape=fit$mle[3])
+#  fit_boot[nrow(fit_boot) +1,] <- gev_fit(boot)$mle
+#  
+#   }
+#  
+# fb <-  fit_boot %>% arrange(mu) %>% slice(26:975) 
+# top_bottom <- fb %>% slice(c(1,n()))
+# probboot <- pgev(q=boot,loc=fit$mle[1],scale=fit$mle[2],shape=fit$mle[3])  
+# boot <- boot[probboot> 0.025 & probboot <0.975]
+# probboot <- probboot[probboot> 0.025 & probboot <0.975]
+# bootstrap <- data.frame(boot,probboot)
 ggplot() + 
   geom_line(aes(x=-1/log(df$p),y=df$z)) +
+ # geom_point(aes(x=-1/log(bootstrap$probboot),y=bootstrap$boot))+
   geom_line(aes(x=-1/log(df$p),y=CI$u),col="#C11432",linetype="dashed") +
   geom_line(aes(x=-1/log(df$p),y=CI$l),col="#C11432", linetype="dashed") +
   geom_ribbon(aes(x=-1/log(df$p),ymin=CI$u,ymax=CI$l), fill="#C11432", alpha=0.2)+
@@ -403,7 +415,7 @@ GPD <- function(z,mle,threshold) {
   sig <- mle[1]
   xi <- mle[2]
   G <- c()
-  for (i in 1:length(z))
+  for (i in seq_along(z))
  G[i] <- 1 - (1 + (xi * (z[i] - threshold))/sig)^(-1/xi)
  return(G)
 }
@@ -416,8 +428,8 @@ u <- threshold
 q <-1- seq(from=1/(length(x)+1),to=length(x)/(length(x)+1),length.out=length(x)) #quantile
 model <- GPD_inv(mle=model_par,threshold=u,p=q) #z generated from the model
 # calculate upper and lower bounds for 95% CI to add to the plots
-Ulow<-sapply(1:length(x), function(i){qbeta(0.025, i, length(x)+1-i)})
-Uup<-sapply(1:length(x), function(i){qbeta(0.975, i, length(x)+1-i)})
+Ulow<-sapply(seq_along(x), function(i){qbeta(0.025, i, length(x)+1-i)})
+Uup<-sapply(seq_along(x), function(i){qbeta(0.975, i, length(x)+1-i)})
 Model <- temp %>% select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle)) %>% 
   mutate(Ulow=Ulow) %>% mutate(Uup=Uup) 
 #est <- GEV_inv(U=q,mle=est_par) #z generated from GEV empirical estimates
@@ -427,8 +439,8 @@ return(data.frame(q=q,Model=model,Data=dat,Ulow=Ulow,Uup=Uup))
 
 #Model <- temp %>% select(Temperature) %>% mutate(Model=GPD(z=Temperature,mle=mle,threshold=u))
 # calculate upper and lower bounds for 95% CI to add to the plots
-Ulow<-sapply(1:length(x), function(i){qbeta(0.025, i, length(x)+1-i)})
-Uup<-sapply(1:length(x), function(i){qbeta(0.975, i, length(x)+1-i)})
+Ulow<-sapply(seq_along(x), function(i){qbeta(0.025, i, length(x)+1-i)})
+Uup<-sapply(seq_along(x), function(i){qbeta(0.975, i, length(x)+1-i)})
 Model <- temp %>%  select(Temperature) %>% mutate(Model=GPD(z=Temperature,mle=mle,threshold=u)) %>% 
   mutate(Ulow=Ulow) %>% mutate(Uup=Uup) 
 Empirical <- temp %>% select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
