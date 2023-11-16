@@ -131,7 +131,7 @@ p9 <- angles(rho=0.9,u=0.999)
 grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
 
 # dependence between r.v. for husler reiss dist
-h <- function(l,u,N=500000){
+h <- function(l,u,N=50000){
   dep_x1_x2 = l
   dep_x2_x3 = l
   
@@ -174,7 +174,7 @@ h <- function(l,u,N=500000){
     theme(panel.grid.major = element_blank(), 
          # legend.position = 'none',
           panel.grid.minor = element_blank())+
-    labs(x = "", y = "") + ggtitle(TeX(paste0("$\\lambda=$",l,", $u=\\hat{F}_R^{-1}($",u,"$)$"))) +
+    labs(x = "", y = "") + ggtitle(TeX(paste0("$\\lambda=$",l,", $r_0=\\hat{F}_R^{-1}($",u,"$)$"))) +
     guides(fill=guide_legend(title="Density estimate"))
   
 }
@@ -522,9 +522,9 @@ generate_dep_X_Y_Y_Z <- function(N,dep=1/2,U=c(0.9,0.99,0.999)) {
     theme_minimal()+
     scale_y_continuous(limits = c(0, 1))+
     scale_x_continuous(limits = c(0, 1))+
-    theme(panel.grid.major = element_blank(), 
+    #theme(panel.grid.major = element_blank(), 
           # legend.position = 'none',
-          panel.grid.minor = element_blank())+
+      #    panel.grid.minor = element_blank())+
     labs(x = "", y = "") +
     ggtitle(TeX(paste0("$\\alpha=$",dep))) +
     guides(fill=guide_legend(title="Density estimate")) 
