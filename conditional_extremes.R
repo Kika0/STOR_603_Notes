@@ -56,6 +56,23 @@ grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y_1,y=Y_3),alpha=0.5),ncol=3)
 
+# filter for Y_1 being extreme
+v <- 0.9
+Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 
+Y_2_likelihood <- function(theta,df=Y_given_1_extreme) {
+  a <- theta[1]
+  b <- theta[2]
+  mu <- theta[3]
+  sig <- theta[4]
+  Y_1 <- df$Y_1
+  Y_2 <- df$Y_2
+ #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
+  log_lik <- sum(-log(Y_1^b *sig) + (-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2))  )
+ return(log_lik)
+}
 
+optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,control = list(fnscale=-1))
+
+# plot the values inferenced on
 
