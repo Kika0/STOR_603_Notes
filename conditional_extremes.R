@@ -49,15 +49,9 @@ frechet_laplace_pit <- function(x) {
 }
 
 # PIT to Laplace
-sims <- sims %>% mutate(Y_1=as.numeric(map_if(X_1,.p=function(x){exp(-1/x)<0.5},
-                           .f=function(x) {log(2*exp(-1/x))},
-                           .else=function(x){-log(2*(1-exp(-1/x)))}))) %>% 
-  mutate(Y_2=as.numeric(map_if(X_2,.p=function(x){exp(-1/x)<0.5},
-                    .f=function(x) {log(2*exp(-1/x))},
-                    .else=function(x){-log(2*(1-exp(-1/x)))}))) %>%
-  mutate(Y_3=as.numeric(map_if(X_3,.p=function(x){exp(-1/x)<0.5},
-                    .f=function(x) {log(2*exp(-1/x))},
-                    .else=function(x){-log(2*(1-exp(-1/x)))})))
+sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
+  mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
+  mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
 
 ggplot(sims %>% select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
 
@@ -81,7 +75,18 @@ Y_2_likelihood <- function(theta,df=Y_given_1_extreme) {
  return(log_lik)
 }
 
-optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,control = list(fnscale=-1))
-
+opt <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,control = list(fnscale=-1))
+a_hat <- opt$par[1]
+b_hat <- opt$par[2]
+mu_hat <- opt$par[3]
+sig_hat <- opt$par[4]
+Y_1 <- Y_given_1_extreme[,4]
 # plot the values inferenced on
+# generate from Normal distribution
+N <- 50000
+Y_2_sim <- rnorm(n=length(Y_1),mean = a_hat*Y_1 + Y_1^b_hat*mu_hat,sd=sig_hat*Y_1^b_hat )
 
+Y_given_1_extreme <- Y_given_1_extreme %>% mutate(Y_2_sim=Y_2_sim)
+ggplot(Y_given_1_extreme %>% select(Y_1,Y_2_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
+
+# transform back to Fréchet margins
