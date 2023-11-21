@@ -3,6 +3,15 @@ library(tidyverse)
 library(latex2exp)
 library(gridExtra)
 
+# set theme defaults to be black rectangle
+theme_set(theme_bw())
+theme_replace(
+  panel.spacing = unit(2, "lines"),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.background = element_blank(),
+  panel.border = element_rect(colour = "black", fill = NA) )
+
 generate_dep_X_Y_Y_Z <- function(N,dep=c(1/2,1/2)) {
   dat <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
   set.seed(12)
