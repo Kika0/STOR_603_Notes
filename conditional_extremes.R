@@ -34,7 +34,8 @@ generate_dep_X_Y_Y_Z <- function(N,dep=c(1/2,1/2)) {
 }
 
 # generate trivariate sample
-sims <- generate_dep_X_Y_Y_Z(N=50000)
+N <- 5000
+sims <- generate_dep_X_Y_Y_Z(N=N)
 
 ggplot(sims %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
 
@@ -60,7 +61,7 @@ grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y_1,y=Y_3),alpha=0.5),ncol=3)
 
 # filter for Y_1 being extreme -----
-v <- 0.9
+v <- 0.99
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 
@@ -84,7 +85,7 @@ sig_hat <- opt$par[4]
 Y_1 <- Y_given_1_extreme[,4]
 # plot the values inferenced on
 # generate from Normal distribution
-N <- 50000
+N <- 5000
 Y_2_sim <- rnorm(n=length(Y_1),mean = a_hat*Y_1 + Y_1^b_hat*mu_hat,sd=sig_hat*Y_1^b_hat )
 
 Y_given_1_extreme <- Y_given_1_extreme %>% mutate(Y_2_sim=Y_2_sim)
@@ -108,7 +109,7 @@ X_2_simdf <- Y_2_sim %>%
   mutate(X_2=as.numeric(map(.x=Y_2,.f=laplace_frechet_pit))) %>%
   mutate(X_2_sim=as.numeric(map(.x=Y_2_sim,.f=laplace_frechet_pit)))
 
-X_2_simdf <- X_2_simdf %>% mutate(v=c(rep("below_threshold",45000),rep("above_threshold",5000)))
+X_2_simdf <- X_2_simdf %>% mutate(v=c(rep("below_threshold",N*v),rep("above_threshold",N*(1-v))))
 
 grid.arrange(ggplot(X_2_simdf) + geom_point(aes(x=X_1,y=X_2,col=v),alpha=0.5),
              ggplot(X_2_simdf) + geom_point(aes(x=X_2,y=X_3,col=v),alpha=0.5),
@@ -131,7 +132,7 @@ grid.arrange(ggplot(X_2_simdf %>% filter(v=="above_threshold")) + geom_point(aes
              ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_2_sim,y=Y_3),alpha=0.5),ncol=2)
 
 # repeat the simulation procedure for X_3 given X_1 is extreme
-v <- 0.9
+v <- 0.99
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 
@@ -152,8 +153,8 @@ a_hat <- opt$par[1]
 b_hat <- opt$par[2]
 mu_hat <- opt$par[3]
 sig_hat <- opt$par[4]
-Y_1 <- Y_given_1_extreme[,4]
-# plot the values inferenced on
+
+# plot the values inferenced on ----
 # generate from Normal distribution
 N <- 50000
 Y_3_sim <- rnorm(n=length(Y_1),mean = a_hat*Y_1 + Y_1^b_hat*mu_hat,sd=sig_hat*Y_1^b_hat )
@@ -161,7 +162,7 @@ Y_3_sim <- rnorm(n=length(Y_1),mean = a_hat*Y_1 + Y_1^b_hat*mu_hat,sd=sig_hat*Y_
 Y_given_1_extreme <- Y_given_1_extreme %>% mutate(Y_3_sim=Y_3_sim)
 ggplot(Y_given_1_extreme %>% select(Y_1,Y_3_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
 
-# transform back to Fréchet margins
+# transform back to Fréchet margins -----
 laplace_frechet_pit <- function(y) {
   if (y<0) {
     x <- (log(2)-y)^(-1)
@@ -200,3 +201,36 @@ grid.arrange(ggplot(X_3_simdf %>% filter(v=="above_threshold")) + geom_point(aes
              ggplot(X_3_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
              ggplot(X_3_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_1,y=Y_3_sim),alpha=0.5),
              ggplot(X_3_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_2,y=Y_3_sim),alpha=0.5),ncol=2)
+
+
+# generate residual Z ----
+Y_1 <- Y_given_1_extreme[,4]
+Y_2 <- Y_given_1_extreme[,5]
+Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
+plot(Y_1,Z)
+
+# generate X_1 from Frechet distribution above 0.9 quantile
+# U <- runif(50000)
+# X_1_gen <- sort( -1/(log(0.99) )  -1/(log(U) ) )
+set.seed(12)
+N <- 50000
+U <- runif(min=0.99,max=1,N)
+X_1_gen <- sort( -1/(log(U) ) )
+
+# transform to Laplace margins
+Gen_Y_1 <- data.frame(X_1=X_1_gen) %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit)))
+
+# for each Y, generate a residual and calculate Y_2
+Y_1 <- Gen_Y_1$Y_1
+Z_gen <- sample(Z,N,replace=TRUE) +rnorm(N,mean=0,sd=density(Z)$bw) # plus noise
+Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_gen
+Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("conditional_model",N))
+# generate Y_1 (extrapolate so above largest observed value)
+
+#plot
+Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% select(X_1,Y_1,Y_2) %>% mutate(sim=rep("original_laplace",50)))
+ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + scale_color_manual(values = c("original_laplace"="black",
+                                                                                                 "conditional_model" = "#C11432")) 
+
+
+
