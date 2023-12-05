@@ -3,7 +3,7 @@ library(evd)
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
-source("cond_model_helpers")
+source("cond_model_helpers.R")
 
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
@@ -18,10 +18,6 @@ theme_replace(
 # generate trivariate sample ----
 N <- 5000
 sims <- generate_dep_X_Y_Y_Z(N=N)
-
-ggplot(sims %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
-
-
 
 # PIT to Laplace
 sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
@@ -39,30 +35,17 @@ v <- 0.99
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 
-Y_2_likelihood <- function(theta,df=Y_given_1_extreme) {
-  a <- theta[1]
-  b <- theta[2]
-  mu <- theta[3]
-  sig <- theta[4]
-  Y_1 <- df$Y_1
-  Y_2 <- df$Y_2
- #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
-  log_lik <- sum(-log(Y_1^b *sig) + (-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2))  )
- return(log_lik)
-}
 
-opt <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,control = list(fnscale=-1))
+opt <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
 a_hat <- opt$par[1]
 b_hat <- opt$par[2]
-mu_hat <- opt$par[3]
-sig_hat <- opt$par[4]
-Y_1 <- Y_given_1_extreme[,4]
-# plot the values inferenced on
-# generate from Normal distribution
+# extrapolate using kernel smoothed residuals
 N <- 5000
-Y_2_sim <- rnorm(n=length(Y_1),mean = a_hat*Y_1 + Y_1^b_hat*mu_hat,sd=sig_hat*Y_1^b_hat )
+Y_1 <- Y_given_1_extreme[,4]
+Y_2 <- Y_given_1_extreme[,5]
+Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
 
-Y_given_1_extreme <- Y_given_1_extreme %>% mutate(Y_2_sim=Y_2_sim)
+
 ggplot(Y_given_1_extreme %>% select(Y_1,Y_2_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
 
 Y_2_sim <- bind_rows(Y_not_1_extreme %>% mutate(Y_2_sim=Y_2),Y_given_1_extreme) %>% 
@@ -99,42 +82,15 @@ v <- 0.99
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 
-Y_3_likelihood <- function(theta,df=Y_given_1_extreme) {
-  a <- theta[1]
-  b <- theta[2]
-  mu <- theta[3]
-  sig <- theta[4]
-  Y_1 <- df$Y_1
-  Y_2 <- df$Y_3
-  #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
-  log_lik <- sum(-log(Y_1^b *sig) + (-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2))  )
-  return(log_lik)
-}
-
-opt <- optim(par=c(1,0,0,1),fn = Y_3_likelihood,df=Y_given_1_extreme,control = list(fnscale=-1))
+opt <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,given=1,sim=3,control = list(fnscale=-1))
 a_hat <- opt$par[1]
 b_hat <- opt$par[2]
-mu_hat <- opt$par[3]
-sig_hat <- opt$par[4]
 
 # plot the values inferenced on ----
-# generate from Normal distribution
-N <- 50000
-Y_3_sim <- rnorm(n=length(Y_1),mean = a_hat*Y_1 + Y_1^b_hat*mu_hat,sd=sig_hat*Y_1^b_hat )
+
 
 Y_given_1_extreme <- Y_given_1_extreme %>% mutate(Y_3_sim=Y_3_sim)
 ggplot(Y_given_1_extreme %>% select(Y_1,Y_3_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
-
-# transform back to Fréchet margins -----
-laplace_frechet_pit <- function(y) {
-  if (y<0) {
-    x <- (log(2)-y)^(-1)
-  }
-  else {
-    x <- -(log(1-exp(-(y+log(2)))))^(-1)
-  }
-  return(x)
-}
 
 Y_3_sim <- bind_rows(Y_not_1_extreme %>% mutate(Y_3_sim=Y_3),Y_given_1_extreme) %>% 
   mutate(X_3_sim=rep(0,N))
@@ -173,8 +129,8 @@ Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
 plot(Y_1,Z)
 
 # generate X_1 from Frechet distribution above 0.9 quantile
-# U <- runif(50000)
-# X_1_gen <- sort( -1/(log(0.99) )  -1/(log(U) ) )
+U <- runif(50000)
+X_1_gen <- sort( -1/(log(0.99) )  -1/(log(U) ) )
 set.seed(12)
 N <- 50000
 U <- runif(min=0.99,max=1,N)
@@ -194,7 +150,29 @@ Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("conditional_model",N)
 Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% select(X_1,Y_1,Y_2) %>% mutate(sim=rep("original_laplace",50)))
 ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + scale_color_manual(values = c("original_laplace"="black",
                                                                                                  "conditional_model" = "#C11432")) 
-(Gen_Y_1 %>% filter(Y_1>9,Y_1<12,Y_2>9,Y_2<12) %>% dim())[1]/50000
+# specify threshold for Laplace margin
+v_l <- c(5,12,5,12)
+# transform to logistic margins
+v <- log(sapply(X = v_l,FUN = laplace_frechet_pit))
+laplace_frechet_pit(5)
 
-evd::pbvevd(c(12to frechet,12),dep=dep[1],model="log") -evd::pbvevd(c(9,12),dep=dep[1],model="log") -
-  evd::pbvevd(c(12,9),dep=dep[1],model="log") + evd::pbvevd(c(9,9),dep=dep[1],model="log")
+# calculate empirical probability by simulating Y_2 from the model
+((Gen_Y_1 %>% filter(Y_1>v[1],Y_1<v[2],Y_2>v[3],Y_2<v[4]) %>% dim())[1]/50000)*(1-0.99)
+
+# need to log Fréchet margins to get the logistic model margin
+evd::pbvevd(c(v[2],v[4]),dep=dep[1],model="log") -
+  evd::pbvevd(c(v[1],v[4]),dep=dep[1],model="log") -
+  evd::pbvevd(c(v[2],v[3]),dep=dep[1],model="log") +
+  evd::pbvevd(c(v[1],v[3]),dep=dep[1],model="log")
+
+# suppose we wish to simulate 1/10000 year event probability
+p10_4 <- frechet_laplace_pit(-1/(log(0.9999)))
+v_l <- c(p10_4,100,p10_4,100)
+# because of dependence, the probability of two variables being large together is larger than p^2
+
+
+# quite good estimation of probability but perhaps generate more large samples to verify
+simulation_prob <- function(Z=Z,a_hat=a_hat,b_hat=b_hat,v_l=c(5,12,5,12))
+
+
+# different methods of generating from Fréchet lead to different results, which should be looked at

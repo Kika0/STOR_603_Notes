@@ -530,9 +530,9 @@ generate_dep_X_Y_Y_Z <- function(N,dep=1/2,U=c(0.9,0.99,0.999)) {
     guides(fill=guide_legend(title="Density estimate")) 
   return(p)
 }
-p1 <- generate_dep_X_Y_Y_Z(N=50000,dep=0.99,U=c(0.9,0.99,0.999))
-p2<- generate_dep_X_Y_Y_Z(N=50000,dep=0.5,U=c(0.9,0.99,0.999))
-p3 <- generate_dep_X_Y_Y_Z(N=50000,dep=0.1,U=c(0.9,0.99,0.999))
+p1 <- generate_dep_X_Y_Y_Z(N=500000,dep=0.99,U=c(0.9,0.99,0.999))
+p2<- generate_dep_X_Y_Y_Z(N=500000,dep=0.5,U=c(0.9,0.99,0.999))
+p3 <- generate_dep_X_Y_Y_Z(N=500000,dep=0.1,U=c(0.9,0.99,0.999))
 grid.arrange(p3,p2,p1,ncol=1)
 
 # plot for different values of alpha but fixed threshold

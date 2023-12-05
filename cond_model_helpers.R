@@ -14,7 +14,7 @@ generate_dep_X_Y_Y_Z <- function(N,dep=c(1/2,1/2)) {
   for (i in 1:nrow(x_y)){
     Unif <- runif(1) # generate U
     y <- Y[i]
-    z[i] <- optim(par=1,fn=to_opt)$par
+    z[i] <- optim(par=1,fn=to_opt,lower=0,upper=10^6,method="Brent")$par
   }
   sims <- data.frame(X_1=x,X_2=Y,X_3=z)
   return(sims)
@@ -40,4 +40,18 @@ laplace_frechet_pit <- function(y) {
     x <- -(log(1-exp(-(y+log(2)))))^(-1)
   }
   return(x)
+}
+
+# conditioning on Y_1 being extreme to model Y_2 (conditional model in bivariate case)
+# calculates MLE a_hat, b_hat, mu_hat and sig_hat
+Y_2_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
+  a <- theta[1]
+  b <- theta[2]
+  mu <- theta[3]
+  sig <- theta[4]
+  Y1 <- df %>% select(starts_with("Y") & contains(as.character(given))) %>% pull()
+  Y2 <- df %>% select(starts_with("Y") & contains(as.character(sim))) %>% pull()
+  #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
+  log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y_1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+  return(log_lik)
 }
