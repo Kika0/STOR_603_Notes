@@ -24,7 +24,7 @@ sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>%
   mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
   mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
 
-ggplot(sims %>% select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
+ggplot(sims %>% select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
 
 grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
@@ -39,7 +39,7 @@ Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 opt <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
 a_hat <- opt$par[1]
 b_hat <- opt$par[2]
-# extrapolate using kernel smoothed residuals
+# extrapolate using kernel smoothed residuals ----
 N <- 5000
 Y_1 <- Y_given_1_extreme[,4]
 Y_2 <- Y_given_1_extreme[,5]
@@ -129,12 +129,16 @@ Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
 plot(Y_1,Z)
 
 # generate X_1 from Frechet distribution above 0.9 quantile
-U <- runif(50000)
-X_1_gen <- sort( -1/(log(0.99) )  -1/(log(U) ) )
+ # U <- runif(50000)
+ # X_1_gen <- sort( -1/log(0.99) + 1 - exp(-U) )
 set.seed(12)
 N <- 50000
 U <- runif(min=0.99,max=1,N)
 X_1_gen <- sort( -1/(log(U) ) )
+
+U <- runif(50000)
+Y_1_gen <- -log(2*(1-0.99)) + rexp(50000)
+Gen_Y_1 <- data.frame(Y_1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
 
 # transform to Laplace margins
 Gen_Y_1 <- data.frame(X_1=X_1_gen) %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit)))
@@ -148,22 +152,30 @@ Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("conditional_model",N)
 
 #plot
 Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% select(X_1,Y_1,Y_2) %>% mutate(sim=rep("original_laplace",50)))
-ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + scale_color_manual(values = c("original_laplace"="black",
-                                                                                                 "conditional_model" = "#C11432")) 
+ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + 
+  scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
+
 # specify threshold for Laplace margin
 v_l <- c(5,12,5,12)
 # transform to logistic margins
 v <- log(sapply(X = v_l,FUN = laplace_frechet_pit))
-laplace_frechet_pit(5)
 
 # calculate empirical probability by simulating Y_2 from the model
 ((Gen_Y_1 %>% filter(Y_1>v[1],Y_1<v[2],Y_2>v[3],Y_2<v[4]) %>% dim())[1]/50000)*(1-0.99)
 
 # need to log Fréchet margins to get the logistic model margin
-evd::pbvevd(c(v[2],v[4]),dep=dep[1],model="log") -
+p <- evd::pbvevd(c(v[2],v[4]),dep=dep[1],model="log") -
   evd::pbvevd(c(v[1],v[4]),dep=dep[1],model="log") -
   evd::pbvevd(c(v[2],v[3]),dep=dep[1],model="log") +
   evd::pbvevd(c(v[1],v[3]),dep=dep[1],model="log")
+
+# calculate CI
+CI <- c(p-(1.96*(p*(1-p)/50000)^(0.5)),p+(1.96*(p*(1-p)/50000)^(0.5)))
+
+ran_bern <- rbinom(n=1000,size = 50000,p=p)/50000
+# density(ran_bern) %>% plot()
+ggplot(data.frame(x=ran_bern)) + geom_density(aes(x=x),stat="density") 
+
 
 # suppose we wish to simulate 1/10000 year event probability
 p10_4 <- frechet_laplace_pit(-1/(log(0.9999)))
@@ -171,8 +183,106 @@ v_l <- c(p10_4,100,p10_4,100)
 # because of dependence, the probability of two variables being large together is larger than p^2
 
 
+d <- data.frame(x=ran_bern)
 # quite good estimation of probability but perhaps generate more large samples to verify
-simulation_prob <- function(Z=Z,a_hat=a_hat,b_hat=b_hat,v_l=c(5,12,5,12))
-
+p1 <- ggplot(data = d) + theme_bw() + 
+  geom_density(aes(x=x, y = ..density..), color = 'black')
+x <- ran_bern
+# new code is below
+q25 <- quantile(x,.025)
+q975 <- quantile(x,.975)
+medx <- median(x)
+x.dens <- density(x)
+df.dens <- data.frame(x = x.dens$x, y = x.dens$y)
+p1 + geom_area(data = subset(df.dens, x >= q25 & x <= q975), 
+              aes(x=x,y=y), fill = 'lightblue') +
+  geom_vline(xintercept = p) 
+ # geom_vline(xintercept = medx)
+library(HDInterval)
+library(ggridges)
+ggplot(d, aes(x = x, y = 0, fill = stat(quantile))) + 
+  geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = hdi, vline_linetype = 2) +
+  scale_fill_manual(values = c("transparent", "lightblue", "transparent"), guide = "none")
 
 # different methods of generating from Fréchet lead to different results, which should be looked at
+
+
+# start from the beginning
+# generate trivariate sample ----
+N <- 5000
+sims <- generate_dep_X_Y_Y_Z(N=N)
+
+# PIT to Laplace
+sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
+  mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
+  mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
+
+ggplot(sims %>% select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
+
+grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
+             ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
+             ggplot(sims) + geom_point(aes(x=Y_1,y=Y_3),alpha=0.5),ncol=3)
+
+# filter for Y_1 being extreme -----
+v <- 0.99
+Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
+Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
+
+
+d <- 3
+for (i in c(2,3)) {
+opt[[i-1]] <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,given=1,sim=i,control = list(fnscale=-1))
+}
+a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
+b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
+
+# generate residual Z ----
+Y_1 <- Y_given_1_extreme[,4]
+Y_2 <- Y_given_1_extreme[,5]
+Y_3 <- Y_given_1_extreme[,6]
+
+Z_2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
+Z_3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
+plot(Y_1,Z_2)
+plot(Y_1,Z_3)
+
+# calculate the normal using the PIT
+Z_N_2 <- qnorm(F_smooth_Z(Z_2))
+Z_N_3 <- qnorm(F_smooth_Z(Z_3))
+rho_hat <- cor(Z_N_2,Z_N_3)
+
+# generate from the normalised residuals
+mvrnorm(n=50000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
+
+# transform back to the original 
+
+# generate X_1 from Frechet distribution above 0.9 quantile
+# U <- runif(50000)
+# X_1_gen <- sort( -1/log(0.99) + 1 - exp(-U) )
+set.seed(12)
+N <- 50000
+U <- runif(min=0.99,max=1,N)
+X_1_gen <- sort( -1/(log(U) ) )
+
+U <- runif(50000)
+Y_1_gen <- -log(2*(1-0.99)) + rexp(50000)
+Gen_Y_1 <- data.frame(Y_1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
+
+# transform to Laplace margins
+Gen_Y_1 <- data.frame(X_1=X_1_gen) %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit)))
+
+# for each Y, generate a residual and calculate Y_2
+Y_1 <- Gen_Y_1$Y_1
+Z_gen <- sample(Z,N,replace=TRUE) +rnorm(N,mean=0,sd=density(Z)$bw) # plus noise
+Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_gen
+Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("conditional_model",N))
+# generate Y_1 (extrapolate so above largest observed value)
+
+#plot
+Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% select(X_1,Y_1,Y_2) %>% mutate(sim=rep("original_laplace",50)))
+ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + 
+  scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
+
+# generate also for Y_3
+
+

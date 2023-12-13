@@ -290,8 +290,15 @@ generate_dep_X_Y_Z <- function(N,abc=abc,U=c(0.9,0.99,0.999)) {
   dat1 = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
     mutate(R = x1 + x2 + x3)  %>% 
     mutate(u = quantile(R, U[i])) %>%
-    mutate(q=rep(U[i],N)) %>% 
+   mutate(q=rep(U[i],N)) %>% 
+    # mutate(q=rep(TeX(paste0("$r_0=$",round(quantile(R, U[i]),5))),N)) %>% 
     filter(R>u) %>%
+    mutate(q = factor(q,
+                        levels = c(U[1],U[2],U[3]),
+                        labels = c(TeX(paste0("$r_0=$",round(quantile(R, U[i]),5))),
+                                   TeX(paste0("$r_0=$",round(quantile(R, U[i]),5))),
+                                   TeX(paste0("$r_0=$",round(quantile(R, U[i]),5)))
+                                   ))) %>%
     mutate(w1 = x1/R, 
            w2 = x2/R,
            w3 = x3/R) 
@@ -303,7 +310,7 @@ p <-   dat %>%
     ggplot()+ 
     geom_density_2d_filled(aes(w1,w2),bins=10,contour_var="ndensity") + 
     geom_polygon(data = upper_corner, aes(x,y),col = 'white', fill = "white")+
-    facet_wrap(~q) +
+    facet_wrap(~q,labeller = label_parsed) +
     theme_minimal()+
     scale_y_continuous(limits = c(0, 1))+
     scale_x_continuous(limits = c(0, 1))+
@@ -311,7 +318,7 @@ p <-   dat %>%
           # legend.position = 'none',
           panel.grid.minor = element_blank())+
     labs(x = "", y = "") +
-  #ggtitle(TeX(paste0("$u=\\hat{F}_R^{-1}($",U,"$)$"))) +
+ # ggtitle(TeX(paste0("$u=\\hat{F}_R^{-1}($",U,"$)$"))) +
     guides(fill=guide_legend(title="Density estimate")) 
 return(p)
 }
@@ -536,37 +543,51 @@ p3 <- generate_dep_X_Y_Y_Z(N=500000,dep=0.1,U=c(0.9,0.99,0.999))
 grid.arrange(p3,p2,p1,ncol=1)
 
 # plot for different values of alpha but fixed threshold
-generate_deps_X_Y_Y_Z <- function(N,dep=c(1/2,1/2)) {
-  set.seed(12)
-  a_x_y <- dep[1]
-  x_y <- evd::rbvevd(N,dep=a_x_y,model="log")
-  x <- exp(x_y[,1])
-  Y <- exp(x_y[,2])
-  a <- dep[2]
-  # generate z
-  to_opt <- function(z) {
-    (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
-  }
-  z <- c()
-  for (i in 1:nrow(x_y)){
-    # generate U
-    Unif <- runif(1)
-    y <- Y[i]
-    # F_Y_Z <- function(z) {
-    #   -a *y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)
-    # }
-    z[i] <- optim(par=1,fn=to_opt)$par
-  }
-  sims <- data.frame(X_1=x,X_2=Y,X_3=z)
-  sims_low_dependence <- sims
-  
-    dat = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
-      mutate(R = x1 + x2 + x3)  %>% 
-      mutate(u = quantile(R, 0.999)) %>%
-      filter(R>u) %>%
-      mutate(w1 = x1/R, 
-             w2 = x2/R,
-             w3 = x3/R) 
+generate_deps_X_Y_Y_Z <- function(N,dep=c(1/2,0.9)) {
+    
+    dat <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+    for (i in 1:length(dep)) {
+      set.seed(26)
+      a_x_y <- dep[i]
+      x_y <- evd::rbvevd(N,dep=a_x_y,model="log")
+      x <- exp(x_y[,1])
+      Y <- exp(x_y[,2])
+      a <- dep[i]
+      # generate z
+      to_opt <- function(z) {
+        (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
+      }
+      z <- c()
+      for (j in 1:nrow(x_y)){
+        # generate U
+        Unif <- runif(1)
+        y <- Y[j]
+        # F_Y_Z <- function(z) {
+        #   -a *y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)
+        # }
+        z[j] <- optim(par=1,fn=to_opt)$par
+      }
+      sims <- data.frame(X_1=x,X_2=Y,X_3=z)
+      sims_low_dependence <- sims
+      
+      dat1 <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+      dat1 = tibble(x1 = sims_low_dependence[,1], x2 = sims_low_dependence[,2], x3 = sims_low_dependence[,3])%>%
+        mutate(R = x1 + x2 + x3)  %>% 
+        mutate(u = quantile(R,0.999)) %>%
+        mutate(q=rep(dep[i],N)) %>% 
+        # mutate(q=rep(TeX(paste0("$r_0=$",round(quantile(R, U[i]),5))),N)) %>% 
+        filter(R>u) %>%
+
+        mutate(w1 = x1/R, 
+               w2 = x2/R,
+               w3 = x3/R) 
+      dat <-  rbind(dat,dat1)
+    }
+  dat <- dat %>%   mutate(q = factor(q,
+                      levels = c(dep[1],dep[2]),
+                      labels = c(TeX(paste0("$\\alpha=$",dep[1])),
+                                 TeX(paste0("$\\alpha=$",dep[2]))
+                      )))
   
   p <-   dat %>%
     ggplot()+ 
@@ -579,12 +600,73 @@ generate_deps_X_Y_Y_Z <- function(N,dep=c(1/2,1/2)) {
           # legend.position = 'none',
           panel.grid.minor = element_blank())+
     labs(x = "", y = "") +
-    ggtitle(TeX(paste0("$\\alpha_1=$",dep[1],", $\\alpha_2$=",dep[2]))) +
+    facet_wrap(~q,labeller = label_parsed) +
+   # ggtitle(TeX(paste0("$$",dep[1],", $\\alpha_2$=",dep[2]))) +
     guides(fill=guide_legend(title="Density estimate")) 
   return(p)
 }
 
-generate_deps_X_Y_Y_Z(N=50000,dep = c(0.9,1/2))
+generate_deps_X_Y_Y_Z(N=500000,dep = c(1/2,0.9))
+
+set.seed(26)
+a_x_y <- 1/2
+x_y <- evd::rbvevd(N,dep=a_x_y,model="log")
+x <- exp(x_y[,1])
+Y <- exp(x_y[,2])
+a <- 1/2
+# generate z
+to_opt <- function(z) {
+  (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
+}
+z <- c()
+for (j in 1:nrow(x_y)){
+  # generate U
+  Unif <- runif(1)
+  y <- Y[j]
+  # F_Y_Z <- function(z) {
+  #   -a *y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)
+  # }
+  z[j] <- optim(par=1,fn=to_opt)$par
+}
+sims <- data.frame(X_1=x,X_2=Y,X_3=z)
+sims_low_dependence <- sims
+X_1 <- x
+X_2 <- Y
+df1 <- data.frame(X_1=X_1,X_2=X_2,uni=seq(0.02,1,0.02),
+                  uni_3=  seq(0.02,5/6,length.out=50), 
+                  u_x=seq(0,0.1,length.out=50),
+                  u_y=0.1-seq(0,0.1,length.out=50))
+                  
+df <-df1 %>%  mutate(above_u=(X_1+X_2>0.1))  
+plot_dependence_R_W <- function(df) {
+  df1 <- data.frame(r=(df$X_1+df$X_2),w=df$X_1/(df$X_1+df$X_2),above_u=df$above_u)%>% mutate(nu=rep(paste0("n=",nrow(df)),nrow(df))) %>% 
+    mutate(u_x=seq(0,1,length.out=nrow(df))) %>% 
+    mutate(u_y=rep(0.1,nrow(df)))
+  ggplot(df1) + geom_point(data=df1,aes(x=w,y=log(r),col=above_u),alpha=0.5)+
+    geom_line(data=df1,aes(x=u_x,y=log(u_y)),col="#C11432",alpha=0.6,linetype="dashed") +
+    annotate("segment",x=0.4,xend=0.4,y=-12.5,yend=1,alpha=0.3) +
+    annotate("segment",x=1/2,xend=1/2,y=-12.5,yend=1,alpha=0.3) +
+    annotate("segment",x=2/3,xend=2/3,y=-12.5,yend=1,alpha=0.3) +
+    xlab(TeX("$W$")) +   ylab(TeX("$\\log (R)$")) +
+    ylim(c(-12.5,1))+
+    annotate("text",x=1,y=-2.7,label="u",col="#C11432") +
+    scale_color_manual(values = c("TRUE" = "#C11432",
+                                  "FALSE"="black")) +
+    labs(color=TeX('Above $u$'))
+}
+plot_dependence_R_W(df=df)
+
+X_1 <- dat1$x1
+X_2 <- dat1$x2
+plot_r_w_frechet <- function(X_1=X_1,X_2=X_2) {
+  set.seed(1)
+  R <- (X_1+X_2)/N
+  W <- (X_1/N)/(R)
+  ggplot(data.frame(R=R,W=W)) + geom_point(aes(x=W,y=R),alpha=0.3,size=2) +
+    ylab(TeX(paste0("$R/$",N,"$|X_1>F^{-1}_{X_1}(.999)$"))) +
+    xlab(TeX(paste0("$W_1|X_1>F^{-1}_{X_1}(.999)$"))) 
+}
+plot_r_w_frechet(X_1,X_2)
 
 # check formula for Laplace PIT
 # U <- runif(10000)
