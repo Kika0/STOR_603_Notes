@@ -55,3 +55,13 @@ Y_2_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y_1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
   return(log_lik)
 }
+
+# generate from the empirical distribution of the residuals
+F_smooth_Z <- function(Z) {
+  Z_smooth <- c()
+  for (i in seq_along(Z)) {
+    z <- Z[i]
+   Z_smooth[i] <-  mean(pnorm((z-Z_2)/density(Z_2)$bw))
+  }
+ return(Z_smooth) 
+}
