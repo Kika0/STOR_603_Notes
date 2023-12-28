@@ -65,3 +65,5 @@ F_smooth_Z <- function(Z) {
   }
  return(Z_smooth) 
 }
+
+# optimise cdf using 50 pieces rather than optimising directly
