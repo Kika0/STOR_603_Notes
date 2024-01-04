@@ -3,6 +3,7 @@ library(evd)
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
+library(MASS)
 source("cond_model_helpers.R")
 
 # set theme defaults to be black rectangle
@@ -85,9 +86,7 @@ Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 opt <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,given=1,sim=3,control = list(fnscale=-1))
 a_hat <- opt$par[1]
 b_hat <- opt$par[2]
-
 # plot the values inferenced on ----
-
 
 Y_given_1_extreme <- Y_given_1_extreme %>% mutate(Y_3_sim=Y_3_sim)
 ggplot(Y_given_1_extreme %>% select(Y_1,Y_3_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
@@ -206,6 +205,15 @@ ggplot(d, aes(x = x, y = 0, fill = stat(quantile))) +
 
 # different methods of generating from Fréchet lead to different results, which should be looked at
 
+# practice transforming from uniform margins to normal and back
+U <- runif(10000)
+plot(density(U))
+N <- qnorm(U)
+plot(density(N))
+plot(density(rnorm(10000)))
+
+# transform back to uniform
+pnorm(1.96)
 
 # start from the beginning
 # generate trivariate sample ----
@@ -213,11 +221,11 @@ N <- 5000
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
-sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
-  mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
-  mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
+sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_3,.f=frechet_laplace_pit))) %>% 
+  mutate(Y_2=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>%
+  mutate(Y_3=as.numeric(map(.x=X_2,.f=frechet_laplace_pit)))
 
-ggplot(sims %>% select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
+ggplot(sims %>% dplyr::select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
 
 grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
@@ -246,43 +254,116 @@ Z_3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
 plot(Y_1,Z_2)
 plot(Y_1,Z_3)
 
+
+
 # calculate the normal using the PIT
 Z_N_2 <- qnorm(F_smooth_Z(Z_2))
 Z_N_3 <- qnorm(F_smooth_Z(Z_3))
+
 rho_hat <- cor(Z_N_2,Z_N_3)
 
-# generate from the normalised residuals
-mvrnorm(n=50000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
+Z_N <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
+Z <- data.frame(Z_2,Z_3)
 
-# transform back to the original 
+# transform back to original margins
+# x <- c()
+# o <- function(z) {
+#   (mean(pnorm((z-Z_2)/density(Z_2)$bw)) - pnorm(Z_N[i,1]))^2
+# }
+# 
+# mean(pnorm((z-Z_2)/density(Z_2)$bw))
+# for (i in 1:nrow(Z_N)) {
+#   x[i] <- optim(fn=o,par=1)$par
+# }
+# o <- function(z) {
+#   (mean(pnorm((z-Z_3)/density(Z_3)$bw)) - pnorm(Z_N[i,1]))^2
+# }
+# 
+# y <- c()
+# for (i in 1:nrow(Z_N)) {
+#   y[i] <- optim(fn=o,par=1)$par
+# }
+
+
 
 # generate X_1 from Frechet distribution above 0.9 quantile
 # U <- runif(50000)
 # X_1_gen <- sort( -1/log(0.99) + 1 - exp(-U) )
-set.seed(12)
-N <- 50000
-U <- runif(min=0.99,max=1,N)
-X_1_gen <- sort( -1/(log(U) ) )
+# set.seed(12)
+# N <- 50000
+# U <- runif(min=0.99,max=1,N)
+# X_1_gen <- sort( -1/(log(U) ) )
 
-U <- runif(50000)
-Y_1_gen <- -log(2*(1-0.99)) + rexp(50000)
+U <- runif(1000)
+Y_1_gen <- -log(2*(1-0.999)) + rexp(1000)
 Gen_Y_1 <- data.frame(Y_1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
 
 # transform to Laplace margins
-Gen_Y_1 <- data.frame(X_1=X_1_gen) %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit)))
+#Gen_Y_1 <- data.frame(X_1=X_1_gen) %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit)))
 
 # for each Y, generate a residual and calculate Y_2
+Z_star <- norm_to_orig(Z_N=Z_N,emp_res = Z)
 Y_1 <- Gen_Y_1$Y_1
-Z_gen <- sample(Z,N,replace=TRUE) +rnorm(N,mean=0,sd=density(Z)$bw) # plus noise
-Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_gen
-Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("conditional_model",N))
+# Y_2 <- a_hat*Y_1 + Y_1^b_hat *x
+# Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
+Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,1]
+Y_3 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,2]
+Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2,Y_3=Y_3) %>% mutate(sim=rep("conditional_model",100))
 # generate Y_1 (extrapolate so above largest observed value)
 
 #plot
-Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% select(X_1,Y_1,Y_2) %>% mutate(sim=rep("original_laplace",50)))
-ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + 
+Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% dplyr::select(X_1,Y_1,Y_2,Y_3) %>% mutate(sim=rep("original_laplace",50)))
+p1 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + 
   scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
+p2 <- ggplot(Gen_orig) + geom_point(aes(x=Y_2,y=Y_3,col=sim),alpha=0.5) + 
+  scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
+p3 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_3,col=sim),alpha=0.5) + 
+  scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
+grid.arrange(p1,p2,p3,ncol=3)
 
-# generate also for Y_3
+Z_comp <- Z_star %>% mutate(Compare=rep("Optimise_all",100))
+Z_comp <- rbind(Z_comp,Z_star%>% mutate(Compare=rep("Linear_segments",100)))
+ggplot() +
+  geom_point(Z_comp,mapping = aes(x=X1,y=X2)) +
+  facet_wrap(~Compare) +
+  xlab(TeX("$Z^*_{2|1}$")) +
+  ylab(TeX("$Z^*_{3|1}$"))
+
+# show that linear approximation is reasonable to only optimise for values near 0 or 1
+u <- seq(0.02,0.98,length.out=49)
+u1 <- seq(0.0001,0.9999,length.out=998)
+ggplot() + 
+  geom_line(data.frame(x=qnorm(u1),u=u1),mapping=aes(x=x,y=u),alpha=0.5) +
+  geom_point(data.frame(x=qnorm(u),u=u),mapping = aes(x=x,y=u),col="#C11432") +
+  geom_line(data.frame(x=qnorm(u),u=u),mapping=aes(x=x,y=u),alpha=0.5,col="#C11432") +
+  ylab(TeX("$\\Phi(x)$")) +
+  xlab(TeX("$x$"))
+
+# this is more useful shown on the actual distribution
+u <- seq(0.02,0.98,length.out=49)
+u1 <- seq(0.0001,0.9999,length.out=998)
+Zu <- c()
+Zu1 <- c()
+to_opt <- function(z) {
+  return( (mean(pnorm((z-Z_2)/density(Z_2)$bw)) - u[j])^2)
+}
+for (j in 1:length(u)) {
+  Zu[j] <- optim(fn=to_opt,par=1)$par
+}
+to_opt <- function(z) {
+  return( (mean(pnorm((z-Z_2)/density(Z_2)$bw)) - u1[j])^2)
+}
+for (j in 1:length(u1)) {
+  Zu1[j] <- optim(fn=to_opt,par=1)$par
+}
+
+ggplot() + 
+  geom_line(data.frame(x=Zu1,u=u1),mapping=aes(x=x,y=u),alpha=0.5) +
+  geom_point(data.frame(x=Zu,u=u),mapping = aes(x=x,y=u),col="#C11432") +
+  geom_line(data.frame(x=Zu,u=u),mapping=aes(x=x,y=u),alpha=0.5,col="#C11432") +
+  ylab(TeX("$s$")) +
+  xlab(TeX("$\\tilde{F}^{-1}_{2|1}\\left(s\\right)$"))
+
+# generate also for Y_3 ----
 
 

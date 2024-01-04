@@ -49,8 +49,8 @@ Y_2_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   b <- theta[2]
   mu <- theta[3]
   sig <- theta[4]
-  Y1 <- df %>% select(starts_with("Y") & contains(as.character(given))) %>% pull()
-  Y2 <- df %>% select(starts_with("Y") & contains(as.character(sim))) %>% pull()
+  Y1 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(given))) %>% pull()
+  Y2 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(sim))) %>% pull()
   #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
   log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y_1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
   return(log_lik)
@@ -64,6 +64,41 @@ F_smooth_Z <- function(Z) {
    Z_smooth[i] <-  mean(pnorm((z-Z_2)/density(Z_2)$bw))
   }
  return(Z_smooth) 
+}
+
+# transform from normal back to kernel smoothed by minimising the square difference
+norm_to_orig <- function(Z_N,emp_res) {
+  Z <- data.frame(matrix(ncol=ncol(Z_N),nrow=nrow(Z_N)))
+  s <- seq(0.02,0.98,length.out=49)
+  Zs <- data.frame(matrix(ncol=ncol(Z_N),nrow=length(s)))
+  # optimise for these 49 values of s
+  to_opt <- function(z) {
+    return( (mean(pnorm((z-emp_res[,i])/density(emp_res[,i])$bw)) - s[j])^2)
+  }
+  for (i in 1:ncol(Z_N)) {
+  for (j in 1:length(s)) {
+    Zs[j,i] <- optim(fn=to_opt,par=1)$par
+  }
+  }
+
+ to_opt <- function(z) {
+ return( (mean(pnorm((z-emp_res[,i])/density(emp_res[,i])$bw)) - pnorm(Z_N[j,i]))^2)
+ }
+ 
+for (i in 1:ncol(Z_N)) {
+  for (j in 1:nrow(Z_N)) {
+    if (pnorm(Z_N[j,i])< min(s) | pnorm(Z_N[j,i])>= max(s) ) {
+    Z[j,i] <- optim(fn=to_opt,par=1)$par
+    }
+    else {
+      k <- which.min(pnorm(Z_N[j,i])>s)-1
+      a <- 0.02/(Zs[k+1,i]-Zs[k,i])
+      b <- -a*Zs[k,i]+s[k]
+      Z[j,i] <- (pnorm(Z_N[j,i])-b)/(a)
+    }
+  }
+}
+  return(Z)
 }
 
 # optimise cdf using 50 pieces rather than optimising directly
