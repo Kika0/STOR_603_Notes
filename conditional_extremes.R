@@ -3,7 +3,8 @@ library(evd)
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
-library(MASS)
+library(MASS) #use dplyr::select to avoid function conflict
+library(xtable)
 source("cond_model_helpers.R")
 
 # set theme defaults to be black rectangle
@@ -266,43 +267,13 @@ Z_N <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
 Z <- data.frame(Z_2,Z_3)
 
 # transform back to original margins
-# x <- c()
-# o <- function(z) {
-#   (mean(pnorm((z-Z_2)/density(Z_2)$bw)) - pnorm(Z_N[i,1]))^2
-# }
-# 
-# mean(pnorm((z-Z_2)/density(Z_2)$bw))
-# for (i in 1:nrow(Z_N)) {
-#   x[i] <- optim(fn=o,par=1)$par
-# }
-# o <- function(z) {
-#   (mean(pnorm((z-Z_3)/density(Z_3)$bw)) - pnorm(Z_N[i,1]))^2
-# }
-# 
-# y <- c()
-# for (i in 1:nrow(Z_N)) {
-#   y[i] <- optim(fn=o,par=1)$par
-# }
-
-
-
-# generate X_1 from Frechet distribution above 0.9 quantile
-# U <- runif(50000)
-# X_1_gen <- sort( -1/log(0.99) + 1 - exp(-U) )
-# set.seed(12)
-# N <- 50000
-# U <- runif(min=0.99,max=1,N)
-# X_1_gen <- sort( -1/(log(U) ) )
+Z_star <- norm_to_orig(Z_N=Z_N,emp_res = Z)
 
 U <- runif(1000)
 Y_1_gen <- -log(2*(1-0.999)) + rexp(1000)
 Gen_Y_1 <- data.frame(Y_1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
 
-# transform to Laplace margins
-#Gen_Y_1 <- data.frame(X_1=X_1_gen) %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit)))
-
 # for each Y, generate a residual and calculate Y_2
-Z_star <- norm_to_orig(Z_N=Z_N,emp_res = Z)
 Y_1 <- Gen_Y_1$Y_1
 # Y_2 <- a_hat*Y_1 + Y_1^b_hat *x
 # Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
@@ -364,6 +335,27 @@ ggplot() +
   ylab(TeX("$s$")) +
   xlab(TeX("$\\tilde{F}^{-1}_{2|1}\\left(s\\right)$"))
 
-# generate also for Y_3 ----
+# print summary of the parameters ----
+N <- 5000
+set.seed(12)
+sims <- generate_dep_X_Y_Y_Z(N=N)
 
+# PIT to Laplace
+sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
+  mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
+  mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
+# print summary
+print(xtable(par_summary(sims=sims),digits=3,include.rownames=FALSE))
+
+# do 1000 simulations to get CI for the estimates
+sumar <- list()
+for (i in 1:1000) {
+  set.seed(123*i)
+  sims <- generate_dep_X_Y_Y_Z(N=N)
+  # PIT to Laplace
+  sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
+    mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
+    mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
+  sumar[[i]] <- par_summary(sims=sims)
+}
 
