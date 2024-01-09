@@ -61,7 +61,7 @@ F_smooth_Z <- function(Z) {
   Z_smooth <- c()
   for (i in seq_along(Z)) {
     z <- Z[i]
-   Z_smooth[i] <-  mean(pnorm((z-Z_2)/density(Z_2)$bw))
+   Z_smooth[i] <-  mean(pnorm((z-Z)/density(Z)$bw))
   }
  return(Z_smooth) 
 }
@@ -108,7 +108,11 @@ par_summary <- function(sims,v=0.99) {
   par_sum <- data.frame(matrix(nrow=5,ncol=0))
 
   # Y_not_1_extreme <- df %>% filter(Y_1<quantile(Y_1,v))
-  
+  Z_2 <- c()
+  Z_3 <- c()
+  Z_N_2 <- c()
+  Z_N_3 <- c()
+  given <- c()
   d <- ncol(df)
   for (j in 1:ncol(df)) {
     Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
@@ -127,18 +131,68 @@ par_summary <- function(sims,v=0.99) {
   Y_2 <- Y_given_1_extreme[,res[1]]
   Y_3 <- Y_given_1_extreme[,res[2]]
   
-  Z_2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
-  Z_3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
+  tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
+  tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
+  
+  Z_2 <- append(Z_2,tmp_z2)
+  Z_3 <- append(Z_3,tmp_z3)
+  given <- append(given,rep(j,50))
   
   # calculate the normal using the PIT
-  Z_N_2 <- qnorm(F_smooth_Z(Z_2))
-  Z_N_3 <- qnorm(F_smooth_Z(Z_3))
+  tmp_zn2 <- qnorm(F_smooth_Z(tmp_z2))
+  tmp_zn3 <- qnorm(F_smooth_Z(tmp_z3))
+  Z_N_2 <- append(Z_N_2,tmp_zn2)
+  Z_N_3 <- append(Z_N_3,tmp_zn3)
   
-  rho_hat <- cor(Z_N_2,Z_N_3)
+  rho_hat <- cor(tmp_zn2,tmp_zn3)
   par_sum <- cbind(par_sum,data.frame(matrix(round(c(a_hat,b_hat,mu_hat,sig_hat,rep(rho_hat,2)),3),nrow=5,ncol=2,byrow=TRUE)))
 }
   return(par_sum)
 }
 
-
+plot_residual <- function(sims,v=0.99) {
+  df <- sims %>% dplyr::select(starts_with("Y"))
+  par_sum <- data.frame(matrix(nrow=5,ncol=0))
+  
+  # Y_not_1_extreme <- df %>% filter(Y_1<quantile(Y_1,v))
+  Z_2 <- c()
+  Z_3 <- c()
+  Z_N_2 <- c()
+  Z_N_3 <- c()
+  given <- c()
+  d <- ncol(df)
+  for (j in 1:ncol(df)) {
+    Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+    res <- c(1:d)[-j]
+    opt <- list()
+    for (i in 2:d) {
+      opt[[i-1]] <- optim(par=c(1,0,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    }
+    a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
+    b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
+    mu_hat <- c(opt[[1]]$par[3],opt[[2]]$par[3])
+    sig_hat <- c(opt[[1]]$par[4],opt[[2]]$par[4])
+    
+    # generate residual Z ----
+    Y_1 <- Y_given_1_extreme[,j]
+    Y_2 <- Y_given_1_extreme[,res[1]]
+    Y_3 <- Y_given_1_extreme[,res[2]]
+    
+   tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
+   tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
+    
+   Z_2 <- append(Z_2,tmp_z2)
+   Z_3 <- append(Z_3,tmp_z3)
+   given <- append(given,rep(j,50))
+    
+    # calculate the normal using the PIT
+    Z_N_2 <- append(Z_N_2,qnorm(F_smooth_Z(tmp_z2)))
+    Z_N_3 <- append(Z_N_3,qnorm(F_smooth_Z(tmp_z3)))
+    
+    rho_hat <- cor(Z_N_2,Z_N_3)
+    # par_sum <- cbind(par_sum,data.frame(matrix(round(c(a_hat,b_hat,mu_hat,sig_hat,rep(rho_hat,2)),3),nrow=5,ncol=2,byrow=TRUE)))
+ par_sum <- data.frame(Z_2,Z_3,Z_N_2,Z_N_3,given)
+     }
+  return(par_sum)
+}
 
