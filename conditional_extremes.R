@@ -336,8 +336,8 @@ ggplot() +
   xlab(TeX("$\\tilde{F}^{-1}_{2|1}\\left(s\\right)$"))
 
 # print summary of the parameters ----
-N <- 5000
-set.seed(12)
+N <- 50000
+set.seed(13)
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
@@ -349,7 +349,7 @@ print(xtable(par_summary(sims=sims),digits=3,include.rownames=FALSE))
 
 # do 1000 simulations to get CI for the estimates
 sumar <- list()
-for (i in 1:1000) {
+for (i in 1:10) {
   set.seed(123*i)
   sims <- generate_dep_X_Y_Y_Z(N=N)
   # PIT to Laplace
@@ -358,4 +358,11 @@ for (i in 1:1000) {
     mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
   sumar[[i]] <- par_summary(sims=sims)
 }
+
+# plot the residual pairs
+ggplot(plot_residual(sims=sims)) + geom_point(aes(x=Z_2,y=Z_3)) + facet_wrap(~given)
+
+# plot the normalised residuals
+ggplot(plot_residual(sims=sims)) + geom_point(aes(x=Z_N_2,y=Z_N_3)) + facet_wrap(~given)
+# plot the residuals after the transformation
 
