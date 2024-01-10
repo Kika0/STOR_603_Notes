@@ -349,7 +349,7 @@ print(xtable(par_summary(sims=sims),digits=3,include.rownames=FALSE))
 
 # do 1000 simulations to get CI for the estimates
 sumar <- list()
-for (i in 1:10) {
+for (i in 1:200) {
   set.seed(123*i)
   sims <- generate_dep_X_Y_Y_Z(N=N)
   # PIT to Laplace
@@ -358,6 +358,34 @@ for (i in 1:10) {
     mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
   sumar[[i]] <- par_summary(sims=sims)
 }
+
+# plot boxplots for a,b,mu,sig estimated values
+muboot <- c()
+sigboot <- c()
+aboot <- c()
+bboot <- c()
+rhoboot <- c()
+Ys <- rep(c("Y_1","Y_2","Y_3"),length(sumar))
+res <- rep(c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23"),length(sumar))
+for (i in 1:length(sumar)) {
+  muboot <- append(muboot,unname(unlist(sumar[[i]][1,])))
+  sigboot <- append(sigboot,unname(unlist(sumar[[i]][2,])))
+  aboot <- append(aboot,unname(unlist(sumar[[i]][3,])))
+  bboot <- append(bboot,unname(unlist(sumar[[i]][4,])))
+  rhoboot <- append(rhoboot,unname(unlist(sumar[[i]][5,c(2,4,6)])))
+}
+
+p1 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=muboot),aes(x=x,y=y))+
+  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\mu}$")) 
+p2 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=sigboot),aes(x=x,y=y))+
+  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\sigma}$")) 
+p3 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=aboot),aes(x=x,y=y))+
+  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\alpha}$")) 
+p4 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=bboot),aes(x=x,y=y))+
+  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\beta}$")) 
+grid.arrange(p3,p4,p1,p2,ncol=2)
+ggplot(data.frame(x=factor(Ys,levels=c("Y_1","Y_2","Y_3")),y=rhoboot),aes(x=x,y=y))+
+  geom_boxplot(fill= c(rep("#C11432",1),rep("#66A64F",1),rep("#009ADA",1))) + xlab("Conditional variable") + ylab(TeX("$\\hat{\\rho}$"))
 
 # plot the residual pairs
 ggplot(plot_residual(sims=sims)) + geom_point(aes(x=Z_2,y=Z_3)) + facet_wrap(~given)
