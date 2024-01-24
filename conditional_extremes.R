@@ -18,7 +18,7 @@ theme_replace(
 
 
 # generate trivariate sample ----
-N <- 5000
+N <- 50000
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
@@ -26,7 +26,7 @@ sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>%
   mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
   mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
 
-ggplot(sims %>% select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
+ggplot(sims %>% dplyr::select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
 
 grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
@@ -34,18 +34,66 @@ grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
 
 # filter for Y_1 being extreme -----
 v <- 0.99
+sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_3,.f=frechet_laplace_pit))) %>% 
+  mutate(Y_2=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>%
+  mutate(Y_3=as.numeric(map(.x=X_2,.f=frechet_laplace_pit)))
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 
+#ggplot(Y_given_1_extreme) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5) + geom_quantile(aes(x=Y_1,y=Y_2),quantiles=c(0.025,0.5,0.975),linetype="dashed",col="#C11432")
 
-opt <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
+opt <- optim(par=c(0,0.2,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
 a_hat <- opt$par[1]
 b_hat <- opt$par[2]
 # extrapolate using kernel smoothed residuals ----
-N <- 5000
 Y_1 <- Y_given_1_extreme[,4]
 Y_2 <- Y_given_1_extreme[,5]
+Z <- c()
+for (i in 1:length(Y_1)) {
+Z[i] <-   (Y_2[i]-a_hat*Y_1[i])/(Y_1[i]^b_hat) %>% replace_na(Y_2[i]-a_hat*Y_1[i])
+}
+plot(Y_1,Z)
+# Z_lower <- quantile(Z,0.025)
+# Z_median <- quantile(Z,0.5)
+# Z_upper <- quantile(Z,0.975)
+
+cond_quantile <- function(x,Z,q,a_hat=a_hat,b_hat=b_hat) {
+  a_hat*x + x^b_hat *quantile(Z,q)
+}
+
+x <- seq(min(Y_1),max(Y_1),length.out=100)
+yl <- cond_quantile(x,Z,q=0.025,a_hat=a_hat,b_hat=b_hat)
+ym <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
+yp <- cond_quantile(x,Z,q=0.975,a_hat=a_hat,b_hat=b_hat)
+
+# calculate also true values
+a_hat <- 1
+b_hat <- 0
 Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
+ylt <- cond_quantile(x,Z,q=0.025,a_hat=a_hat,b_hat=b_hat)
+ymt <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
+ypt <- cond_quantile(x,Z,q=0.975,a_hat=a_hat,b_hat=b_hat)
+plot(Y_1,Z)
+# also optimise using beta=0
+opt <- optim(par=c(0.5,0,1),fn = Y_likelihood_initial,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
+a_hat <- opt$par[1]
+b_hat <- 0
+Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
+plot(Y_1,Z)
+ylb <- cond_quantile(x,Z,q=0.025,a_hat=a_hat,b_hat=b_hat)
+ymb <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
+ypb <- cond_quantile(x,Z,q=0.975,a_hat=a_hat,b_hat=b_hat)
+
+ggplot() + geom_point(data=Y_given_1_extreme,aes(x=Y_1,y=Y_2),alpha=0.5) + 
+  geom_line(data=data.frame(x=x,y=yl),aes(x=x,y=y),linetype="dashed",col="#C11432") +
+  geom_line(data=data.frame(x=x,y=ym),aes(x=x,y=y),linetype="dashed",col="#C11432") +
+  geom_line(data=data.frame(x=x,y=yp),aes(x=x,y=y),linetype="dashed",col="#C11432") +
+  geom_line(data=data.frame(x=x,y=ylt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
+  geom_line(data=data.frame(x=x,y=ymt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
+  geom_line(data=data.frame(x=x,y=ypt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
+  geom_line(data=data.frame(x=x,y=ylb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) +
+  geom_line(data=data.frame(x=x,y=ymb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) +
+  geom_line(data=data.frame(x=x,y=ypb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) 
 
 
 ggplot(Y_given_1_extreme %>% select(Y_1,Y_2_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
@@ -337,7 +385,7 @@ ggplot() +
 
 # print summary of the parameters ----
 N <- 50000
-set.seed(13)
+set.seed(131)
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
@@ -349,8 +397,8 @@ print(xtable(par_summary(sims=sims),digits=3,include.rownames=FALSE))
 
 # do 1000 simulations to get CI for the estimates
 sumar <- list()
-for (i in 1:200) {
-  set.seed(123*i)
+for (i in 1:20) {
+  set.seed(12*i)
   sims <- generate_dep_X_Y_Y_Z(N=N)
   # PIT to Laplace
   sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
@@ -368,12 +416,14 @@ rhoboot <- c()
 Ys <- rep(c("Y_1","Y_2","Y_3"),length(sumar))
 res <- rep(c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23"),length(sumar))
 for (i in 1:length(sumar)) {
-  muboot <- append(muboot,unname(unlist(sumar[[i]][1,])))
-  sigboot <- append(sigboot,unname(unlist(sumar[[i]][2,])))
-  aboot <- append(aboot,unname(unlist(sumar[[i]][3,])))
-  bboot <- append(bboot,unname(unlist(sumar[[i]][4,])))
+  aboot <- append(aboot,unname(unlist(sumar[[i]][1,])))
+  bboot <- append(bboot,unname(unlist(sumar[[i]][2,])))
+  muboot <- append(muboot,unname(unlist(sumar[[i]][3,])))
+  sigboot <- append(sigboot,unname(unlist(sumar[[i]][4,])))
   rhoboot <- append(rhoboot,unname(unlist(sumar[[i]][5,c(2,4,6)])))
 }
+
+
 
 p1 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=muboot),aes(x=x,y=y))+
   geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\mu}$")) 
@@ -384,6 +434,20 @@ p3 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13"
 p4 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=bboot),aes(x=x,y=y))+
   geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\beta}$")) 
 grid.arrange(p3,p4,p1,p2,ncol=2)
+p1 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=aboot),aes(x=y,fill=x))+
+  geom_density(alpha=0.5) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\alpha}$")) +
+  scale_fill_manual(values=c(rep("#C11432",1),"#009ADA","#C11432",rep("#66A64F",1),rep("#009ADA",1),"#66A64F"))
+p2 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=bboot),aes(x=y,fill=x))+
+  geom_density(alpha=0.5) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\beta}$")) +
+  scale_fill_manual(values=c(rep("#C11432",1),"#009ADA","#C11432",rep("#66A64F",1),rep("#009ADA",1),"#66A64F"))
+p3 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=muboot),aes(x=y,fill=x))+
+  geom_density(alpha=0.5) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\mu}$")) +
+  scale_fill_manual(values=c(rep("#C11432",1),"#009ADA","#C11432",rep("#66A64F",1),rep("#009ADA",1),"#66A64F"))
+p4 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=sigboot),aes(x=y,fill=x))+
+  geom_density(alpha=0.5) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\sigma}$")) +
+  scale_fill_manual(values=c(rep("#C11432",1),"#009ADA","#C11432",rep("#66A64F",1),rep("#009ADA",1),"#66A64F"))
+grid.arrange(p1,p2,p3,p4,ncol=2)
+
 ggplot(data.frame(x=factor(Ys,levels=c("Y_1","Y_2","Y_3")),y=rhoboot),aes(x=x,y=y))+
   geom_boxplot(fill= c(rep("#C11432",1),rep("#66A64F",1),rep("#009ADA",1))) + xlab("Conditional variable") + ylab(TeX("$\\hat{\\rho}$"))
 
@@ -394,3 +458,60 @@ ggplot(plot_residual(sims=sims)) + geom_point(aes(x=Z_2,y=Z_3)) + facet_wrap(~gi
 ggplot(plot_residual(sims=sims)) + geom_point(aes(x=Z_N_2,y=Z_N_3)) + facet_wrap(~given)
 # plot the residuals after the transformation
 
+
+# plot residuals
+tmp_df <- rbind(plot_residual(sims=sims) %>% mutate(Estimate="ab_estimated"),plot_residual_trueab(sims=sims) %>% mutate(Estimate="ab_true"))
+p1 <- tmp_df %>% filter(given=="1") %>% ggplot() + geom_point(mapping = aes(x=Z_2,y=Z_3,color=Estimate)) +
+ggtitle("Given 1")+ scale_color_manual(values=c("#C11432","black"))
+p2 <- tmp_df %>% filter(given=="2") %>% ggplot() + geom_point(mapping = aes(x=Z_2,y=Z_3,color=Estimate)) +
+  ggtitle("Given 2")+ scale_color_manual(values=c("#66A64F","black"))
+p3 <- tmp_df %>% filter(given=="3") %>% ggplot() + geom_point(mapping = aes(x=Z_2,y=Z_3,color=Estimate)) +
+  ggtitle("Given 3")+ scale_color_manual(values=c("#009ADA","black"))
+grid.arrange(p1,p2,p3,ncol=3)
+
+# tmp_df <- rbind(plot_residual(sims=sims) %>% mutate(Estimate="ab_estimated"),plot_residual_trueab(sims=sims) %>% mutate(Estimate="ab_true"))
+p1 <- tmp_df %>% filter(given=="1") %>% ggplot() + geom_point(mapping = aes(x=Z_N_2,y=Z_N_3,color=Estimate)) +
+  ggtitle("Given 1")+ scale_color_manual(values=c("#C11432","black"))
+p2 <- tmp_df %>% filter(given=="2") %>% ggplot() + geom_point(mapping = aes(x=Z_N_2,y=Z_N_3,color=Estimate)) +
+  ggtitle("Given 2")+ scale_color_manual(values=c("#66A64F","black"))
+p3 <- tmp_df %>% filter(given=="3") %>% ggplot() + geom_point(mapping = aes(x=Z_N_2,y=Z_N_3,color=Estimate)) +
+  ggtitle("Given 3")+ scale_color_manual(values=c("#009ADA","black"))
+grid.arrange(p1,p2,p3,ncol=3)
+
+p1 <- plot_simulated(sims=sims,given=1)
+p2 <- plot_simulated(sims=sims,given=2)
+p3 <- plot_simulated(sims=sims,given=3)
+grid.arrange(p1,p2,p3,ncol=1)
+
+v_l <- rep(frechet_laplace_pit( qfrechet(0.999)),2)
+# transform to frechet margins
+# v <- log(sapply(X = v_l,FUN = laplace_frechet_pit))
+
+# calculate empirical probability by simulating Y_2 from the model
+sim_val <- simulated(sims=sims,given=1)
+giv_1 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
+)
+sim_val <- simulated(sims=sims,given=2)
+giv_2 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
+)
+sim_val <- simulated(sims=sims,given=3)
+giv_3 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
+)
+
+data.frame(giv_1,giv_2,giv_3)
+# need to log Fréchet margins to get the logistic model margin
+
+p <- 1 - 
+  0.999 -
+  0.999 +
+  evd::pbvevd(c(log(qfrechet(0.999)),log(qfrechet(0.999))),dep=dep[1],model="log")
+
+# calculate CI
+p <- giv_1[1]
+CI <- c(p-(1.96*(p*(1-p)/100000)^(0.5)),p+(1.96*(p*(1-p)/100000)^(0.5)))
