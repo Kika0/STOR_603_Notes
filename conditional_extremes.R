@@ -18,7 +18,7 @@ theme_replace(
 
 
 # generate trivariate sample ----
-N <- 50000
+N <- 500000
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
@@ -34,9 +34,9 @@ grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
 
 # filter for Y_1 being extreme -----
 v <- 0.99
-sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_3,.f=frechet_laplace_pit))) %>% 
-  mutate(Y_2=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>%
-  mutate(Y_3=as.numeric(map(.x=X_2,.f=frechet_laplace_pit)))
+sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
+  mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
+  mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 
@@ -61,7 +61,7 @@ cond_quantile <- function(x,Z,q,a_hat=a_hat,b_hat=b_hat) {
   a_hat*x + x^b_hat *quantile(Z,q)
 }
 
-x <- seq(min(Y_1),max(Y_1),length.out=100)
+x <- seq(min(Y_1)-0.2,max(Y_1)+0.2,length.out=100)
 yl <- cond_quantile(x,Z,q=0.025,a_hat=a_hat,b_hat=b_hat)
 ym <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
 yp <- cond_quantile(x,Z,q=0.975,a_hat=a_hat,b_hat=b_hat)
@@ -80,23 +80,84 @@ a_hat <- opt$par[1]
 b_hat <- 0
 Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
 plot(Y_1,Z)
-ylb <- cond_quantile(x,Z,q=0.025,a_hat=a_hat,b_hat=b_hat)
+ylb <- cond_quantile(x,Z,q=0.25,a_hat=a_hat,b_hat=b_hat)
 ymb <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
-ypb <- cond_quantile(x,Z,q=0.975,a_hat=a_hat,b_hat=b_hat)
+ypb <- cond_quantile(x,Z,q=0.75,a_hat=a_hat,b_hat=b_hat)
 
-ggplot() + geom_point(data=Y_given_1_extreme,aes(x=Y_1,y=Y_2),alpha=0.5) + 
-  geom_line(data=data.frame(x=x,y=yl),aes(x=x,y=y),linetype="dashed",col="#C11432") +
-  geom_line(data=data.frame(x=x,y=ym),aes(x=x,y=y),linetype="dashed",col="#C11432") +
-  geom_line(data=data.frame(x=x,y=yp),aes(x=x,y=y),linetype="dashed",col="#C11432") +
-  geom_line(data=data.frame(x=x,y=ylt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
-  geom_line(data=data.frame(x=x,y=ymt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
-  geom_line(data=data.frame(x=x,y=ypt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
-  geom_line(data=data.frame(x=x,y=ylb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) +
-  geom_line(data=data.frame(x=x,y=ymb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) +
-  geom_line(data=data.frame(x=x,y=ypb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) 
+# create a loop to count points in each region
+q <- seq(0.05,0.95,by=0.05)
+tmp <- rep(NA,length(Y_1))
+# bottom edge case
+y1 <- cond_quantile(x,Z,q=min(q),a_hat=a_hat,b_hat=b_hat)
+A <- c(min(x),y1[which.min(x)])
+B <- c(max(x),y1[which.max(x)])
+D <- c(min(x),-10)
+C <- c(max(x),-10)
+df_tmp <- data.frame(matrix(c(A,B,C,D),ncol=2,byrow=TRUE))
+no <-   data.frame(pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp))
+tmp[pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp)] <- paste0(1)
+for (i in 1:(length(q)-1)) {
+  y1 <- cond_quantile(x,Z,q=q[i],a_hat=a_hat,b_hat=b_hat)
+  y2 <- cond_quantile(x,Z,q=q[i+1],a_hat=a_hat,b_hat=b_hat)
+  A <- c(min(x),y1[which.min(x)])
+  B <- c(max(x),y1[which.max(x)])
+  D <- c(min(x),y2[which.min(x)])
+  C <- c(max(x),y2[which.max(x)])
+  df_tmp <- data.frame(matrix(c(A,B,C,D),ncol=2,byrow=TRUE))
+no <-   cbind(no,pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp))
+tmp[pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp)] <- paste0(i+1)
+}
+# top edge case
+y1 <- cond_quantile(x,Z,q=max(q),a_hat=a_hat,b_hat=b_hat)
+A <- c(min(x),y1[which.min(x)])
+B <- c(max(x),y1[which.max(x)])
+D <- c(min(x),20)
+C <- c(max(x),20)
+df_tmp <- data.frame(matrix(c(A,B,C,D),ncol=2,byrow=TRUE))
+no <- cbind(no,pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp))
+rowSums(no) # check it is all ones
+colSums(no) %>% as.vector()
+tmp[pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp)] <- paste0(length(q)+1)
 
+ggplot() + geom_point(data=Y_given_1_extreme %>% mutate(check=tmp),aes(x=Y_1,y=Y_2,col=check),alpha=0.5)  
+  # geom_line(data=data.frame(x=x,y=yl),aes(x=x,y=y),linetype="dashed",col="#C11432") +
+  # geom_line(data=data.frame(x=x,y=ym),aes(x=x,y=y),linetype="dashed",col="#C11432") +
+  # geom_line(data=data.frame(x=x,y=yp),aes(x=x,y=y),linetype="dashed",col="#C11432") +
+  # geom_line(data=data.frame(x=x,y=ylt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
+  # geom_line(data=data.frame(x=x,y=ymt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
+  # geom_line(data=data.frame(x=x,y=ypt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
+  # geom_line(data=data.frame(x=x,y=ylb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) +
+  # geom_line(data=data.frame(x=x,y=ymb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) +
+  # geom_line(data=data.frame(x=x,y=ypb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) 
+  # geom_polygon(data=df_tmp,aes(x=X1,y=X2),fill="#009ada",alpha=0.2)
 
-ggplot(Y_given_1_extreme %>% select(Y_1,Y_2_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
+# plot likelihood
+library(threejs)
+u <- seq(-0.95, 0.95, by = .05)
+v <- seq(0, 0.95, by = .05)
+M <- expand.grid(u,v)
+Lik <- c()
+for (i in 1:nrow(M)) {
+Lik[i] <- Y_likelihood(theta = c(M$Var1[i],M$Var2[i],0,1),df=Y_given_1_extreme,given=1,sim=2)
+}
+tmp_df <- cbind(M,Lik)
+
+scatterplot3js(x=M$Var2, y=M$Var1, z=Lik, phi = 40, theta = 20,
+               color=rainbow(length(z)),
+               colkey = FALSE,
+               cex = .3,xlab="beta",ylab="alpha"
+               )
+
+tmp_df %>% filter(Lik>quantile(Lik,0.9)) %>% 
+  ggplot(aes(x = Var1, y = Var2, z = Lik, fill = Lik)) + 
+  geom_tile(style="quantile") + 
+  #scale_fill_viridis() +  
+  geom_contour(color = "black", alpha=0.5) +
+  xlab("alpha") +
+  ylab("beta")
+
+ggplot(Y_given_1_extreme %>% select(Y_1,Y_2_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") +
+  facet_wrap(~name)
 
 Y_2_sim <- bind_rows(Y_not_1_extreme %>% mutate(Y_2_sim=Y_2),Y_given_1_extreme) %>% 
   mutate(X_2_sim=rep(0,N))
@@ -397,7 +458,7 @@ print(xtable(par_summary(sims=sims),digits=3,include.rownames=FALSE))
 
 # do 1000 simulations to get CI for the estimates
 sumar <- list()
-for (i in 1:20) {
+for (i in 1:5) {
   set.seed(12*i)
   sims <- generate_dep_X_Y_Y_Z(N=N)
   # PIT to Laplace
