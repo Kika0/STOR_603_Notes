@@ -88,9 +88,7 @@ Y_likelihood_initial <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   return(log_lik)
 }
 
-Y_likelihood_trueab <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
-  a <- 1
-  b <- 0
+Y_likelihood_fix_ab <- function(a=1,b=0,theta,df=Y_given_1_extreme,given=1,sim=2) {
   mu <- theta[1]
   sig <- theta[2]
   Y1 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(given))) %>% pull()
