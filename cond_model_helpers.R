@@ -66,7 +66,7 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
     log_lik <- (-10^6)
   }
   else {
-  log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y_1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+  log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
   }
   return(log_lik)
 }
@@ -83,7 +83,7 @@ Y_likelihood_initial <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
     log_lik <- (-10^6)
   }
   else {
-    log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y_1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+    log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
   }
   return(log_lik)
 }
@@ -95,10 +95,40 @@ Y_likelihood_trueab <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   sig <- theta[2]
   Y1 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(given))) %>% pull()
   Y2 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(sim))) %>% pull()
-  #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
-    log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y_1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+    log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
   return(log_lik)
 }
+
+Y_likelihood_constrained <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
+ v <- 0.99
+   a <- theta[1]
+  b <- theta[2]
+  mu <- theta[3]
+  sig <- theta[4]
+  Y1 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(given))) %>% pull()
+  Y2 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(sim))) %>% pull()
+  #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
+  # positive residual quantile
+  q <- 0.9
+  zp <- quantile(Y2-Y1,q)
+  # residual quantile
+  z <- quantile( (Y1-a*Y1)/(Y1^b),q)
+  # negative residual quantile
+  zn <- quantile(Y2+Y1,q)
+  
+  if (  ( (a<=min(1,1-b*z*v^(b-1),1-v^(b-1)*z+v^(-1)*zp) )|(  ((1-b*z*v^(b-1))<a & a<=1) & (( (1-b^(-1))*(b*z)^(1/(1-b)) *(1-a)^(-b/(1-b)) +zp)>0  ) ) )&
+        ( (a<=min(1,1+b*z*v^(b-1),1+v^(b-1)*z-v^(-1)*zn) )|(  ((1+b*z*v^(b-1))<(-a) & (-a)<=1) & (( (1-b^(-1))*(-b*z)^(1/(1-b)) *(1+a)^(-b/(1-b)) -zn)>0  ) ) ) 
+        ) {
+    
+    log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+  }
+  else {
+    log_lik <- (-10^6)
+  }
+  return(log_lik)
+}
+
+
 
 # generate from the empirical distribution of the residuals
 F_smooth_Z <- function(Z) {
@@ -480,7 +510,7 @@ simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
   return(Gen_orig)
 }
 
-plot_cond_quantile <- function(sims=sims,v=0.99)
+plot_cond_quantile <- function(sims=sims,v=0.99) {
 df <- sims %>% dplyr::select(starts_with("Y"))
 par_sum <- data.frame(matrix(nrow=6,ncol=0))
 par_sum_init <- data.frame(matrix(nrow=5,ncol=0))
