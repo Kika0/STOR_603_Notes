@@ -119,17 +119,8 @@ rowSums(no) # check it is all ones
 colSums(no) %>% as.vector()
 tmp[pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp)] <- paste0(length(q)+1)
 
-ggplot() + geom_point(data=Y_given_1_extreme %>% mutate(check=tmp),aes(x=Y_1,y=Y_2,col=check),alpha=0.5)  
-  # geom_line(data=data.frame(x=x,y=yl),aes(x=x,y=y),linetype="dashed",col="#C11432") +
-  # geom_line(data=data.frame(x=x,y=ym),aes(x=x,y=y),linetype="dashed",col="#C11432") +
-  # geom_line(data=data.frame(x=x,y=yp),aes(x=x,y=y),linetype="dashed",col="#C11432") +
-  # geom_line(data=data.frame(x=x,y=ylt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
-  # geom_line(data=data.frame(x=x,y=ymt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
-  # geom_line(data=data.frame(x=x,y=ypt),aes(x=x,y=y),linetype="dashed",col="black",alpha=0.5) +
-  # geom_line(data=data.frame(x=x,y=ylb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) +
-  # geom_line(data=data.frame(x=x,y=ymb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) +
-  # geom_line(data=data.frame(x=x,y=ypb),aes(x=x,y=y),linetype="dashed",col="#009ada",alpha=0.5) 
-  # geom_polygon(data=df_tmp,aes(x=X1,y=X2),fill="#009ada",alpha=0.2)
+ggplot() + geom_point(data=Y_given_1_extreme %>% mutate(check=tmp),aes(x=Y_1,y=Y_2,col=check),alpha=0.5)+
+  geom_polygon(data=df_tmp,aes(x=X1,y=X2),fill="#009ada",alpha=0.2)
 
 # plot likelihood
 library(threejs)
@@ -138,7 +129,7 @@ v <- seq(0, 0.95, by = .05)
 M <- expand.grid(u,v)
 Lik <- c()
 for (i in 1:nrow(M)) {
-Lik[i] <- Y_likelihood(theta = c(M$Var1[i],M$Var2[i],0,1),df=Y_given_1_extreme,given=1,sim=2)
+Lik[i] <- optim(par=c(0,1),fn = Y_likelihood_fix_ab,a=M$Var1[i],b=M$Var2[i],df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))$value
 }
 tmp_df <- cbind(M,Lik)
 
