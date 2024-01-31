@@ -3,6 +3,7 @@ library(evd)
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
+library(viridis)
 library(MASS) #use dplyr::select to avoid function conflict
 library(xtable)
 source("cond_model_helpers.R")
@@ -18,7 +19,7 @@ theme_replace(
 
 
 # generate trivariate sample ----
-N <- 500000
+N <- 50000
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
@@ -26,8 +27,8 @@ sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>%
   mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
   mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
 
+# check it looks Laplace 
 ggplot(sims %>% dplyr::select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
-
 grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y_1,y=Y_3),alpha=0.5),ncol=3)
@@ -39,8 +40,6 @@ sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>%
   mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
-
-#ggplot(Y_given_1_extreme) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5) + geom_quantile(aes(x=Y_1,y=Y_2),quantiles=c(0.025,0.5,0.975),linetype="dashed",col="#C11432")
 
 opt <- optim(par=c(0,0.2,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
 a_hat <- opt$par[1]
@@ -140,12 +139,12 @@ scatterplot3js(x=M$Var2, y=M$Var1, z=Lik, phi = 40, theta = 20,
                )
 
 tmp_df %>% filter(Lik>quantile(Lik,0.9)) %>% 
-  ggplot(aes(x = Var1, y = Var2, z = Lik, fill = Lik)) + 
-  geom_tile(style="quantile") + 
+  ggplot(aes(x = Var1, y = Var2, z = Lik)) + 
+  geom_tile( aes(fill = Lik)) + 
   #scale_fill_viridis() +  
   geom_contour(color = "black", alpha=0.5) +
-  xlab("alpha") +
-  ylab("beta")
+  xlab(TeX("$\\alpha$")) +
+  ylab(TeX("$\\beta$"))
 
 ggplot(Y_given_1_extreme %>% select(Y_1,Y_2_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") +
   facet_wrap(~name)
@@ -468,11 +467,11 @@ rhoboot <- c()
 Ys <- rep(c("Y_1","Y_2","Y_3"),length(sumar))
 res <- rep(c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23"),length(sumar))
 for (i in 1:length(sumar)) {
-  aboot <- append(aboot,unname(unlist(sumar[[i]][1,])))
-  bboot <- append(bboot,unname(unlist(sumar[[i]][2,])))
-  muboot <- append(muboot,unname(unlist(sumar[[i]][3,])))
-  sigboot <- append(sigboot,unname(unlist(sumar[[i]][4,])))
-  rhoboot <- append(rhoboot,unname(unlist(sumar[[i]][5,c(2,4,6)])))
+  aboot <- append(aboot,unname(unlist(sumar[[i]][7,])))
+  bboot <- append(bboot,unname(unlist(sumar[[i]][8,])))
+  muboot <- append(muboot,unname(unlist(sumar[[i]][9,])))
+  sigboot <- append(sigboot,unname(unlist(sumar[[i]][10,])))
+  rhoboot <- append(rhoboot,unname(unlist(sumar[[i]][11,c(2,4,6)])))
 }
 
 
