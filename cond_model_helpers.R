@@ -221,7 +221,7 @@ par_summary <- function(sims,v=0.9) {
   
   Z_2 <- append(Z_2,tmp_z2)
   Z_3 <- append(Z_3,tmp_z3)
-  given <- append(given,rep(j,50))
+  given <- append(given,rep(j,(N*(1-v)) ))
   
   # calculate the normal using the PIT
   tmp_zn2 <- qnorm(F_smooth_Z(tmp_z2))
@@ -307,7 +307,7 @@ plot_residual_trueab <- function(sims,v=0.9) {
      # init_opt <- optim(par=c(1,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))$par
       init_par <- c(0,1)
       # optimise using the initial parameters
-      opt[[i-1]] <- optim(par=init_par,fn = Y_likelihood_trueab,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+      opt[[i-1]] <- optim(par=init_par,fn = Y_likelihood_fix_ab,a=1,b=0,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
     }
     a_hat <- c(1,1)
     b_hat <- c(0,0)
@@ -325,7 +325,7 @@ plot_residual_trueab <- function(sims,v=0.9) {
     
     Z_2 <- append(Z_2,tmp_z2)
     Z_3 <- append(Z_3,tmp_z3)
-    given <- append(given,rep(j,50))
+    given <- append(given,rep(j,(N*(1-v))))
     
     # calculate the normal using the PIT
     Z_N_2 <- append(Z_N_2,qnorm(F_smooth_Z(tmp_z2)))
