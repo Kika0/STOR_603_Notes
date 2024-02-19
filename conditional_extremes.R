@@ -19,7 +19,7 @@ theme_replace(
 
 
 # generate trivariate sample ----
-N <- 50000
+N <- 5000000
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
@@ -138,7 +138,7 @@ scatterplot3js(x=M$Var2, y=M$Var1, z=Lik, phi = 40, theta = 20,
                cex = .3,xlab="beta",ylab="alpha"
                )
 
-tmp_df %>% filter(Lik>quantile(Lik,0.9)) %>% 
+tmp_df %>% filter(Lik>quantile(Lik,0)) %>% 
   ggplot(aes(x = Var1, y = Var2, z = Lik)) + 
   geom_tile( aes(fill = Lik)) + 
   #scale_fill_viridis() +  
@@ -436,7 +436,7 @@ ggplot() +
 
 # print summary of the parameters ----
 N <- 50000
-set.seed(131)
+set.seed(1312)
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
@@ -503,10 +503,15 @@ ggplot(data.frame(x=factor(Ys,levels=c("Y_1","Y_2","Y_3")),y=rhoboot),aes(x=x,y=
   geom_boxplot(fill= c(rep("#C11432",1),rep("#66A64F",1),rep("#009ADA",1))) + xlab("Conditional variable") + ylab(TeX("$\\hat{\\rho}$"))
 
 # plot the residual pairs
-ggplot(plot_residual(sims=sims)) + geom_point(aes(x=Z_2,y=Z_3)) + facet_wrap(~given)
+tmp_df <- plot_residual(sims=sims)
+l <- c(min(tmp_df$Z_2,tmp_df$Z_3),max(tmp_df$Z_2,tmp_df$Z_3))
+ggplot(tmp_df) + geom_point(aes(x=Z_2,y=Z_3)) + facet_wrap(~given) + xlim(l) + ylim(l)
+rm(l)
 
 # plot the normalised residuals
-ggplot(plot_residual(sims=sims)) + geom_point(aes(x=Z_N_2,y=Z_N_3)) + facet_wrap(~given)
+l <- c(min(tmp_df$Z_N_2,tmp_df$Z_N_3),max(tmp_df$Z_N_2,tmp_df$Z_N_3))
+ggplot(tmp_df) + geom_point(aes(x=Z_N_2,y=Z_N_3)) + facet_wrap(~given)  + xlim(l) + ylim(l)
+rm(tmp_df,l)
 # plot the residuals after the transformation
 
 
@@ -537,25 +542,31 @@ grid.arrange(p1,p2,p3,ncol=1)
 v_l <- rep(frechet_laplace_pit( qfrechet(0.999)),2)
 # transform to frechet margins
 # v <- log(sapply(X = v_l,FUN = laplace_frechet_pit))
+annotate('rect', xmin=3, xmax=5, ymin=3, ymax=7, alpha=.2, fill='red')
 
 # calculate empirical probability by simulating Y_2 from the model
-sim_val <- simulated(sims=sims,given=1)
-giv_1 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+sim_val <- plot_simulated(sims=sims,given=1)
+ giv_1 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
+giv_1 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
 )
-sim_val <- simulated(sims=sims,given=2)
+sim_val <- plot_simulated(sims=sims,given=2)
+giv_2 <-  c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
+
 giv_2 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
 )
-sim_val <- simulated(sims=sims,given=3)
+sim_val <- plot_simulated(sims=sims,given=3)
+giv_3 <-  c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
+
 giv_3 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
 )
 
-data.frame(giv_1,giv_2,giv_3)
+tmp_df <- data.frame(giv_1,giv_2,giv_3)
 # need to log Fréchet margins to get the logistic model margin
 
 p <- 1 - 
@@ -566,3 +577,40 @@ p <- 1 -
 # calculate CI
 p <- giv_1[1]
 CI <- c(p-(1.96*(p*(1-p)/100000)^(0.5)),p+(1.96*(p*(1-p)/100000)^(0.5)))
+
+tmp_CI <- data.frame(giv_1=rep(NA,1), giv_2=rep(NA,1),giv_3=rep(NA,1))
+for (i in 1:1) {
+  for (j in 1:3) {
+    p <- tmp_df[i,j]
+    tmp_CI[i,j] <- paste0("(",p-(1.96*(p*(1-p)/100000)^(0.5)),", ",p+(1.96*(p*(1-p)/100000)^(0.5)),")")
+  }
+}
+
+# giv_1
+# 1   (0.000305757241083301, 0.0005642427589167)
+# 2 (0.000173857940786816, 0.000380142059213185)
+# 3   (0.00023824025255423, 0.00047175974744577)
+# giv_2
+# 1  (0.000427289306056411, 0.00072471069394359)
+# 2 (0.000244932451697785, 0.000481067548302216)
+# 3  (0.000427289306056411, 0.00072471069394359)
+# giv_3
+# 1 (0.000293004159841356, 0.000546995840158645)
+# 2 (0.000249961043187434, 0.000488038956812567)
+# 3 (0.000444731067227458, 0.000747268932772543)
+# 
+# giv_1
+# 1 (0.000291306764968228, 0.000544693235031773)
+# 2     (0.0001665469132593, 0.0003694530867407)
+# 3 (0.000247445751040699, 0.000484554248959302)
+# giv_2
+# 1 (0.000482372614334326, 0.000795627385665675)
+# 2 (0.000287066464270648, 0.000538933535729352)
+# 3  (0.00043949396227925, 0.000740506037720751)
+# giv_3
+# 1 (0.000311721963107453, 0.000572278036892548)
+# 2 (0.000257518636427637, 0.000498481363572364)
+# 3 (0.000438621488626653, 0.000739378511373348)
+
+sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v)),] %>% glimpse()
+sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v)),] %>% glimpse()
