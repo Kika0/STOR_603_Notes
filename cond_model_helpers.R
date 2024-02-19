@@ -88,7 +88,7 @@ Y_likelihood_initial <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   return(log_lik)
 }
 
-Y_likelihood_fix_ab <- function(a=1,b=0,theta,df=Y_given_1_extreme,given=1,sim=2) {
+Y_likelihood_fix_ab <- function(theta,a=1,b=0,df=Y_given_1_extreme,given=1,sim=2) {
   mu <- theta[1]
   sig <- theta[2]
   Y1 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(given))) %>% pull()
@@ -108,11 +108,14 @@ Y_likelihood_constrained <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
   # positive residual quantile
   q <- 0.9
-  zp <- quantile(Y2-Y1,q)
+  # zp <- quantile(Y2-Y1,q)
+  zp <- max(Y2-Y1)
   # residual quantile
-  z <- quantile( (Y1-a*Y1)/(Y1^b),q)
+  # z <- quantile( (Y1-a*Y1)/(Y1^b),q)
+  z <- max((Y1-a*Y1)/(Y1^b))
   # negative residual quantile
-  zn <- quantile(Y2+Y1,q)
+  # zn <- quantile(Y2+Y1,q)
+  zn <- max(Y2+Y1)
   
   if (  ( (a<=min(1,1-b*z*v^(b-1),1-v^(b-1)*z+v^(-1)*zp) )|(  ((1-b*z*v^(b-1))<a & a<=1) & (( (1-b^(-1))*(b*z)^(1/(1-b)) *(1-a)^(-b/(1-b)) +zp)>0  ) ) )&
         ( (a<=min(1,1+b*z*v^(b-1),1+v^(b-1)*z-v^(-1)*zn) )|(  ((1+b*z*v^(b-1))<(-a) & (-a)<=1) & (( (1-b^(-1))*(-b*z)^(1/(1-b)) *(1+a)^(-b/(1-b)) -zn)>0  ) ) ) 
@@ -316,12 +319,12 @@ plot_residual_trueab <- function(sims,v=0.9) {
     lik <- c(opt[[1]]$value,opt[[2]]$value)
     
     # generate residual Z ----
-    Y_1 <- Y_given_1_extreme[,j]
-    Y_2 <- Y_given_1_extreme[,res[1]]
-    Y_3 <- Y_given_1_extreme[,res[2]]
+    Y1 <- Y_given_1_extreme[,j]
+    Y2 <- Y_given_1_extreme[,res[1]]
+    Y3 <- Y_given_1_extreme[,res[2]]
     
-    tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
-    tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
+    tmp_z2 <- (Y2-a_hat[1]*Y1)/(Y1^b_hat[1])
+    tmp_z3 <- (Y3-a_hat[2]*Y1)/(Y1^b_hat[2])
     
     Z_2 <- append(Z_2,tmp_z2)
     Z_3 <- append(Z_3,tmp_z3)
@@ -338,7 +341,7 @@ plot_residual_trueab <- function(sims,v=0.9) {
   return(par_sum)
 }
 
-plot_simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
+plot_simulated <- function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
   df <- sims %>% dplyr::select(starts_with("Y"))
   par_sum <- data.frame(matrix(nrow=5,ncol=0))
   
@@ -376,7 +379,7 @@ plot_simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
     
     Z_2 <- append(Z_2,tmp_z2)
     Z_3 <- append(Z_3,tmp_z3)
-    given <- append(given,rep(j,50))
+    given <- append(given,rep(j,(N*(1-v))))
     
     # calculate the normal using the PIT
     Z_N_2 <- append(Z_N_2,qnorm(F_smooth_Z(tmp_z2)))
@@ -384,8 +387,12 @@ plot_simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
     
     rho_hat <- cor(Z_N_2,Z_N_3)
     # generate from normal
-    
+    if (j==5) {
+      Z_N <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,0,0,1),2,2))
+    }
+    else {
     Z_N <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
+    }
     Z <- data.frame(Z_2,Z_3)
     
     # transform back to original margins
@@ -396,31 +403,34 @@ plot_simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
     Gen_Y_1 <- data.frame(Y_1=Y_1_gen)
     
     # for each Y, generate a residual and calculate Y_2
-    Y_1 <- Y_given_1_extreme[,j]
+    Y_1 <- Gen_Y_1$Y_1
     # Y_2 <- a_hat*Y_1 + Y_1^b_hat *x
     # Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
     Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,1]
     Y_3 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,2]
+    
     Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2,Y_3=Y_3) %>% mutate(sim=rep("conditional_model",1000))
     # generate Y_1 (extrapolate so above largest observed value)
     
     #plot
+    Y_1 <- Y_given_1_extreme[,j]
     Y_2 <- Y_given_1_extreme[,res[1]]
     Y_3 <- Y_given_1_extreme[,res[2]]
     thres <- frechet_laplace_pit( qfrechet(0.999))
-    
+    v <- 0.99
     Gen_orig <- rbind(Gen_Y_1,data.frame(Y_1,Y_2,Y_3) %>% mutate(sim=rep("original_laplace",500)))
     p1 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
-      scale_color_manual(values = c("original_laplace"="black","conditional_model" = cond_colours[j])) 
+      scale_color_manual(values = c("original_laplace"="black","conditional_model" = cond_colours[j])) + xlab(TeX("$Y_1$")) +ylab(TeX("$Y_2"))
     p2 <- ggplot(Gen_orig) + geom_point(aes(x=Y_2,y=Y_3,col=sim),alpha=0.5) + 
       scale_color_manual(values = c("original_laplace"="black","conditional_model" = cond_colours[j]))  + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed")
     p3 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_3,col=sim),alpha=0.5) + 
       scale_color_manual(values = c("original_laplace"="black","conditional_model" = cond_colours[j]))  + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed")
     p <- grid.arrange(p1,p2,p3,ncol=3)
+    
     # par_sum <- cbind(par_sum,data.frame(matrix(round(c(a_hat,b_hat,mu_hat,sig_hat,rep(rho_hat,2)),3),nrow=5,ncol=2,byrow=TRUE)))
     #par_sum <- data.frame(Z_2,Z_3,Z_N_2,Z_N_3,given)
 
-  return(p)
+  return(p1)
 }
 
 simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
@@ -461,7 +471,7 @@ simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
   
   Z_2 <- append(Z_2,tmp_z2)
   Z_3 <- append(Z_3,tmp_z3)
-  given <- append(given,rep(j,50))
+  given <- append(given,rep(j,500))
   
   # calculate the normal using the PIT
   Z_N_2 <- append(Z_N_2,qnorm(F_smooth_Z(tmp_z2)))
