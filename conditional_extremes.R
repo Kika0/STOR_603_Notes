@@ -586,36 +586,13 @@ for (i in 1:1) {
   }
 }
 
-sims[(sims$Y_1>quantile(sims$Y_1,v1) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v1)),] %>% glimpse()
-sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v)),] %>% glimpse()
-
-# calculate the exact probability
-to_opt <- function(z) {
-  (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
-}
-
-integrand <- function(y) {
-  (1-  y^(-(1/a)+1)*(y^(-1/a)+x^(-1/a))^(a-1)*exp(-(y^(-1/a)+x^(-1/a))^a)*exp(1/y)  )*
-    y^(-2)*exp(-1/y)*
-    (1-  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )
-}
-
-integrand <- function(y) {
-  (1-  (1+(y/x)^(1/a))^(a-1)*exp( y^(-1)*( 1- ( 1+(y/x)^(1/a) )^a) )  )*
-    y^(-2)*exp(-1/y)*
-    (1-  (1+(z/y)^(-1/a))^(a-1)*exp( y^(-1)*( 1- ( 1+(z/y)^(-1/a) )^a) ) )
-}
-
+# calculate the exact probability ----
 integrand <- function(t) {
   -(1-  (1+(t*x)^(-1/a))^(a-1)*exp( t*( 1- ( 1+(t*x)^(-1/a) )^a) )  )*
     exp(-t)*
     (1-  (1+(z*t)^(-1/a))^(a-1)*exp( t*( 1- ( 1+(z*t)^(-1/a) )^a) ) )
 }
 
-x <- z <- qfrechet(0.995)
-integrate(integrand,lower=0,upper=1/qfrechet(0.998))
-
-s <- seq(0.9,0.999,length.out=50)
 s <-  c(seq(0.99,0.999,length.out=20),seq(0.999,0.9999,length.out=20))
 cdf <- c()
 cdf_emp <- c()
@@ -626,10 +603,8 @@ for (i in 1:length(s)) {
  cdf_emp[i] <- nrow(sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v)),])/500000
   
 }
-
-nrow(sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v)),])/500000
-
 ggplot(data.frame(x=qfrechet(s),cdf,cdf_emp)) + geom_line(aes(x=x,y=cdf),col="#C11432",alpha=0.6) + 
   geom_line(aes(x=x,y=cdf_emp),col="#009ADA",alpha=0.6) + geom_point(aes(x=x,y=cdf),col="#C11432",alpha=0.6) + 
   geom_point(aes(x=x,y=cdf_emp),col="#009ADA",alpha=0.6)
+rm(s,cdf,cdf_emp)
 
