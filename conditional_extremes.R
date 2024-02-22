@@ -19,7 +19,7 @@ theme_replace(
 
 
 # generate trivariate sample ----
-N <- 5000000
+N <- 50000
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
@@ -586,31 +586,50 @@ for (i in 1:1) {
   }
 }
 
-# giv_1
-# 1   (0.000305757241083301, 0.0005642427589167)
-# 2 (0.000173857940786816, 0.000380142059213185)
-# 3   (0.00023824025255423, 0.00047175974744577)
-# giv_2
-# 1  (0.000427289306056411, 0.00072471069394359)
-# 2 (0.000244932451697785, 0.000481067548302216)
-# 3  (0.000427289306056411, 0.00072471069394359)
-# giv_3
-# 1 (0.000293004159841356, 0.000546995840158645)
-# 2 (0.000249961043187434, 0.000488038956812567)
-# 3 (0.000444731067227458, 0.000747268932772543)
-# 
-# giv_1
-# 1 (0.000291306764968228, 0.000544693235031773)
-# 2     (0.0001665469132593, 0.0003694530867407)
-# 3 (0.000247445751040699, 0.000484554248959302)
-# giv_2
-# 1 (0.000482372614334326, 0.000795627385665675)
-# 2 (0.000287066464270648, 0.000538933535729352)
-# 3  (0.00043949396227925, 0.000740506037720751)
-# giv_3
-# 1 (0.000311721963107453, 0.000572278036892548)
-# 2 (0.000257518636427637, 0.000498481363572364)
-# 3 (0.000438621488626653, 0.000739378511373348)
-
-sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v)),] %>% glimpse()
+sims[(sims$Y_1>quantile(sims$Y_1,v1) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v1)),] %>% glimpse()
 sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v)),] %>% glimpse()
+
+# calculate the exact probability
+to_opt <- function(z) {
+  (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
+}
+
+integrand <- function(y) {
+  (1-  y^(-(1/a)+1)*(y^(-1/a)+x^(-1/a))^(a-1)*exp(-(y^(-1/a)+x^(-1/a))^a)*exp(1/y)  )*
+    y^(-2)*exp(-1/y)*
+    (1-  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )
+}
+
+integrand <- function(y) {
+  (1-  (1+(y/x)^(1/a))^(a-1)*exp( y^(-1)*( 1- ( 1+(y/x)^(1/a) )^a) )  )*
+    y^(-2)*exp(-1/y)*
+    (1-  (1+(z/y)^(-1/a))^(a-1)*exp( y^(-1)*( 1- ( 1+(z/y)^(-1/a) )^a) ) )
+}
+
+integrand <- function(t) {
+  -(1-  (1+(t*x)^(-1/a))^(a-1)*exp( t*( 1- ( 1+(t*x)^(-1/a) )^a) )  )*
+    exp(-t)*
+    (1-  (1+(z*t)^(-1/a))^(a-1)*exp( t*( 1- ( 1+(z*t)^(-1/a) )^a) ) )
+}
+
+x <- z <- qfrechet(0.995)
+integrate(integrand,lower=0,upper=1/qfrechet(0.998))
+
+s <- seq(0.9,0.999,length.out=50)
+s <-  c(seq(0.99,0.999,length.out=20),seq(0.999,0.9999,length.out=20))
+cdf <- c()
+cdf_emp <- c()
+for (i in 1:length(s)) {
+  x <- z <- qfrechet(s[i])
+  v <- s[i]
+  cdf[i] <- integrate(integrand,lower=1/qfrechet(s[i]),upper=0)$value
+ cdf_emp[i] <- nrow(sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v)),])/500000
+  
+}
+
+nrow(sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v)),])/500000
+
+ggplot(data.frame(x=qfrechet(s),cdf,cdf_emp)) + geom_line(aes(x=x,y=cdf),col="#C11432",alpha=0.6) + 
+  geom_line(aes(x=x,y=cdf_emp),col="#009ADA",alpha=0.6) + geom_point(aes(x=x,y=cdf),col="#C11432",alpha=0.6) + 
+  geom_point(aes(x=x,y=cdf_emp),col="#009ADA",alpha=0.6)
+
