@@ -3,11 +3,11 @@ library(network) ## needed for plotting
 
 
 d <- 5 #number of variables
-n <- 1000 #number of data points
+n <- 10000 #number of data points
 
 
 ## Specify copula families for all d*(d-1)/2 pairs with Gumbel copulas
-## in the first tree, Calyton in the second, Gaussian in the third
+## in the first tree, Clayton in the second, Gaussian in the third
 ## and Student's t in the fourth
 family <- c(rep(4,4),rep(3,3),rep(1,2),2)
 
