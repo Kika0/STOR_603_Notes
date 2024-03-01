@@ -30,6 +30,80 @@ generate_dep_X_Y_Y_Z <- function(N,dep=c(1/2,1/2)) {
   return(sims)
 }
 
+generate_dep_log_norm <- function(N,dep=c(1/2,1/2)) {
+  dat <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+  # set.seed(12)
+  x_y <- evd::rbvevd(N,dep=dep[1],model="log")
+  x <- exp(x_y[,1])
+  Y <- exp(x_y[,2])
+  r <- dep[2]
+  # generate z
+  U <- runif(N)
+  y_N <- qnorm(exp(-1/Y))
+  z_N <- qnorm(1-U)*(1-r^2)^(1/2) + r*y_N
+  z <- (-log(pnorm(z_N)))^(-1)
+  sims <- data.frame(X_1=x,X_2=Y,X_3=z)
+  return(sims)
+}
+
+generate_dep_norm_norm <- function(N,dep=c(1/2,1/2)) {
+  dat <- tibble(x1=numeric(),x2=numeric(),x3=numeric(),R=numeric(),u=numeric(),q=numeric(),w1=numeric(),w2=numeric(),w3=numeric())
+  # set.seed(12)
+  x_y <- mvrnorm(n=N,mu=c(0,0),Sigma = matrix(c(1,dep[1],dep[1],1),ncol=2))
+  x <- (-log(pnorm(x_y[,1])))^(-1)
+  Y <- (-log(pnorm(x_y[,2])))^(-1)
+  r <- dep[2]
+  # generate z
+  U <- runif(N)
+  y_N <- qnorm(exp(-1/Y))
+  z_N <- qnorm(1-U)*(1-r^2)^(1/2) + r*y_N
+  z <- (-log(pnorm(z_N)))^(-1)
+  sims <- data.frame(X_1=x,X_2=Y,X_3=z)
+  return(sims)
+}
+
+# generate Y from standard Fréchet
+generate_Y <- function(N) {
+U <- runif(N)
+Y <- (-log(U))^(-1)
+sims <- data.frame(Y1=Y)
+  return(sims)
+}
+
+link_log <- function(sims,dep=1/2) {
+  Y <- sims %>% dplyr::select("Y1") %>% pull()
+  N <- length(Y)
+  a <- dep
+  # generate z
+  to_opt <- function(x) {
+    (  (  y^(-(1/a)+1)*(y^(-1/a)+x^(-1/a))^(a-1)*exp(-(y^(-1/a)+x^(-1/a))^a)*exp(1/y)  )-Unif)^2
+  }
+  x <- c()
+  for (i in 1:N){
+    Unif <- runif(1) # generate U
+    y <- Y[i]
+    x[i] <- optim(par=1,fn=to_opt,lower=0,upper=10^6,method="Brent")$par
+  }
+  sims <- sims %>% mutate(X=x)
+  names(sims)[-1] <- paste0("Y",ncol(sims))
+  return(sims)
+}
+
+link_norm <- function(sims,dep=1/2) {
+  Y <- sims %>% dplyr::select("Y") %>% pull()
+  N <- length(Y1)
+  r <- dep
+  # generate x
+  U <- runif(N)
+  y_N <- qnorm(exp(-1/Y))
+  x_N <- qnorm(1-U)*(1-r^2)^(1/2) + r*y_N
+  x <- (-log(pnorm(x_N)))^(-1)
+  sims <- sims %>% mutate(Z=x)
+  return(sims)
+}
+
+
+
 # transform from Fréchet to Laplace
 frechet_laplace_pit <- function(x) {
   if (exp(-1/x)<0.5) {

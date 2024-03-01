@@ -586,25 +586,82 @@ for (i in 1:1) {
   }
 }
 
-# calculate the exact probability ----
-integrand <- function(t) {
-  -(1-  (1+(t*x)^(-1/a))^(a-1)*exp( t*( 1- ( 1+(t*x)^(-1/a) )^a) )  )*
-    exp(-t)*
-    (1-  (1+(z*t)^(-1/a))^(a-1)*exp( t*( 1- ( 1+(z*t)^(-1/a) )^a) ) )
+sims[(sims$Y_1>quantile(sims$Y_1,v1) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v1)),] %>% glimpse()
+sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v)),] %>% glimpse()
+
+# calculate the exact probability
+to_opt <- function(z) {
+  (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
 }
 
-s <-  c(seq(0.99,0.999,length.out=20),seq(0.999,0.9999,length.out=20))
+integrand <- function(y) {
+  (1-  y^(-(1/a)+1)*(y^(-1/a)+x^(-1/a))^(a-1)*exp(-(y^(-1/a)+x^(-1/a))^a)*exp(1/y)  )*
+    y^(-2)*exp(-1/y)*
+    (1-  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )
+}
+
+integrand <- function(y) {
+  (1-  (1+(x/y)^(-1/a))^(a-1)*exp( y^(-1)*( 1- ( 1+(x/y)^(-1/a) )^a) )  )*
+    y^(-2)*exp(-1/y)*
+    (1-  (1+(z/y)^(-1/a))^(a-1)*exp( y^(-1)*( 1- ( 1+(z/y)^(-1/a) )^a) ) )
+}
+
+x <- z <- qfrechet(0.995)
+integrate(integrand,lower=qfrechet(0.998),upper=Inf)
+
+s <- seq(0.9,0.997,length.out=50)
 cdf <- c()
 cdf_emp <- c()
 for (i in 1:length(s)) {
   x <- z <- qfrechet(s[i])
   v <- s[i]
-  cdf[i] <- integrate(integrand,lower=1/qfrechet(s[i]),upper=0)$value
+  cdf[i] <- integrate(integrand,lower=qfrechet(s[i]),upper=Inf)$value
  cdf_emp[i] <- nrow(sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v)),])/500000
   
 }
+
+nrow(sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v)),])/500000
+
 ggplot(data.frame(x=qfrechet(s),cdf,cdf_emp)) + geom_line(aes(x=x,y=cdf),col="#C11432",alpha=0.6) + 
   geom_line(aes(x=x,y=cdf_emp),col="#009ADA",alpha=0.6) + geom_point(aes(x=x,y=cdf),col="#C11432",alpha=0.6) + 
   geom_point(aes(x=x,y=cdf_emp),col="#009ADA",alpha=0.6)
-rm(s,cdf,cdf_emp)
 
+generate_Y(N=N) %>% link_log(dep=1/2) %>% link_norm(dep=1/2) %>% plot_pairs()
+set.seed(1)
+sims_tmp <- generate_Y(N=N) %>% link_log(dep=1/2) %>% link_log(dep=1/2) 
+sims <- sims_tmp %>% apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+names(sims) <- c("Y2","Y1","Y3")
+grid.arrange(ggplot(sims) + geom_point(aes(x=Y1,y=Y2),alpha=0.5,size=0.1,col="#009ADA"),
+             ggplot(sims) + geom_point(aes(x=Y2,y=Y3),alpha=0.5,size=0.1,col="#009ADA"),
+             ggplot(sims) + geom_point(aes(x=Y1,y=Y3),alpha=0.5,size=0.1),ncol=3)
+
+U <- runif(N)
+X <- (-log(U))^(-1)
+U <- runif(N)
+Z <- (-log(U))^(-1)
+X <- sims_tmp[,2]
+Z <- sims_tmp[,3]
+
+to_opt <- function(y) {
+  (  (  exp(-(x^(-1/a) +y^(-1/a)+z^(-1/a))^a + (x^(-1/a)+z^(-1/a))^a )*
+          (x^(-1/a) +y^(-1/a)+z^(-1/a))^(a-2)*((1-a)/a+(x^(-1/a) +y^(-1/a)+z^(-1/a))^a)/
+          ((x^(-1/a) +z^(-1/a))^(a-2)*((1-a)/a+(x^(-1/a) +z^(-1/a))^a))
+          )-Unif)^2
+}
+y <- c()
+for (i in 1:N){
+  Unif <- runif(1) # generate U
+  x <- X[i]
+  z <- Z[i]
+  y[i] <- optim(par=1,fn=to_opt,lower=0,upper=10^6,method="Brent")$par
+}
+
+sims1 <- data.frame(Y1=X,Y2=y,Y3=Z)%>% apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+l <- min(sims,sims1)
+u <- max(sims,sims1)
+grid.arrange(ggplot(sims) + geom_point(aes(x=Y1,y=Y2),alpha=0.5,size=0.1,col="#009ADA") + xlim(c(l,u))+ ylim(c(l,u)) + xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_2$")),
+             ggplot(sims) + geom_point(aes(x=Y2,y=Y3),alpha=0.5,size=0.1,col="#009ADA")+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_2$"))+ ylab(TeX("$Y_3$")),
+             ggplot(sims) + geom_point(aes(x=Y1,y=Y3),alpha=0.5,size=0.1)+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_3$")),
+             ggplot(sims1) + geom_point(aes(x=Y1,y=Y2),alpha=0.5,size=0.1,col="#009ADA")+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_2^*$")),
+             ggplot(sims1) + geom_point(aes(x=Y2,y=Y3),alpha=0.5,size=0.1,col="#009ADA")+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_2^*$"))+ ylab(TeX("$Y_3$")),
+             ggplot(sims1) + geom_point(aes(x=Y1,y=Y3),alpha=0.5,size=0.1)+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_3$")),ncol=3)
