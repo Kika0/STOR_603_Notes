@@ -665,3 +665,142 @@ grid.arrange(ggplot(sims) + geom_point(aes(x=Y1,y=Y2),alpha=0.5,size=0.1,col="#0
              ggplot(sims1) + geom_point(aes(x=Y1,y=Y2),alpha=0.5,size=0.1,col="#009ADA")+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_2^*$")),
              ggplot(sims1) + geom_point(aes(x=Y2,y=Y3),alpha=0.5,size=0.1,col="#009ADA")+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_2^*$"))+ ylab(TeX("$Y_3$")),
              ggplot(sims1) + geom_point(aes(x=Y1,y=Y3),alpha=0.5,size=0.1)+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_3$")),ncol=3)
+#(x2*x3)^{-(1/a)-1}
+integrand_subs <- function(t) {
+t^(-2/a)* (1+(x2*t)^(-1/a))^(a-2) *(1+(x3*t)^(-1/a))^(a-2)*
+    (((1-a)/a) + t*(1+(x2*t)^(-1/a))^a )*(((1-a)/a) + t*(1+(x3*t)^(-1/a))^a )*
+    exp(t*( 1-(1+(x2*t)^(-1/a))^a-(1+(x3*t)^(-1/a))^a  ))
+}
+\texttt{x2*10^1.4}
+integral <- function(s) {
+  s^(2/a-2)* (1+(x2/s)^(-1/a))^(a-2) *(1+(x3/s)^(-1/a))^(a-2)*
+    (((1-a)/a) + s^(-1)*(1+(x2/s)^(-1/a))^a )*(((1-a)/a) + s^(-1)*(1+(x3/s)^(-1/a))^a )*
+    exp(s^(-1)*( 1-(1+(x2/s)^(-1/a))^a-(1+(x3/s)^(-1/a))^a  ))
+}
+U <- runif(1)
+X2 <- sims_tmp[,2]
+X3 <- sims_tmp[,3]
+x2 <- X2[1]
+x3 <- X3[1]
+u <- integrate(integral,lower=0,upper=qfrechet(0.9999))$value
+l <- integrate(integral,lower=0,upper=u)$value
+U
+u/l
+
+U <- seq(from=0.0001,to=0.99999,length.out=1998)
+int <- c()
+for (i in 1:1998){
+  Unif <- U[i]
+  x2 <- max(X2)
+  x3 <- X3[which.max(X2)]
+  # x2 <- X2[4]
+  # x3 <- X3[4]
+  # u[i] <- integrate(integral,lower=0,upper=qfrechet(Unif))$value
+  # l[i] <- integrate(integral,lower=0,upper=10^4)$value
+  d[i] <- integral(qfrechet(Unif))
+  # x <- c()
+  # for (j in 1:1998) {
+  #   x[j] <- integral(s=qfrechet(U[j]))
+  # }
+}
+  y <- c()
+  for (j in 1:1997) {
+    y[j] <- abs(d[j+1]+d[j])
+  }
+
+  u <-  qfrechet(U[which(y==y[y<0.0000001][1])])
+  if (length(u)==0) {
+    u <- qfrechet(max(U))
+  }
+ # int[i] <-  u[i]/l[i]
+
+plot(qfrechet(U),d,xlim = c(0,u))
+plot(qfrechet(U),d)
+plot(y)
+
+to_opt <- function(x) {
+  (  (  integrate(integral,lower=0,upper=x)$value/l[i] )-Unif)^2
+}
+x4 <-c()
+for (i in 1:N){
+  Unif <- runif(1) # generate U
+  x2 <- X2[i]
+  x3 <- X3[i]
+  # x <- c()
+  # for (j in 1:1998) {
+  #   x[j] <- integral(s=1/qfrechet(U[j]))
+  # }
+  # y <- c()
+  # for (j in 1:1997) {
+  #   y[j] <- abs(x[j+1]+x[j])
+  # }
+  # u <- c()
+  # u <-  qfrechet(U[which(y==y[y<(10^(-12))][1])])
+  # if (length(u)==0) {
+  #   u <- qfrechet(max(U))
+  # }
+   u <- (x2+x3)/2*10^(1.2)
+  l[i] <- integrate(integral,lower=0,upper=u)$value 
+  x4[i] <- optim(par=1,fn=to_opt,lower=0,upper=u,method="Brent")$par
+}
+
+# col="#009ADA"
+
+sims1 <- data.frame(Y1=X2,Y2=x4,Y3=X3)%>% apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+sims <- sims %>% mutate(out=((X2+X3)<(1)))
+sims1 <- sims1 %>% mutate(out=((X2+X3)<(1)))
+l <- min(sims,sims1)
+u <- max(sims,sims1)
+grid.arrange(ggplot(sims) + geom_point(aes(x=Y1,y=Y2),alpha=0.5,size=0.1,col="#009ADA") + xlim(c(l,u))+ ylim(c(l,u)) + xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_2$")),
+             ggplot(sims) + geom_point(aes(x=Y2,y=Y3),alpha=0.5,size=0.1,col="#009ADA")+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_2$"))+ ylab(TeX("$Y_3$")),
+             ggplot(sims) + geom_point(aes(x=Y1,y=Y3),alpha=0.5,size=0.1)+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_3$")),
+             ggplot(sims1) + geom_point(aes(x=Y1,y=Y2),alpha=0.5,size=0.1,col="#009ADA")+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_2^*$")),
+             ggplot(sims1) + geom_point(aes(x=Y2,y=Y3),alpha=0.5,size=0.1,col="#009ADA")+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_2^*$"))+ ylab(TeX("$Y_3$")),
+             ggplot(sims1) + geom_point(aes(x=Y1,y=Y3),alpha=0.5,size=0.1)+ xlim(c(l,u))+ ylim(c(l,u))+ xlab(TeX("$Y_1$"))+ ylab(TeX("$Y_3$")),ncol=3)
+
+x <- c()
+U <- seq(from=0.01,to=0.99,length.out=198)
+x2 <- X2[1]
+x3 <- X3[1]
+l <- integrate(integral,lower=0,upper=10^4)$value
+for (i in 1:198) {
+x[i] <- integral(s=1/qfrechet(U[i]))/l 
+}
+plot(qfrechet(U),x)
+integrate(integral,lower=0,upper=10^4)
+
+# plot several different densities
+tmp <- data.frame(z=as.numeric(),cdf=as.numeric())
+tmp1 <- data.frame(z=as.numeric(),cdf=as.numeric(),ite=as.character())
+set.seed(123)
+for (j in 1:20) {
+  # x2 <- max(X2)
+  # x3 <- X3[X2==max(X2)]
+  x2 <- X2[j]
+  x3 <- X3[j]
+  u <- (x2+x3)/2*10^(1.2)
+  l <- integrate(integral,lower=0,upper=10^5)$value
+  for (i in 1:1998) {
+    x[i] <- integral(s=1/qfrechet(U[i]))/l 
+  }
+  from <- (j-1)*1998+1
+  to <- 1998*j
+  tmp[from:to,] <- cbind(data.frame(z=qfrechet(U),cdf=x))
+  tmp1[from:to,] <- cbind(tmp[from:to,],data.frame(ite=rep(paste0("x2=",round(x2,2),", x3=",round(x3,2)),1998)))
+  
+}
+ggplot(tmp1[from:to,]) + geom_line(aes(x=z,y=cdf,col=ite),alpha=1,linewidth=1)+ylab(TeX(paste0("$h($","$x_4$","$)")))+ xlim(c(0,u))+
+  xlab(TeX("$x_4$"))
+
+for (i in 1:198) {
+  x[i] <- integral(s=1/qfrechet(U[i]))/l 
+}
+y <- c()
+for (i in 1:197) {
+ y[i] <- abs(x[i+1]-x[i]) 
+}
+
+# generate from 4 variables with logistic links
+
+
+
