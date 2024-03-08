@@ -28,13 +28,25 @@ gaussprocess <- function(from = 0, to = 1, K = function(s, t) {exp(-(abs(s-t)/la
   return(data.frame("t" = t, "xt" = path))
 }
 
-df <- cbind(rbind(gaussprocess(lambda=0.1),gaussprocess(lambda = 1),gaussprocess(lambda=10)),
+set.seed(1)
+l1 <- gaussprocess(lambda=0.1)
+set.seed(1)
+l2 <- gaussprocess(lambda=1)
+set.seed(1)
+l3 <- gaussprocess(lambda=10)
+df <- cbind(rbind(l1,l2,l3),
             data.frame(lambda=c(rep("0.1",1000),rep("1",1000),rep("10",1000))))
 
 ggplot(df) + geom_line(aes(x=t,y=xt,col=lambda))+ ylab(TeX(paste0("$X($","$s$","$)")))
 
 
-df <- cbind(rbind(gaussprocess(alpha=0.1),gaussprocess(alpha = 1),gaussprocess(alpha=1.9)),
+set.seed(1)
+l1 <- gaussprocess(alpha = 0.1)
+set.seed(1)
+l2 <- gaussprocess(alpha = 1)
+set.seed(1)
+l3 <- gaussprocess(alpha = 1.9)
+df <- cbind(rbind(l1,l2,l3),
             data.frame(alpha=c(rep("0.1",1000),rep("1",1000),rep("1.9",1000))))
 
 ggplot(df) + geom_line(aes(x=t,y=xt,col=alpha))+ ylab(TeX(paste0("$X($","$s$","$)")))
