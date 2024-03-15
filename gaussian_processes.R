@@ -1,6 +1,8 @@
 library(MASS)
 library(tidyverse)
 library(latex2exp)
+library(viridis)
+library(plgp)
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
 theme_replace(
@@ -11,7 +13,7 @@ theme_replace(
   panel.border = element_rect(colour = "black", fill = NA) )
 
 gaussprocess <- function(from = 0, to = 1, K = function(s, t) {exp(-(abs(s-t)/lambda)^alpha)},
-                         start = NULL, m = 1000,alpha=1,lambda=1) {
+                         start = NULL, m = 50,alpha=1,lambda=1) {
   
   t <- seq(from = from, to = to, length.out = m)
   Sigma <- sapply(t, function(s1) {
@@ -21,9 +23,9 @@ gaussprocess <- function(from = 0, to = 1, K = function(s, t) {exp(-(abs(s-t)/la
   })
   
   path <- mvrnorm(mu = rep(0, times = m), Sigma = Sigma)
-  if (!is.null(start)) {
-    path <- path - path[1] + start  # Must always start at "start"
-  }
+  # if (!is.null(start)) {
+  #   path <- path - path[1] + start  # Must always start at "start"
+  # }
   
   return(data.frame("t" = t, "xt" = path))
 }
@@ -35,19 +37,19 @@ l2 <- gaussprocess(lambda=1)
 set.seed(1)
 l3 <- gaussprocess(lambda=10)
 df <- cbind(rbind(l1,l2,l3),
-            data.frame(lambda=c(rep("0.1",1000),rep("1",1000),rep("10",1000))))
+            data.frame(lambda=c(rep("0.1",m),rep("1",m),rep("10",m))))
 
 ggplot(df) + geom_line(aes(x=t,y=xt,col=lambda))+ ylab(TeX(paste0("$X($","$s$","$)")))
 
-
+m <- 50
 set.seed(1)
-l1 <- gaussprocess(alpha = 0.1)
+l1 <- gaussprocess(alpha = 0.1,m=m)
 set.seed(1)
-l2 <- gaussprocess(alpha = 1)
+l2 <- gaussprocess(alpha = 1,m=m)
 set.seed(1)
-l3 <- gaussprocess(alpha = 1.9)
+l3 <- gaussprocess(alpha = 1.9,m=m)
 df <- cbind(rbind(l1,l2,l3),
-            data.frame(alpha=c(rep("0.1",1000),rep("1",1000),rep("1.9",1000))))
+            data.frame(alpha=c(rep("0.1",m),rep("1",m),rep("1.9",m))))
 
 ggplot(df) + geom_line(aes(x=t,y=xt,col=alpha))+ ylab(TeX(paste0("$X($","$s$","$)")))
 
@@ -66,3 +68,124 @@ plot(density(tmp1$xt[tmp1$t==3/99]))
 plot(density(rnorm(1000)))
 ggplot() + geom_density(tmp1 %>% mutate(t=as.character(t)), mapping=aes(x = xt, col = t),alpha = 0.1,linewidth=0.3)+ theme(legend.position="none") +
   geom_density(data.frame(x=rnorm(1000)),mapping=aes(x=x))
+
+gaussprocessadd <- function(from = 0, to = 1,df, K = function(s1,s2 ) {exp(-(abs(s1-s2)/lambda)^alpha)},
+                         start = NULL, m = 50,alpha=1,lambda=1) {
+  t <- df$t
+  y <- df$xt
+  ts <- seq(from = from, to = to, length.out = m)
+  Kxx <- sapply(t, function(s1) {
+    sapply(t, function(s2) {
+      K(s1, s2)
+    })
+  })
+  
+  Kxxs <- sapply(ts, function(s1) {
+    sapply(t, function(s2) {
+      K(s1, s2)
+    })
+  })
+  
+  Kxsx <- sapply(t, function(s1) {
+    sapply(ts, function(s2) {
+      K(s1, s2)
+    })
+  })
+  
+  Kxsxs <- sapply(ts, function(s1) {
+    sapply(ts, function(s2) {
+      K(s1, s2)
+    })
+  })
+  
+  mu <- Kxsx%*%solve(Kxx)%*%matrix(y,ncol=1)
+  Sigma <- Kxsxs-Kxsx%*%solve(Kxx)%*%Kxxs
+  path <- mvrnorm(mu = mu, Sigma = Sigma)
+  # if (!is.null(start)) {
+  #   path <- path - path[1] + start  # Must always start at "start"
+  # }
+  
+  return(data.frame("t" = ts, "xt" = path))
+}
+set.seed(1)
+df <- gaussprocess(m=11)
+tmp <- gaussprocessadd(df=df,m=51)
+tmp1 <- gaussprocessadd(df=df,m=51)
+tmp2 <- gaussprocessadd(df=df,m=51)
+ggplot() + geom_line(data=tmp,aes(x=t,y=xt),col="#C11432") +geom_point(data=df,aes(x=t,y=xt),size=2) + geom_line(data=tmp1,aes(x=t,y=xt),col="#009ADA")+ geom_line(data=tmp2,aes(x=t,y=xt),col="#66A64F")
+
+# sample in two dimensions
+x <- seq(0,1)
+gaussprocess2d <- function(from = 0, to = 1, K = function(s, t) {exp(-(sqrt((s[1]-t[1])^2+(s[2]-t[2])^2)/lambda)^alpha)},
+                         start = NULL, m = 1000,alpha=1,lambda=1) {
+  
+  x <- seq(from = from, to = to, length.out = m)
+  y <- seq(from = from, to = to, length.out = m)
+  xy <- expand.grid(x,y) 
+  xy.list <- split(xy, seq(nrow(xy)))
+  Sigma <- matrix(ncol=m^2,nrow=m^2)
+for (i in 1:nrow(xy)){
+    for (j in 1:nrow(xy)) {
+    Sigma[i,j] <-  as.numeric(K(s=xy[i,], t=xy[j,]) )
+    }
+  }
+  
+  path <- mvrnorm(mu = rep(0, times = m^2), Sigma = Sigma)
+  # if (!is.null(start)) {
+  #   path <- path - path[1] + start  # Must always start at "start"
+  # }
+  
+  return(data.frame("x" = xy$Var1, "y"=xy$Var2, "xt" = path))
+}
+tmp <- gaussprocess2d(m=20)
+ggplot(tmp,aes(x=x,y=y)) +
+  geom_raster(aes(fill=xt), interpolate = TRUE) +
+  geom_contour(aes(z=xt), bins = 12, color = "gray30", 
+               size = 0.5, alpha = 0.5) +
+  coord_equal() +
+  scale_x_continuous(expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  scale_fill_viridis_c(option = "viridis")
+
+# kernel function
+rbf_D <- function(X,lambda=1, alpha=1, eps = sqrt(.Machine$double.eps) ){
+  D <- plgp::distance(X)
+  Sigma <- exp(-(D/lambda)^alpha) + diag(eps, nrow(X))
+}
+# number of samples
+mx <- 50
+x <- seq(0,1,length=mx)
+# grid of pairwise values
+X <- expand.grid(x, x)
+alpha <- c(0.1,1,1.9)
+lambda <- c(0.01,0.1,1)
+pp <- data.frame(y=as.numeric(),x1=as.numeric(),x2=as.numeric(),ite=as.character())
+for (i in 1:length(alpha)) {
+  for (j in 1:length(lambda)) {
+    # compute squared exponential kernel on pairwise values
+    Sigma <- rbf_D(X,lambda = lambda[j],alpha = alpha[i])
+    # sample from multivariate normal with mean zero, sigma = sigma
+    Y <- MASS::mvrnorm(1,rep(0,dim(Sigma)[1]), Sigma)
+    pp <- rbind(pp,data.frame(y=Y,x1=X[,1],x2=X[,2],ite=paste0("lambda=",lambda[j],", alpha=",alpha[i])))
+  }
+} 
+
+ggplot(pp,aes(x=x1,y=x2)) +
+  geom_tile(aes(fill=y), interpolate = TRUE) +
+  geom_contour(aes(z=y), bins = 12, color = "gray30", 
+               size = 0.5, alpha = 0.5) +
+  coord_equal() +
+  facet_wrap(~ite) +
+  # ylab(TeX("$\\Phi(\\boldsymbol(x))$"))+
+  scale_x_continuous(expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  scale_fill_viridis_c(option = "viridis")
+
+# compute squared exponential kernel on pairwise values
+Sigma <- rbf_D(X,lambda = 0.01,alpha = 1)
+
+# sample from multivariate normal with mean zero, sigma = sigma
+Y <- MASS::mvrnorm(1,rep(0,dim(Sigma)[1]), Sigma)
+
+# plot results
+pp <- data.frame(y=Y,x1=X[,1],x2=X[,2])
