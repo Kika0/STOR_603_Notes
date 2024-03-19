@@ -120,7 +120,7 @@ ggplot() + geom_line(data=tmp,aes(x=t,y=xt),col="#C11432") +geom_point(data=df,a
 # sample in two dimensions ----
 x <- seq(0,1)
 gaussprocess2d <- function(from = 0, to = 1, K = function(s, t) {exp(-(sqrt((s[1]-t[1])^2+(s[2]-t[2])^2)/lambda)^alpha)},
-                         start = NULL, m = 1000,alpha=1,lambda=1) {
+                         start = NULL, rho=NULL, sig=NULL, m = 1000,alpha=1,lambda=1) {
   
   x <- seq(from = from, to = to, length.out = m)
   y <- seq(from = from, to = to, length.out = m)
@@ -129,7 +129,7 @@ gaussprocess2d <- function(from = 0, to = 1, K = function(s, t) {exp(-(sqrt((s[1
   Sigma <- matrix(ncol=m^2,nrow=m^2)
 for (i in 1:nrow(xy)){
     for (j in 1:nrow(xy)) {
-    Sigma[i,j] <-  as.numeric(K(s=xy[i,], t=xy[j,]) )
+    Sigma[i,j] <-  as.numeric(K(s= as.numeric(xy[i,]), t=as.numeric(xy[j,])) )
     }
   }
   
@@ -140,7 +140,14 @@ for (i in 1:nrow(xy)){
   
   return(data.frame("x" = xy$Var1, "y"=xy$Var2, "xt" = path))
 }
-tmp <- gaussprocess2d(m=10)
+
+K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
+                    cov = matrix(c(1,rho*sig,rho*sig,sig^2),ncol=2))/lambda)^alpha)}
+
+set.seed(1)
+tmp <- gaussprocess2d(m=10,K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
+                                                                 cov = matrix(c(1,rho*sig,rho*sig,sig^2),ncol=2))/lambda)^alpha)},
+              rho=1/3,sig=1/2        )
 ggplot(tmp,aes(x=x,y=y)) +
   geom_raster(aes(fill=xt), interpolate = TRUE) +
   geom_contour(aes(z=xt), bins = 12, color = "gray30", 
@@ -149,6 +156,26 @@ ggplot(tmp,aes(x=x,y=y)) +
   scale_x_continuous(expand=c(0,0)) +
   scale_y_continuous(expand=c(0,0)) +
   scale_fill_viridis_c(option = "viridis")
+# try mahalanobis distance for a range of parameters
+# number of samples
+mx <- 20
+x <- seq(0,1,length=mx)
+# grid of pairwise values
+X <- expand.grid(x, x)
+rho <- c(0.1,0.5,0.9)
+rho <- c(0,0.1,0.2)
+sig <- c(0.5,1,2)
+pp <- data.frame(y=as.numeric(),x1=as.numeric(),x2=as.numeric(),ite=as.character())
+
+for (i in 1:length(rho)) {
+  for (j in 1:length(sig)) {
+    # sample from multivariate normal with mean zero, sigma = sigma
+    set.seed(1)
+    Y <- gaussprocess2d(m=mx,rho = rho[i],sig=sig[j],K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
+                                                                                           cov = matrix(c(1,rho[i]*sig[j],rho[i]*sig[j],sig[j]^2),ncol=2))/lambda)^alpha)})$xt
+    pp <- rbind(pp,data.frame(y=Y,x1=X[,1],x2=X[,2],ite=paste0("rho=",rho[i],", sigma=",sig[j])))
+  }
+}
 
 # kernel function
 rbf_D <- function(X,lambda=1, alpha=1, eps = sqrt(.Machine$double.eps) ){
@@ -163,7 +190,6 @@ X <- expand.grid(x, x)
 alpha <- c(0.5,1,1.5)
 lambda <- c(0.5,1,2)
 pp <- data.frame(y=as.numeric(),x1=as.numeric(),x2=as.numeric(),ite=as.character())
-set.seed(1)
 for (i in 1:length(alpha)) {
   for (j in 1:length(lambda)) {
     # sample from multivariate normal with mean zero, sigma = sigma
@@ -194,4 +220,38 @@ pp <- data.frame(y=Y,x1=X[,1],x2=X[,2])
 
 # combine GP with conditional models----
 m <- 10
-n <- 100
+n <- 1000
+
+# sample many times to illustrate the Gaussian density at each 1:m ----
+tmp <- data.frame(t=as.numeric(),xt=as.numeric())
+tmp1 <- data.frame(t=as.numeric(),xt=as.numeric(),ite=as.character())
+set.seed(1234)
+for (i in 1:n) {
+  from <- (i-1)*m+1
+  to <- m*i
+  tmp[from:to,] <- gaussprocess(m=m)
+  tmp1[from:to,] <- cbind(tmp[from:to,],data.frame(ite=rep(as.character(i),m)))
+}
+
+ggplot(tmp1) + geom_line(aes(x=t,y=xt,col=ite),alpha=0.5,linewidth=0.1)+ylab(TeX(paste0("$X($","$s$","$)")))+   theme(legend.position="none") 
+ # scale_color_manual(values=c(rep("#C11432",500),rep("#009ADA",500)))
+ggplot() + geom_density(tmp1 %>% mutate(t=as.character(t)), mapping=aes(x = xt, col = t),alpha = 0.1,linewidth=0.3)+ theme(legend.position="none") +
+  geom_density(data.frame(x=rnorm(n)),mapping=aes(x=x))
+
+paste0("Y",1:10)
+# transform data to a correct format
+tmp <- tmp1 %>% select(xt,t) %>%   mutate(id = row_number(), .by =t) %>%
+  pivot_wider(names_from = t, values_from = xt, id_cols = id) %>% select(-id)
+colnames(tmp) <- paste0("Y",1:(m+1))
+# PIT to Laplace
+sims <- tmp %>% mutate(Y_1=as.numeric(map(.x=Y1,.f=frechet_laplace_pit))) %>% 
+  mutate(Y_2=as.numeric(map(.x=Y2,.f=frechet_laplace_pit))) %>%
+  mutate(Y_3=as.numeric(map(.x=Y3,.f=frechet_laplace_pit)))
+
+# check it looks Laplace 
+ggplot(sims %>% dplyr::select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
+grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
+             ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
+             ggplot(sims) + geom_point(aes(x=Y_1,y=Y_3),alpha=0.5),ncol=3)
+
+
