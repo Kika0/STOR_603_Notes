@@ -183,7 +183,7 @@ v <- 0.99
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 
-opt <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,given=1,sim=3,control = list(fnscale=-1))
+opt <- optim(par=c(1,0,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=1,sim=3,control = list(fnscale=-1))
 a_hat <- opt$par[1]
 b_hat <- opt$par[2]
 # plot the values inferenced on ----
@@ -250,7 +250,7 @@ Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("conditional_model",N)
 # generate Y_1 (extrapolate so above largest observed value)
 
 #plot
-Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% select(X_1,Y_1,Y_2) %>% mutate(sim=rep("original_laplace",50)))
+Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% dplyr::select(X_1,Y_1,Y_2) %>% mutate(sim=rep("original_laplace",500)))
 ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + 
   scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
 
@@ -303,20 +303,8 @@ ggplot(d, aes(x = x, y = 0, fill = stat(quantile))) +
   geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = hdi, vline_linetype = 2) +
   scale_fill_manual(values = c("transparent", "lightblue", "transparent"), guide = "none")
 
-# different methods of generating from Fréchet lead to different results, which should be looked at
-
-# practice transforming from uniform margins to normal and back
-U <- runif(10000)
-plot(density(U))
-N <- qnorm(U)
-plot(density(N))
-plot(density(rnorm(10000)))
-
-# transform back to uniform
-pnorm(1.96)
-
-# start from the beginning
-# generate trivariate sample ----
+# start from the beginning ----
+# generate trivariate sample
 N <- 5000
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
