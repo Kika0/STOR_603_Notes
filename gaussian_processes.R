@@ -3,6 +3,9 @@ library(tidyverse)
 library(latex2exp)
 library(viridis)
 library(plgp)
+library(gridExtra)
+library(here)
+source(here("cond_model_helpers.R"))
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
 theme_replace(
@@ -151,7 +154,7 @@ tmp <- gaussprocess2d(m=10,K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
 ggplot(tmp,aes(x=x,y=y)) +
   geom_raster(aes(fill=xt), interpolate = TRUE) +
   geom_contour(aes(z=xt), bins = 12, color = "gray30", 
-               size = 0.5, alpha = 0.5) +
+               linewidth = 0.5, alpha = 0.5) +
   coord_equal() +
   scale_x_continuous(expand=c(0,0)) +
   scale_y_continuous(expand=c(0,0)) +
@@ -177,11 +180,6 @@ for (i in 1:length(rho)) {
   }
 }
 
-# kernel function
-rbf_D <- function(X,lambda=1, alpha=1, eps = sqrt(.Machine$double.eps) ){
-  D <- plgp::distance(X)
-  Sigma <- exp(-(D/lambda)^alpha) + diag(eps, nrow(X))
-}
 # number of samples
 mx <- 30
 x <- seq(0,1,length=mx)
@@ -238,20 +236,27 @@ ggplot(tmp1) + geom_line(aes(x=t,y=xt,col=ite),alpha=0.5,linewidth=0.1)+ylab(TeX
 ggplot() + geom_density(tmp1 %>% mutate(t=as.character(t)), mapping=aes(x = xt, col = t),alpha = 0.1,linewidth=0.3)+ theme(legend.position="none") +
   geom_density(data.frame(x=rnorm(n)),mapping=aes(x=x))
 
-paste0("Y",1:10)
+paste0("Y",1:m)
 # transform data to a correct format
-tmp <- tmp1 %>% select(xt,t) %>%   mutate(id = row_number(), .by =t) %>%
-  pivot_wider(names_from = t, values_from = xt, id_cols = id) %>% select(-id)
+tmp <- tmp1 %>% dplyr::select(xt,t) %>%   mutate(id = row_number(), .by =t) %>%
+  pivot_wider(names_from = t, values_from = xt, id_cols = id) %>% dplyr::select(-id)
 colnames(tmp) <- paste0("Y",1:(m+1))
 # PIT to Laplace
-sims <- tmp %>% mutate(Y_1=as.numeric(map(.x=Y1,.f=frechet_laplace_pit))) %>% 
-  mutate(Y_2=as.numeric(map(.x=Y2,.f=frechet_laplace_pit))) %>%
-  mutate(Y_3=as.numeric(map(.x=Y3,.f=frechet_laplace_pit)))
+sims <- apply(tmp,c(1,2),norm_laplace_pit) %>% as.data.frame()
 
 # check it looks Laplace 
-ggplot(sims %>% dplyr::select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
-grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
-             ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
-             ggplot(sims) + geom_point(aes(x=Y_1,y=Y_3),alpha=0.5),ncol=3)
-
+ggplot(sims %>% dplyr::select(Y1,Y2,Y3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
+grid.arrange(ggplot(sims) + geom_point(aes(x=Y1,y=Y2),alpha=0.5),
+             ggplot(sims) + geom_point(aes(x=Y2,y=Y3),alpha=0.5),
+             ggplot(sims) + geom_point(aes(x=Y1,y=Y3),alpha=0.5),ncol=3)
+# calculate the residuals
+sims1 <- sims[,1:9]
+names(sims1) <- paste0("Y",1:2)
+tmp <- par_est(sims1,v=0.99)
+tmp <- tmp %>% mutate(t=abs(res-given)/(m-1)) %>% mutate(given=factor(given,levels = 1:(m-1)))
+ggplot(tmp) + geom_point(aes(x=t,y=lik,col=given)) + geom_line(aes(x=t,y=lik,col=given))
+ggplot(tmp) + geom_point(aes(x=t,y=a,col=given)) + geom_line(aes(x=t,y=a,col=given))
+ggplot(tmp) + geom_point(aes(x=t,y=b,col=given)) + geom_line(aes(x=t,y=b,col=given))
+ggplot(tmp) + geom_point(aes(x=t,y=mu,col=given)) + geom_line(aes(x=t,y=mu,col=given))
+ggplot(tmp) + geom_point(aes(x=t,y=sig,col=given)) + geom_line(aes(x=t,y=sig,col=given))
 
