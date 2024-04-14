@@ -20,7 +20,7 @@ theme_replace(
 
 # generate trivariate sample ----
 N <- 50000
-sims <- generate_dep_X_Y_Y_Z(N=N)
+sims <- generate_dep_X_Y_Y_Z(N=N,dep = c(0.9,1/2))
 
 # PIT to Laplace
 sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
@@ -246,13 +246,13 @@ Gen_Y_1 <- data.frame(X_1=X_1_gen) %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frech
 Y_1 <- Gen_Y_1$Y_1
 Z_gen <- sample(Z,N,replace=TRUE) +rnorm(N,mean=0,sd=density(Z)$bw) # plus noise
 Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_gen
-Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("conditional_model",N))
+Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("model",N))
 # generate Y_1 (extrapolate so above largest observed value)
 
 #plot
 Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% dplyr::select(X_1,Y_1,Y_2) %>% mutate(sim=rep("original_laplace",500)))
 ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + 
-  scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
+  scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
 
 # specify threshold for Laplace margin
 v_l <- c(5,12,5,12)
@@ -305,7 +305,7 @@ ggplot(d, aes(x = x, y = 0, fill = stat(quantile))) +
 
 # start from the beginning ----
 # generate trivariate sample
-N <- 5000
+N <- 50000
 sims <- generate_dep_X_Y_Y_Z(N=N)
 
 # PIT to Laplace
@@ -327,7 +327,7 @@ Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 
 d <- 3
 for (i in c(2,3)) {
-opt[[i-1]] <- optim(par=c(1,0,0,1),fn = Y_2_likelihood,df=Y_given_1_extreme,given=1,sim=i,control = list(fnscale=-1))
+opt[[i-1]] <- optim(par=c(1,0,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=1,sim=i,control = list(fnscale=-1))
 }
 a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
 b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
@@ -342,8 +342,6 @@ Z_3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
 plot(Y_1,Z_2)
 plot(Y_1,Z_3)
 
-
-
 # calculate the normal using the PIT
 Z_N_2 <- qnorm(F_smooth_Z(Z_2))
 Z_N_3 <- qnorm(F_smooth_Z(Z_3))
@@ -357,7 +355,7 @@ Z <- data.frame(Z_2,Z_3)
 Z_star <- norm_to_orig(Z_N=Z_N,emp_res = Z)
 
 U <- runif(1000)
-Y_1_gen <- -log(2*(1-0.999)) + rexp(1000)
+Y_1_gen <- -log(2*(1-0.9999)) + rexp(1000)
 Gen_Y_1 <- data.frame(Y_1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
 
 # for each Y, generate a residual and calculate Y_2
@@ -366,17 +364,17 @@ Y_1 <- Gen_Y_1$Y_1
 # Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
 Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,1]
 Y_3 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,2]
-Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2,Y_3=Y_3) %>% mutate(sim=rep("conditional_model",100))
+Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2,Y_3=Y_3) %>% mutate(sim=rep("model",1000))
 # generate Y_1 (extrapolate so above largest observed value)
 
 #plot
-Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% dplyr::select(X_1,Y_1,Y_2,Y_3) %>% mutate(sim=rep("original_laplace",50)))
+Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% dplyr::select(X_1,Y_1,Y_2,Y_3) %>% mutate(sim=rep("original_laplace",500)))
 p1 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + 
-  scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
+  scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
 p2 <- ggplot(Gen_orig) + geom_point(aes(x=Y_2,y=Y_3,col=sim),alpha=0.5) + 
-  scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
+  scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
 p3 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_3,col=sim),alpha=0.5) + 
-  scale_color_manual(values = c("original_laplace"="black","conditional_model" = "#C11432")) 
+  scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
 grid.arrange(p1,p2,p3,ncol=3)
 
 Z_comp <- Z_star %>% mutate(Compare=rep("Optimise_all",100))
@@ -533,25 +531,26 @@ v_l <- rep(frechet_laplace_pit( qfrechet(0.999)),2)
 annotate('rect', xmin=3, xmax=5, ymin=3, ymax=7, alpha=.2, fill='red')
 
 # calculate empirical probability by simulating Y_2 from the model
-sim_val <- plot_simulated(sims=sims,given=1)
- giv_1 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
-giv_1 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999),
-           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
-           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
+set.seed(1)
+sim_val <- plot_simulated(sims=sims,given=3)
+giv_1 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
+giv_1 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
 )
 sim_val <- plot_simulated(sims=sims,given=2)
-giv_2 <-  c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
+giv_2 <-  c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
 
-giv_2 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
-           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
-           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
+giv_2 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
 )
 sim_val <- plot_simulated(sims=sims,given=3)
-giv_3 <-  c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
+giv_3 <-  c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
 
-giv_3 <- c(((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
-           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
-           ((sim_val %>% filter(sim=="conditional_model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
+giv_3 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+           ((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
 )
 
 tmp_df <- data.frame(giv_1,giv_2,giv_3)
@@ -790,5 +789,16 @@ for (i in 1:197) {
 
 # generate from 4 variables with logistic links
 
-
-
+x_y <- as.data.frame(exp(evd::rbvevd(N,dep=1/2,model="log")))
+names(x_y) <- c("x1","y1")
+x_y <- x_y %>% mutate(x=as.numeric(map(.x=x1,.f=frechet_laplace_pit))) %>% 
+  mutate(y=as.numeric(map(.x=y1,.f=frechet_laplace_pit)))
+x_y$tf <- x_y$x>v_l[1]
+xy <- as.data.frame(mvrnorm(N,mu=c(0,0),Sigma = matrix(c(1,1/2,1/2,1),ncol=2)))
+names(xy) <- c("x","y")
+xy$tf <- xy$x>qnorm(0.999)
+p1 <- ggplot(x_y) + geom_point(aes(x=x,y=y,col=tf),alpha=0.5) + xlab("") + ylab("") + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none")
+p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),alpha=0.5) + xlab("") + ylab("")+ scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) + theme(legend.position="none")
+p3 <- ggplot(x_y %>% filter(x>v_l[1])) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
+p4 <- ggplot(xy %>% filter(x>qnorm(0.999))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
+grid.arrange(p1,p2,p3,p4,ncol=2)
