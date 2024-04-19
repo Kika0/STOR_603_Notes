@@ -6,6 +6,7 @@ library(gridExtra)
 library(viridis)
 library(MASS) #use dplyr::select to avoid function conflict
 library(xtable)
+library(gnorm)
 source("cond_model_helpers.R")
 
 # set theme defaults to be black rectangle
