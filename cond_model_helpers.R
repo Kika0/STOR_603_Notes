@@ -733,8 +733,6 @@ grid.arrange(p1,p2,p3,ncol=1)
 
 # function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
   df <- (sims %>% dplyr::select(starts_with("Y")))[,1:2]
-  par_sum <- data.frame(matrix(nrow=5,ncol=0))
-  # Y_not_1_extreme <- df %>% filter(Y_1<quantile(Y_1,v))
   Z <- c()
   j <- given
   cond_colours <- c("#C11432","#66A64F","#009ADA")
@@ -742,46 +740,52 @@ grid.arrange(p1,p2,p3,ncol=1)
   
   Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
   res <- c(1:d)[-j]
-  opt <- list()
-  for (i in 2:d) {
     # get initial parameters
     init_opt <- optim(par=c(1,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))$par
     init_par <- c(init_opt[1],0.2,init_opt[2],init_opt[3])
     # optimise using the initial parameters
-    opt[[i-1]] <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-  }
-  a_hat <- c(opt[[1]]$par[1])
-  b_hat <- c(opt[[1]]$par[2])
-  mu_hat <- c(opt[[1]]$par[3])
-  sig_hat <- c(opt[[1]]$par[4])
+    opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+  a_hat <- c(opt$par[1])
+  b_hat <- c(opt$par[2])
+  mu_hat <- c(opt$par[3])
+  sig_hat <- c(opt$par[4])
   
-  # generate residual Z ----
+  # calculate observed residuals Z ----
   Y_1 <- Y_given_1_extreme[,j]
   Y_2 <- Y_given_1_extreme[,res[1]]
-
-  
-  tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
+ tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
 # fit DL to the residuals
-  fg <- function(z) {
-    integrate(function(x) exp(-x) * x^(z - 1), 0, Inf)
-  }
+  # fg <- function(z) {
+  #   integrate(function(x) exp(-x) * x^(z - 1), 0, Inf)
+  # }
+ DLLL2step <- function(x,theta) {
+   mu <- theta[1]
+   sig <- theta[2]
+   delta <- theta[3]
+   if(sig<=0 | delta<=0 ){return(10e10)}
+   -sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T))
+ }
+ opt <- optim(DLLL2step,x=tmp_z2,par=c(0,1,1))
+ 
   DLLL <- function(x,theta) {
     mu <- theta[1]
   sig <- theta[2]
   delta <- theta[3]
   a <- theta[4]
   b <- theta[5]
-  x <- (Y_2-a*Y_1)/(Y_1^b)
-    if(sig<=0 | delta<=0 | a<(-1) | a>1 | b<0 | b>=1){return(-10e10)}
-    -sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T))
+  Y1 <- x[,1]
+  Y2 <- x[,2]
+obs_res <- (Y2-a*Y1)/(Y1^b)
+    if(sig<=0 | delta<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
+    -sum(dgnorm(obs_res,mu=mu,alpha=sig,beta=delta,log=T))
   }
   # optimise over the parameters
-  opt <- optim(DLLL,x=tmp_z2,par=c(0,1,1,0.8,0.6))
+  opt <- optim(DLLL,x=data.frame(Y_1,Y_2),par=c(0,1,1.5,0.8,0.3))
   mu <- opt$par[1]
   sig <- opt$par[2]
-  delta <-  opt$par[3]
+  delta <-  opt$par[3]=
 
-  # transform back to original margins
+  # sample residual Z_star
   Z_star <- rgnorm(n=1000,mu=mu,alpha=sig,beta=delta)
   
   U <- runif(1000)
