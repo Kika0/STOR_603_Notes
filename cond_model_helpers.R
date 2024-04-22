@@ -715,49 +715,24 @@ return(p)
 
 # Laplace margin density
 g_laplace <- function(z,a) {
- # -(a-1)*(1/a)*exp(z/a)*(1+(exp(z/a)))^(a-2)
- # -2^(-1/a)*(a-1)*(1/a)*exp(z/a)*(1+(exp(z/a)))^(a-2)
   (a-1)*(-1/a)*exp(-z/a)*(1+(exp(-z/a)))^(a-2)
-  
 }
 
 G_laplace <- function(z,a) {
 (1+exp(-z/a))^(a-1)
 }
 
-ggplot() + xlim(-10,20) + geom_function(fun=G_laplace,args=list(a=0.25),col="#C11432")+ geom_function(fun=G_laplace,args=list(a=1/2),col="#009ada")+ geom_function(fun=G_laplace,args=list(a=0.75),col="#66A64F")+ xlab(TeX("$z$")) + ylab(TeX("$G(z)$"))
-ggplot() + xlim(-10,20) + geom_function(fun=g_laplace,args=list(a=0.25),col="#C11432")+ geom_function(fun=g_laplace,args=list(a=1/2),col="#009ada")+ geom_function(fun=g_laplace,args=list(a=0.75),col="#66A64F") + ylim(0,1) + xlab(TeX("$z$")) + ylab(TeX("$g(z)$"))
-p2 <- ggplot() + xlim(-10,20) + geom_function(fun=g_laplace,args=list(a=1/2)) + ylim(0,1)+ xlab(TeX("$z$")) + ylab(TeX("$g(z)$"))
-p3 <- ggplot() + xlim(-10,20) + geom_function(fun=g_laplace,args=list(a=0.75))  + ylim(0,1)+ xlab(TeX("$z$")) + ylab(TeX("$g(z)$"))
-grid.arrange(p1,p2,p3,ncol=1)
 
-# function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
-  df <- (sims %>% dplyr::select(starts_with("Y")))[,1:2]
-  Z <- c()
-  j <- given
-  cond_colours <- c("#C11432","#66A64F","#009ADA")
-  d <- ncol(df)
-  
-  Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
-  res <- c(1:d)[-j]
-    # get initial parameters
-    init_opt <- optim(par=c(1,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))$par
-    init_par <- c(init_opt[1],0.2,init_opt[2],init_opt[3])
-    # optimise using the initial parameters
-    opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-  a_hat <- c(opt$par[1])
-  b_hat <- c(opt$par[2])
-  mu_hat <- c(opt$par[3])
-  sig_hat <- c(opt$par[4])
-  
-  # calculate observed residuals Z ----
-  Y_1 <- Y_given_1_extreme[,j]
-  Y_2 <- Y_given_1_extreme[,res[1]]
- tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
-# fit DL to the residuals
-  # fg <- function(z) {
-  #   integrate(function(x) exp(-x) * x^(z - 1), 0, Inf)
-  # }
+#' Calculate negative log-likelihood for delta-Laplace distribution
+#'
+#' @param x A vector of observed values.
+#' @param theta A vector of 3 parameter values.
+#'
+#' @return A negative log-likelihood.
+#' @export
+#'
+#' @examples 
+#' DLLL2step(x=rgnorm(50),theta=c(0,1,1))
  DLLL2step <- function(x,theta) {
    mu <- theta[1]
    sig <- theta[2]
@@ -765,7 +740,6 @@ grid.arrange(p1,p2,p3,ncol=1)
    if(sig<=0 | delta<=0 ){return(10e10)}
    -sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T))
  }
- opt <- optim(DLLL2step,x=tmp_z2,par=c(0,1,1))
  
   DLLL <- function(x,theta) {
     mu <- theta[1]
@@ -779,47 +753,4 @@ obs_res <- (Y2-a*Y1)/(Y1^b)
     if(sig<=0 | delta<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
     -sum(dgnorm(obs_res,mu=mu,alpha=sig,beta=delta,log=T))
   }
-  # optimise over the parameters
-  opt <- optim(DLLL,x=data.frame(Y_1,Y_2),par=c(0,1,1.5,0.8,0.3))
-  mu <- opt$par[1]
-  sig <- opt$par[2]
-  delta <-  opt$par[3]=
-
-  # sample residual Z_star
-  Z_star <- rgnorm(n=1000,mu=mu,alpha=sig,beta=delta)
-  
-  U <- runif(1000)
-  Y_1_gen <- -log(2*(1-0.999)) + rexp(1000)
-  Gen_Y_1 <- data.frame(Y_1=Y_1_gen)
-  
-  # for each Y, generate a residual and calculate Y_2
-  Y_1 <- Gen_Y_1$Y_1
-   Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star
-  Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("model",1000))
-  names(Gen_Y_1) <- c(paste0("Y",j),paste0("Y",res[1]),"sim")
-  # generate Y_1 (extrapolate so above largest observed value)
-  
-  #plot
-  Y1 <- Y_given_1_extreme[,j]
-  Y2 <- Y_given_1_extreme[,res[1]]
-  tmp <- data.frame(Y1,Y2) %>% mutate(sim=rep("data",50))
-  names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),"sim")
-  thres <- frechet_laplace_pit( qfrechet(0.999))
-  v <- 0.99
-  l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2)
-  u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2)
-  Gen_orig <- rbind(Gen_Y_1,tmp)
-  p1 <- ggplot(Gen_orig) +  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432") + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
-    scale_color_manual(values = c("data"="black","model" = cond_colours[j])) + xlab(TeX("$Y_1$")) +ylab(TeX("$Y_2$")) +
-    xlim(c(l,u)) + ylim(c(l,u)) 
-  p2 <- ggplot(Gen_orig)+  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432")  + geom_point(aes(x=Y2,y=Y3,col=sim),alpha=0.5) + 
-    scale_color_manual(values = c("data"="black","model" = cond_colours[j])) + xlab(TeX("$Y_2$")) +ylab(TeX("$Y_3$")) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
-    xlim(c(l,u)) + ylim(c(l,u))
-  p3 <- ggplot(Gen_orig)+  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432")  + geom_point(aes(x=Y1,y=Y3,col=sim),alpha=0.5) + 
-    scale_color_manual(values = c("data"="black","model" = cond_colours[j]))+ xlab(TeX("$Y_1$")) +ylab(TeX("$Y_3$"))  + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
-    xlim(c(l,u)) + ylim(c(l,u))
-  p <- grid.arrange(p1,p2,p3,ncol=3)
-  
-  # par_sum <- cbind(par_sum,data.frame(matrix(round(c(a_hat,b_hat,mu_hat,sig_hat,rep(rho_hat,2)),3),nrow=5,ncol=2,byrow=TRUE)))
-  #par_sum <- data.frame(Z_2,Z_3,Z_N_2,Z_N_3,given)
   
