@@ -30,6 +30,15 @@ likl2 <- c()
 mu2 <- c()
 sig2 <- c()
 delta2 <- c()
+a1 <- c()
+b1 <- c()
+mu1 <- c()
+sig1 <- c()
+delta1 <- c()
+likl3 <- c()
+conv1 <- c()
+conv2 <- c()
+conv3 <- c()
 
 for (i in 1:100) {
 set.seed(123*i)
@@ -56,30 +65,38 @@ b_hat <- append(b_hat,opt$par[2])
 mu_hat <- append(mu_hat,opt$par[3])
 sig_hat <- c(sig_hat,opt$par[4])
 likl1 <- append(likl1,opt$value)
+conv1 <- append(conv1,opt$convergence)
 
 # calculate observed residuals Z ----
 Y1 <- Y_given_1_extreme[,j]
 Y2 <- Y_given_1_extreme[,res[1]]
 tmp_z2 <- (Y2-a_hat[i]*Y1)/(Y1^b_hat[i])
-opt <- optim(DLLL2step,x=tmp_z2,par=c(0,1,1))
-# optimise over the parameters
-opt <- optim(DLLL,x=data.frame(Y1,Y2),par=c(0,1,1.5,0.8,0.8))
+opt <- optim(DLLL2step,x=tmp_z2,par=c(0,1,1),control = list(maxit=500))
 mu2 <- append(mu2,opt$par[1])
 sig2 <- append(sig2,opt$par[2])
 delta2 <-  append(delta2,opt$par[3])
 likl2 <- append(likl2,opt$value)
+conv2 <- append(conv2,opt$convergence)
+# optimise over all of the parameters
+opt <- optim(fn=DLLL,x=data.frame(Y1,Y2),par=c(0,1,1.5,0.8,0.6),control=list(maxit=500))
+mu1 <- append(mu1,opt$par[1])
+sig1 <- append(sig1,opt$par[2])
+delta1 <-  append(delta1,opt$par[3])
+a1 <- append(a1,opt$par[4])
+b1 <-  append(b1,opt$par[5])
+likl3 <- append(likl3,opt$value)
+conv3 <- append(conv3,opt$convergence)
 }
  
 # plot
-plot(density(a_hat))
-plot(density(b_hat))
-plot(density(mu_hat))
-plot(density(sig_hat))
-plot(density(likl1))
-plot(density(likl2))
-plot(density(mu2))
-plot(density(sig2))
-plot(density(delta2))
+tmp_df <- data.frame(a_hat,b_hat,mu_hat,sig_hat,likl1,likl2,mu2,sig2,delta2,
+                     a1,b1,mu1,sig1,delta1,likl3)
+grid.arrange(ggplot(tmp_df) + geom_density(aes(x=a_hat),col="#C11432")+ geom_density(aes(x=a1),col="#009ADA"),
+ggplot(tmp_df) + geom_density(aes(x=b_hat),col="#C11432")+ geom_density(aes(x=b1),col="#009ADA"),
+ggplot(tmp_df) + geom_density(aes(x=mu_hat),col="#C11432") + geom_density(aes(x=mu2))+ geom_density(aes(x=mu1),col="#009ADA"),
+ggplot(tmp_df) + geom_density(aes(x=sig_hat),col="#C11432") + geom_density(aes(x=sig2))+ geom_density(aes(x=sig1),col="#009ADA"),
+ggplot(tmp_df) + geom_density(aes(x=-likl1),col="#C11432") + geom_density(aes(x=likl2))+ geom_density(aes(x=likl3),col="#009ADA"),
+ggplot(tmp_df) + geom_density(aes(x=delta2))+ geom_density(aes(x=delta1),col="#009ADA"),ncol=2)
 # sample residual Z_star ----
 Z_star <- rgnorm(n=1000,mu=mu,alpha=sig,beta=delta)
 
