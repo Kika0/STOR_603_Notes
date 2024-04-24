@@ -741,7 +741,7 @@ G_laplace <- function(z,a) {
    -sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T))
  }
  
-  DLLL <- function(x,theta) {
+DLLL <- function(x,theta) {
     mu <- theta[1]
   sig <- theta[2]
   delta <- theta[3]
@@ -751,6 +751,32 @@ G_laplace <- function(z,a) {
   Y2 <- x[,2]
 obs_res <- (Y2-a*Y1)/(Y1^b)
     if(sig<=0 | delta<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
-    -sum(dgnorm(obs_res,mu=mu,alpha=sig,beta=delta,log=T))
+    -sum((dgnorm(obs_res,mu=mu,alpha=sig,beta=delta,log=TRUE)-log(Y1^b)))
   }
+  
+  dgnormsk <- function(x,mu,sig,deltal,deltau) {
+    z <- c()
+    C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )^(-1)
+    for (i in 1:length(x)) {
+      if (x[i]<0) {
+        z[i] <- C/sig*exp(-abs((x-mu)/sig)^deltal)
+      }
+      z[i] <- C/sig*exp(-abs((x-mu)/sig)^deltal)
+    }
+    return(z)
+  }
+  DLLLsk <- function(x,theta) {
+    mu <- theta[1]
+    sig <- theta[2]
+    deltal <- theta[3]
+    deltau <- theta[4]
+    a <- theta[5]
+    b <- theta[6]
+    Y1 <- x[,1]
+    Y2 <- x[,2]
+    obs_res <- (Y2-a*Y1)/(Y1^b)
+    if(sig<=0 | deltal<=0 |deltau<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
+    -sum(log(dgnormsk(obs_res,mu=mu,sig=sig,deltal=delta1,deltau=deltau)))
+  }
+  
   
