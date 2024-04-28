@@ -3,7 +3,7 @@ library(network) ## needed for plotting
 
 
 d <- 5 #number of variables
-n <- 10000 #number of data points
+n <- 1000 #number of data points
 
 
 ## Specify copula families for all d*(d-1)/2 pairs with Gumbel copulas

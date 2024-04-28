@@ -775,7 +775,6 @@ for (j in 1:20) {
   to <- 1998*j
   tmp[from:to,] <- cbind(data.frame(z=qfrechet(U),cdf=x))
   tmp1[from:to,] <- cbind(tmp[from:to,],data.frame(ite=rep(paste0("x2=",round(x2,2),", x3=",round(x3,2)),1998)))
-  
 }
 ggplot(tmp1[from:to,]) + geom_line(aes(x=z,y=cdf,col=ite),alpha=1,linewidth=1)+ylab(TeX(paste0("$h($","$x_4$","$)")))+ xlim(c(0,u))+
   xlab(TeX("$x_4$"))

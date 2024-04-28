@@ -240,7 +240,7 @@ paste0("Y",1:m)
 # transform data to a correct format
 tmp <- tmp1 %>% dplyr::select(xt,t) %>%   mutate(id = row_number(), .by =t) %>%
   pivot_wider(names_from = t, values_from = xt, id_cols = id) %>% dplyr::select(-id)
-colnames(tmp) <- paste0("Y",1:(m+1))
+colnames(tmp) <- paste0("Y",1:m)
 # PIT to Laplace
 sims <- apply(tmp,c(1,2),norm_laplace_pit) %>% as.data.frame()
 

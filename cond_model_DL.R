@@ -17,41 +17,31 @@ theme_replace(
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
 
-ggplot() + xlim(-10,20) + geom_function(fun=G_laplace,args=list(a=0.25),col="#C11432")+ geom_function(fun=G_laplace,args=list(a=1/2),col="#009ada")+ geom_function(fun=G_laplace,args=list(a=0.75),col="#66A64F")+ xlab(TeX("$z$")) + ylab(TeX("$G(z)$"))
-ggplot() + xlim(-10,20) + geom_function(fun=g_laplace,args=list(a=0.25),col="#C11432")+ geom_function(fun=g_laplace,args=list(a=1/2),col="#009ada")+ geom_function(fun=g_laplace,args=list(a=0.75),col="#66A64F") + ylim(0,1) + xlab(TeX("$z$")) + ylab(TeX("$g(z)$"))
+ggplot() + xlim(-10,20) + geom_function(fun=G_laplace,args=list(a=0.25),col="#C11432")+ geom_function(fun=G_laplace,args=list(a=1/2),col="#009ADA")+ geom_function(fun=G_laplace,args=list(a=0.75),col="#66A64F")+ xlab(TeX("$z$")) + ylab(TeX("$G(z)$"))
+ggplot() + xlim(-10,20) +
+  geom_function(fun=g_laplace,args=list(a=0.25),col="#C11432")+
+  geom_function(fun=g_laplace,args=list(a=1/2),col="#009ADA")+
+  geom_function(fun=g_laplace,args=list(a=0.75),col="#66A64F") + ylim(0,1) + xlab(TeX("$z$")) + ylab(TeX("$g(z)$"))
 
-# generate trivariate sample ----
-a_hat <- c()
-b_hat <- c()
-mu_hat <- c()
-sig_hat <- c()
-likl1 <- c()
-likl2 <- c()
-mu2 <- c()
-sig2 <- c()
-delta2 <- c()
-a1 <- c()
-b1 <- c()
-mu1 <- c()
-sig1 <- c()
-delta1 <- c()
-likl3 <- c()
-conv1 <- c()
-conv2 <- c()
-conv3 <- c()
+# compare different methods to model univariate residual ----
+# two-step DL (Gaussian regression in the first step)
+a_hat <- b_hat <- mu_hat <- sig_hat <- likl1a <- conv1a <- c()
+mu2 <- sig2 <- delta2 <- likl1b <- conv1b <- c()
+# one-step DL
+a1 <- b1 <- mu1 <- sig1 <- delta1 <- likl2 <- conv2 <- c()
+# asymmetric DL
+a <- b <- mu <- sig <- deltal <- deltau <- likl3 <- conv3 <- c()
 
 for (i in 1:100) {
 set.seed(123*i)
 N <- 50000
-sims <- generate_dep_X_Y_Y_Z(N=N,dep = c(0.9,1/2))
+sims <- generate_dep_X_Y_Y_Z(N=N,dep = c(1/2,1/2))
 # PIT to Laplace
 sims <- sims %>% mutate(Y1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
   mutate(Y2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
   mutate(Y3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
 df <- (sims %>% dplyr::select(starts_with("Y")))[,1:2]
-Z <- c()
-j <- given
-cond_colours <- c("#C11432","#66A64F","#009ADA")
+j <- 1
 d <- ncol(df)
 Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
 res <- c(1:d)[-j]
@@ -64,42 +54,61 @@ a_hat <- append(a_hat,opt$par[1])
 b_hat <- append(b_hat,opt$par[2])
 mu_hat <- append(mu_hat,opt$par[3])
 sig_hat <- c(sig_hat,opt$par[4])
-likl1 <- append(likl1,opt$value)
-conv1 <- append(conv1,opt$convergence)
+likl1a <- append(likl1a,opt$value)
+conv1a <- append(conv1a,opt$convergence)
 
 # calculate observed residuals Z ----
 Y1 <- Y_given_1_extreme[,j]
 Y2 <- Y_given_1_extreme[,res[1]]
-tmp_z2 <- (Y2-a_hat[i]*Y1)/(Y1^b_hat[i])
-opt <- optim(DLLL2step,x=tmp_z2,par=c(0,1,1),control = list(maxit=500))
+tmp_z2 <- (Y2-opt$par[1]*Y1)/(Y1^opt$par[2])
+opt <- optim(DLLL2step,x=tmp_z2,par=c(0,1,1),control = list(maxit=1000))
 mu2 <- append(mu2,opt$par[1])
 sig2 <- append(sig2,opt$par[2])
 delta2 <-  append(delta2,opt$par[3])
-likl2 <- append(likl2,opt$value)
-conv2 <- append(conv2,opt$convergence)
+likl1b <- append(likl1b,opt$value)
+conv1b <- append(conv2,opt$convergence)
 # optimise over all of the parameters
-opt <- optim(fn=DLLL,x=data.frame(Y1,Y2),par=c(0,1,1.5,0.8,0.6),control=list(maxit=500))
+opt <- optim(fn=DLLL,x=data.frame(Y1,Y2),par=c(0,1,1.5,0.8,0.6),control=list(maxit=1000))
 mu1 <- append(mu1,opt$par[1])
 sig1 <- append(sig1,opt$par[2])
 delta1 <-  append(delta1,opt$par[3])
 a1 <- append(a1,opt$par[4])
 b1 <-  append(b1,opt$par[5])
+likl2 <- append(likl2,opt$value)
+conv2 <- append(conv2,opt$convergence)
+opt <- optim(fn=DLLLsk,x=data.frame(Y1,Y2),par=c(0,1,1.5,1.5,0.8,0.3),control=list(maxit=2000))
+mu <- append(mu,opt$par[1])
+sig <- append(sig,opt$par[2])
+deltal <-  append(deltal,opt$par[3])
+deltau <-  append(deltau,opt$par[4])
+a <- append(a,opt$par[5])
+b <-  append(b,opt$par[6])
 likl3 <- append(likl3,opt$value)
 conv3 <- append(conv3,opt$convergence)
 }
+c(sum(conv1a),sum(conv1b),sum(conv2),sum(conv3))
  
-# plot
-tmp_df <- data.frame(a_hat,b_hat,mu_hat,sig_hat,likl1,likl2,mu2,sig2,delta2,
-                     a1,b1,mu1,sig1,delta1,likl3)
-grid.arrange(ggplot(tmp_df) + geom_density(aes(x=a_hat),col="#C11432")+ geom_density(aes(x=a1),col="#009ADA"),
-ggplot(tmp_df) + geom_density(aes(x=b_hat),col="#C11432")+ geom_density(aes(x=b1),col="#009ADA"),
-ggplot(tmp_df) + geom_density(aes(x=mu_hat),col="#C11432") + geom_density(aes(x=mu2))+ geom_density(aes(x=mu1),col="#009ADA"),
-ggplot(tmp_df) + geom_density(aes(x=sig_hat),col="#C11432") + geom_density(aes(x=sig2))+ geom_density(aes(x=sig1),col="#009ADA"),
-ggplot(tmp_df) + geom_density(aes(x=-likl1),col="#C11432") + geom_density(aes(x=likl2))+ geom_density(aes(x=likl3),col="#009ADA"),
-ggplot(tmp_df) + geom_density(aes(x=delta2))+ geom_density(aes(x=delta1),col="#009ADA"),ncol=2)
+# plot the estimated parameters
+tmp_df <- data.frame(a_hat,b_hat,mu_hat,sig_hat,likl1a,likl1b,mu2=mu2,sig2=sig2,delta2,
+                     a1,b1,mu1,sig1,delta1,likl2,a,b,mu,sig,deltal,deltau,likl3)
+grid.arrange(ggplot(tmp_df %>% filter(conv1a==0,conv2==0,conv3==0)) + geom_density(aes(x=a_hat),col="#C11432",linetype="dashed")+ geom_density(aes(x=a1),col="#66A64F")+ geom_density(aes(x=a),col="#009ADA")+ xlab(TeX("$\\hat{\\alpha}$")),
+ggplot(tmp_df) + geom_density(aes(x=b_hat),col="#C11432",linetype="dashed")+ geom_density(aes(x=b1),col="#66A64F")+ geom_density(aes(x=b),col="#009ADA")+ xlab(TeX("$\\hat{\\beta}$")),
+ggplot(tmp_df) + geom_density(aes(x=mu_hat),col="#C11432",linetype="dashed") + geom_density(aes(x=mu2),col="#C11432")+ geom_density(aes(x=mu1),col="#66A64F")+ geom_density(aes(x=mu),col="#009ADA")+ xlab(TeX("$\\hat{\\mu}$")),
+ggplot(tmp_df) + geom_density(aes(x=sig_hat),col="#C11432",linetype="dashed") + geom_density(aes(x=sig2),col="#C11432")+ geom_density(aes(x=sig1),col="#66A64F")+ geom_density(aes(x=sig),col="#009ADA")+ xlab(TeX("$\\hat{\\sigma}$")),
+ggplot(tmp_df) + geom_density(aes(x=-likl1a),col="#C11432",linetype="dashed") + geom_density(aes(x=likl1b),col="#C11432",alpha=0.5)+ geom_density(aes(x=likl2),col="#66A64F",alpha=0.5)+ geom_density(aes(x=likl3),col="#009ADA")+xlab("negative log-likelihood"),
+ggplot(tmp_df) + geom_density(aes(x=delta2),col="#C11432")+ geom_density(aes(x=delta1),col="#66A64F")+ geom_density(aes(x=deltal),col="#009ADA",size=2)+ geom_density(aes(x=deltau),col="#009ADA")+xlim(c(0,4))+ xlab(TeX("$\\hat{\\delta}$")),ncol=2)
+
+# plot the densities G(z) for one of the simulations
+ggplot() + xlim(-10,10) + geom_density(mapping=aes(tmp_z2),linetype="dashed")+
+  geom_function(fun=dgnorm,args=list(mu=mu1,alpha=sig1,beta=delta1),col="#66A64F")+
+  geom_function(fun=dgnormsk,args=list(mu=mu,sig=sig,deltal=deltal,deltau=deltau),col="#009ADA") +
+  geom_function(fun=g_laplace,args=list(a=1/2),col="black")+
+  geom_function(fun=dgnorm,args=list(mu=mu2,alpha=sig2,beta=delta2),col="#C11432") + ylim(0,0.75) + xlab(TeX("$z$")) + ylab(TeX("$g(z)$"))
+
 # sample residual Z_star ----
 Z_star <- rgnorm(n=1000,mu=mu,alpha=sig,beta=delta)
 
+# plot residuals
 U <- runif(1000)
 Y_1_gen <- -log(2*(1-0.999)) + rexp(1000)
 Gen_Y_1 <- data.frame(Y_1=Y_1_gen)

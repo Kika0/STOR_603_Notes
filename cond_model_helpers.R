@@ -71,7 +71,7 @@ sims <- data.frame(Y1=Y)
 }
 
 link_log <- function(sims,dep=1/2) {
-  Y <- sims %>% dplyr::select("Y1") %>% pull()
+  Y <- sims %>% pull(-1)
   N <- length(Y)
   a <- dep
   # generate z
@@ -85,7 +85,7 @@ link_log <- function(sims,dep=1/2) {
     x[i] <- optim(par=1,fn=to_opt,lower=0,upper=10^6,method="Brent")$par
   }
   sims <- sims %>% mutate(X=x)
-  names(sims)[-1] <- paste0("Y",ncol(sims))
+  names(sims) <- paste0("Y",1:ncol(sims))
   return(sims)
 }
 
@@ -759,9 +759,9 @@ obs_res <- (Y2-a*Y1)/(Y1^b)
     C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )^(-1)
     for (i in 1:length(x)) {
       if (x[i]<0) {
-        z[i] <- C/sig*exp(-abs((x-mu)/sig)^deltal)
+        z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltal)
       }
-      z[i] <- C/sig*exp(-abs((x-mu)/sig)^deltal)
+      z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltau)
     }
     return(z)
   }
@@ -776,7 +776,20 @@ obs_res <- (Y2-a*Y1)/(Y1^b)
     Y2 <- x[,2]
     obs_res <- (Y2-a*Y1)/(Y1^b)
     if(sig<=0 | deltal<=0 |deltau<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
-    -sum(log(dgnormsk(obs_res,mu=mu,sig=sig,deltal=delta1,deltau=deltau)))
+  #  -sum(log(dgnormsk(obs_res,mu=mu,sig=sig,deltal=delta1,deltau=deltau))-log(Y1^b))
+    z <- c()
+    C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )
+    for (i in 1:length(obs_res)) {
+      if (obs_res[i]<0) {
+       # z[i] <- C/(sig*Y1[i]^b)*exp(-abs((obs_res[i]-mu)/sig)^deltal)
+        z[i] <- -log(C)-log(sig)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sig)^deltal
+      }
+      else {
+    #  z[i] <- C/(sig*Y1[i]^b)*exp(-abs((obs_res[i]-mu)/sig)^deltau)
+      z[i] <- -log(C)-log(sig)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sig)^deltau
+      }
+    }
+    return(-sum(z))
   }
   
   
