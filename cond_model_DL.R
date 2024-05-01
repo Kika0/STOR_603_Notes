@@ -32,8 +32,8 @@ a1 <- b1 <- mu1 <- sig1 <- delta1 <- likl2 <- conv2 <- c()
 # asymmetric DL
 a <- b <- mu <- sig <- deltal <- deltau <- likl3 <- conv3 <- c()
 
-for (i in 1:100) {
-set.seed(123*i)
+for (i in 1:200) {
+set.seed(12*i)
 N <- 50000
 sims <- generate_dep_X_Y_Y_Z(N=N,dep = c(1/2,1/2))
 # PIT to Laplace
@@ -87,6 +87,10 @@ likl3 <- append(likl3,opt$value)
 conv3 <- append(conv3,opt$convergence)
 }
 c(sum(conv1a),sum(conv1b),sum(conv2),sum(conv3))
+
+teststat <- 2 * (as.numeric(likl2)-as.numeric(likl3))
+p.val <- pchisq(teststat, df = 1, lower.tail = FALSE)
+sum(p.val<0.05)
  
 # plot the estimated parameters
 tmp_df <- data.frame(a_hat,b_hat,mu_hat,sig_hat,likl1a,likl1b,mu2=mu2,sig2=sig2,delta2,
@@ -96,7 +100,7 @@ ggplot(tmp_df) + geom_density(aes(x=b_hat),col="#C11432",linetype="dashed")+ geo
 ggplot(tmp_df) + geom_density(aes(x=mu_hat),col="#C11432",linetype="dashed") + geom_density(aes(x=mu2),col="#C11432")+ geom_density(aes(x=mu1),col="#66A64F")+ geom_density(aes(x=mu),col="#009ADA")+ xlab(TeX("$\\hat{\\mu}$")),
 ggplot(tmp_df) + geom_density(aes(x=sig_hat),col="#C11432",linetype="dashed") + geom_density(aes(x=sig2),col="#C11432")+ geom_density(aes(x=sig1),col="#66A64F")+ geom_density(aes(x=sig),col="#009ADA")+ xlab(TeX("$\\hat{\\sigma}$")),
 ggplot(tmp_df) + geom_density(aes(x=-likl1a),col="#C11432",linetype="dashed") + geom_density(aes(x=likl1b),col="#C11432",alpha=0.5)+ geom_density(aes(x=likl2),col="#66A64F",alpha=0.5)+ geom_density(aes(x=likl3),col="#009ADA")+xlab("negative log-likelihood"),
-ggplot(tmp_df) + geom_density(aes(x=delta2),col="#C11432")+ geom_density(aes(x=delta1),col="#66A64F")+ geom_density(aes(x=deltal),col="#009ADA",size=2)+ geom_density(aes(x=deltau),col="#009ADA")+xlim(c(0,4))+ xlab(TeX("$\\hat{\\delta}$")),ncol=2)
+ggplot(tmp_df) + geom_density(aes(x=delta2),col="#C11432")+ geom_density(aes(x=delta1),col="#66A64F")+ geom_density(aes(x=deltal),col="#009ADA",size=1.5)+ geom_density(aes(x=deltau),col="#009ADA")+xlim(c(0,4))+ xlab(TeX("$\\hat{\\delta}$")),ncol=2)
 
 # plot the densities G(z) for one of the simulations
 ggplot() + xlim(-10,10) + geom_density(mapping=aes(tmp_z2),linetype="dashed")+
