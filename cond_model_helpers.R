@@ -151,7 +151,7 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
     log_lik <- (-10^6)
   }
   else {
-  log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+  log_lik <- sum(-log(Y1^b *sig*sqrt(2*pi)) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
   }
   return(log_lik)
 }
