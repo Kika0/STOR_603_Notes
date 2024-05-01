@@ -1,4 +1,5 @@
 # libraries and functions ----
+library(VineCopula)
 library(evd)
 library(tidyverse)
 library(latex2exp)
@@ -18,6 +19,8 @@ theme_replace(
 
 # generate from the model
 set.seed(1)
+N <- 500
+v <- 0.99
 sims_tmp <- generate_Y(N=N) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2)
 sims <- sims_tmp %>% apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 
@@ -33,7 +36,6 @@ d <- ncol(df)
   n_v <- nrow(Y_given_1_extreme)
   res <- c(1:d)[-j]
   init_par <- c()
-  init_lik <- c()
   for (i in 2:d) {
     # optimise using the initial parameters
     init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
@@ -41,18 +43,28 @@ d <- ncol(df)
     opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
     a_hat <- opt$par[1]
     b_hat <- opt$par[2]
-    res_var <- append(res_var,rep(res[i-1],n_v))
+    res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
+    Y1 <- Y_given_1_extreme[,j]
+    Y2 <- Y_given_1_extreme[,res[i-1]]
     tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
   }
   
-obs_res <- data.frame(res_var,tmp_z) %>% pivot_wider(cols=res_var)
-# transform to Uniform margins
-sims1 <- (sims %>% apply(c(2),FUN=row_number))/(N+1)
+obs_res <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = res_var, values_from = tmp_z) %>% 
+  dplyr::select(-row)
+pairs(obs_res)
 
+# transform to Uniform margins
+obs_res1 <- (obs_res %>% apply(c(2),FUN=row_number))/(N+1)
+
+
+sims1 <- (sims %>% apply(c(2),FUN=row_number))/(N+1)
 # model using VineCopula package
 fit <- RVineStructureSelect(sims1)
+fit
 plot(fit,edge.labels = "family")
-# simulate from the copula
+<- # simulate from the copula
 
 # transform back residuals to original margins
 
