@@ -102,6 +102,11 @@ ggplot(tmp_df) + geom_density(aes(x=sig_hat),col="#C11432",linetype="dashed") + 
 ggplot(tmp_df) + geom_density(aes(x=-likl1a),col="#C11432",linetype="dashed") + geom_density(aes(x=likl1b),col="#C11432",alpha=0.5)+ geom_density(aes(x=likl2),col="#66A64F",alpha=0.5)+ geom_density(aes(x=likl3),col="#009ADA")+xlab("negative log-likelihood"),
 ggplot(tmp_df) + geom_density(aes(x=delta2),col="#C11432")+ geom_density(aes(x=delta1),col="#66A64F")+ geom_density(aes(x=deltal),col="#009ADA",size=1.5)+ geom_density(aes(x=deltau),col="#009ADA")+xlim(c(0,4))+ xlab(TeX("$\\hat{\\delta}$")),ncol=2)
 
+
+ggplot(tmp_df%>% filter(conv1a==0,conv2==0,conv3==0) %>% mutate(diff12=-(likl2+likl1a),diff23=(likl2-likl3)))+
+  geom_density(aes(x=diff12),linetype="dashed")+
+  geom_density(aes(x=diff23)) + xlab("Difference in log-likelihood")
+
 # plot the densities G(z) for one of the simulations
 ggplot() + xlim(-10,10) + geom_density(mapping=aes(tmp_z2),linetype="dashed")+
   geom_function(fun=dgnorm,args=list(mu=mu1,alpha=sig1,beta=delta1),col="#66A64F")+
