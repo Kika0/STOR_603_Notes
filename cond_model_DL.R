@@ -88,10 +88,12 @@ conv3 <- append(conv3,opt$convergence)
 }
 c(sum(conv1a),sum(conv1b),sum(conv2),sum(conv3))
 
+teststat1 <- 2 * (as.numeric(-likl1a)-as.numeric(likl2))
+p.val1 <- pchisq(teststat1, df = 1, lower.tail = FALSE)
+sum(p.val1<0.05)
 teststat <- 2 * (as.numeric(likl2)-as.numeric(likl3))
 p.val <- pchisq(teststat, df = 1, lower.tail = FALSE)
-sum(p.val<0.05)
- 
+sum(p.val<0.05) 
 # plot the estimated parameters
 tmp_df <- data.frame(a_hat,b_hat,mu_hat,sig_hat,likl1a,likl1b,mu2=mu2,sig2=sig2,delta2,
                      a1,b1,mu1,sig1,delta1,likl2,a,b,mu,sig,deltal,deltau,likl3)
