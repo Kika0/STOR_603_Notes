@@ -6,7 +6,7 @@ library(latex2exp)
 library(gridExtra)
 library(viridis)
 library(MASS) #use dplyr::select to avoid function conflict
-source("cond_model_helpers.R")
+source(c("cond_model_helpers.R","sample_distribution_helpers.R"))
 
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
