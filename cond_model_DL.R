@@ -4,7 +4,7 @@ library(tidyverse)
 library(latex2exp)
 library(gridExtra)
 library(viridis)
-library(MASS) #use dplyr::select to avoid function conflict
+library(MASS) # use dplyr::select to avoid function conflict
 library(gnorm)
 source(c("cond_model_helpers.R","sample_distribution_helpers.R"))
 
