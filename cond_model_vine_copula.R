@@ -26,11 +26,12 @@ sims <- sims_tmp %>% apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 
 # calculate the observed residuals
 df <- sims %>% dplyr::select(starts_with("Y"))
-j <- 1
+j <- 2
 a_hat <- c()
 b_hat <- c()
 res_var <- c()
 tmp_z <- c()
+tmp_z1 <- c()
 d <- ncol(df)
   Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
   n_v <- nrow(Y_given_1_extreme)
@@ -38,34 +39,110 @@ d <- ncol(df)
   init_par <- c()
   for (i in 2:d) {
     # optimise using the initial parameters
-    init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-    init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
-    opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-   # a_hat <- opt$par[1]
+   init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+   init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
+   opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+   a_hat1 <- opt$par[1]
     a_hat <- 1
-  #  b_hat <- opt$par[2]
+   b_hat1 <- opt$par[2]
     b_hat <- 0
     res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
     Y1 <- Y_given_1_extreme[,j]
     Y2 <- Y_given_1_extreme[,res[i-1]]
     tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
+    tmp_z1 <- append(tmp_z1,(Y2-a_hat1*Y1/(Y1^b_hat1)))
   }
   
 obs_res <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
   mutate(row = row_number()) %>%
   tidyr::pivot_wider(names_from = res_var, values_from = tmp_z) %>% 
   dplyr::select(-row)
-pairs(obs_res)
+# obs_res1 <- data.frame(res_var,tmp_z1) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>%
+#   mutate(row = row_number()) %>%
+#   tidyr::pivot_wider(names_from = res_var, values_from = tmp_z1) %>%
+#   dplyr::select(-row)
+# tmp <- rbind(obs_res,obs_res1) %>% mutate("parameter"=factor(c(rep("true",nrow(obs_res)),rep("estimated",nrow(obs_res1)))))
+# pairs(obs_res)
+# library(GGally)
+# # compare estimated and a=1,b=0 parameters
+# ggpairs(tmp,columns = 1:4,ggplot2::aes(color=parameter,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5)))
 
 # transform to Uniform margins
-obs_res1 <- (obs_res %>% apply(c(2),FUN=row_number))/(N+1)
+obs_res1 <- (obs_res %>% apply(c(2),FUN=row_number))/(n_v+1)
+ggpairs(obs_res1)
 #sims1 <- (sims %>% apply(c(2),FUN=row_number))/(N+1) #transform data to uniform margins
 # model using VineCopula package
-fit <- RVineStructureSelect(obs_res1)
-fit
+fit1 <- RVineStructureSelect(obs_res1,trunclevel = 1)
+fit1
+fit2 <- RVineStructureSelect(obs_res1,trunclevel = 2)
+fit2
+fit3 <- RVineStructureSelect(obs_res1,trunclevel = 3)
+fit3
+aic1 <- RVineAIC(obs_res1,RVM=fit1)$AIC
+aic2 <- RVineAIC(obs_res1,RVM=fit2)$AIC
+aic3 <- RVineAIC(obs_res1,RVM=fit3)$AIC
+aic3-aic2
+aic2-aic1
+RVineClarkeTest(data=obs_res1,RVM1 = fit1,RVM2 = fit2)
+
 plot(fit,edge.labels = "family")
-<- # simulate from the copula
-
+# simulate from the copula
+Zsim <- RVineSim(N=500,RVM=fit3)
 # transform back residuals to original margins
-
+# can use kernel smoothed distribution as initial step
+to_opt <- function(z) {
+  return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
+}
+Z <- Zsim
+for (i in 1:nrow(Zsim)) {
+  for (k in 1:ncol(Zsim)) {
+    Z[i,k] <- optim(fn=to_opt,par=1)$par
+  }
+}
+pairs(Z)
+ggpairs(Z)
+pairs(obs_res)
 # simulate
+Z_star <- as.data.frame(Z)
+U <- runif(500)
+Y_1_gen <- -log(2*(1-0.99)) + rexp(500)
+Gen_Y_1 <- data.frame(Y_1=Y_1_gen)
+
+# for each Y, generate a residual and calculate Y_2
+Y_1 <- Gen_Y_1$Y_1
+# Y_2 <- a_hat*Y_1 + Y_1^b_hat *x
+# Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
+Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,1]
+Y_3 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,2]
+Y_4 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,3]
+Y_5 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,4]
+
+Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2,Y_3=Y_3,Y_4=Y_4,Y_5=Y_5) %>% mutate(sim=rep("model",500))
+names(Gen_Y_1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+# generate Y_1 (extrapolate so above largest observed value)
+
+#plot
+Y1 <- Y_given_1_extreme[,j]
+Y2 <- Y_given_1_extreme[,res[1]]
+Y3 <- Y_given_1_extreme[,res[2]]
+Y4 <- Y_given_1_extreme[,res[3]]
+Y5 <- Y_given_1_extreme[,res[4]]
+tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",500))
+names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+thres <- frechet_laplace_pit( qfrechet(0.999))
+v <- 0.99
+l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
+u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
+Gen_orig <- rbind(Gen_Y_1,tmp)
+ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5)))
+# p1 <- ggplot(Gen_orig) +  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432") + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
+#   scale_color_manual(values = c("data"="black","model" = cond_colours[j])) + xlab(TeX("$Y_1$")) +ylab(TeX("$Y_2$")) +
+#   xlim(c(l,u)) + ylim(c(l,u)) 
+# p2 <- ggplot(Gen_orig)+  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432")  + geom_point(aes(x=Y2,y=Y3,col=sim),alpha=0.5) + 
+#   scale_color_manual(values = c("data"="black","model" = cond_colours[j])) + xlab(TeX("$Y_2$")) +ylab(TeX("$Y_3$")) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
+#   xlim(c(l,u)) + ylim(c(l,u))
+# p3 <- ggplot(Gen_orig)+  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432")  + geom_point(aes(x=Y1,y=Y3,col=sim),alpha=0.5) + 
+#   scale_color_manual(values = c("data"="black","model" = cond_colours[j]))+ xlab(TeX("$Y_1$")) +ylab(TeX("$Y_3$"))  + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
+#   xlim(c(l,u)) + ylim(c(l,u))
+# 
+# p <- grid.arrange(p1,p2,p3,ncol=3)
