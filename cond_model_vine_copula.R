@@ -26,7 +26,7 @@ sims <- sims_tmp %>% apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 
 # calculate the observed residuals
 df <- sims %>% dplyr::select(starts_with("Y"))
-j <- 2
+j <- 1
 a_hat <- c()
 b_hat <- c()
 res_var <- c()
@@ -49,8 +49,8 @@ d <- ncol(df)
     res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
     Y1 <- Y_given_1_extreme[,j]
     Y2 <- Y_given_1_extreme[,res[i-1]]
-    tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
-    tmp_z1 <- append(tmp_z1,(Y2-a_hat1*Y1/(Y1^b_hat1)))
+    tmp_z1 <- append(tmp_z1,(Y2-a_hat*Y1/(Y1^b_hat)))
+    tmp_z <- append(tmp_z,(Y2-a_hat1*Y1/(Y1^b_hat1)))
   }
   
 obs_res <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
