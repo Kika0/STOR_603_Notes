@@ -4,7 +4,7 @@ library(evd)
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
-library(viridis)
+library(GGally) # for ggpairs function
 library(MASS) # use dplyr::select to avoid function conflict
 source(c("cond_model_helpers.R","sample_distribution_helpers.R"))
 
@@ -16,60 +16,51 @@ theme_replace(
   panel.grid.minor = element_blank(),
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
-
-# generate from the model
-set.seed(1)
-N <- 50000
-v <- 0.99
-sims_tmp <- generate_Y(N=N) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2)
-sims <- sims_tmp %>% apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-
 # calculate the observed residuals
-df <- sims %>% dplyr::select(starts_with("Y"))
-j <- 1
-a_hat <- c()
-b_hat <- c()
-res_var <- c()
-tmp_z <- c()
-tmp_z1 <- c()
-d <- ncol(df)
+observed_residuals <- function(df=sims,given=1,v=0.99) {
+  j <- given
+  a_hat <- b_hat <- res_var <- c()
+  tmp_z <- tmp_z1 <- c()
+  d <- ncol(df)
   Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
   n_v <- nrow(Y_given_1_extreme)
   res <- c(1:d)[-j]
   init_par <- c()
   for (i in 2:d) {
     # optimise using the initial parameters
-   init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-   init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
-   opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-   a_hat1 <- opt$par[1]
+    init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
+    opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    a_hat1 <- opt$par[1]
     a_hat <- 1
-   b_hat1 <- opt$par[2]
+    b_hat1 <- opt$par[2]
     b_hat <- 0
     res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
     Y1 <- Y_given_1_extreme[,j]
     Y2 <- Y_given_1_extreme[,res[i-1]]
-    tmp_z1 <- append(tmp_z1,(Y2-a_hat*Y1/(Y1^b_hat)))
-    tmp_z <- append(tmp_z,(Y2-a_hat1*Y1/(Y1^b_hat1)))
+    tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
+    tmp_z1 <- append(tmp_z1,(Y2-a_hat1*Y1/(Y1^b_hat1)))
   }
-  
-obs_res <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
-  mutate(row = row_number()) %>%
-  tidyr::pivot_wider(names_from = res_var, values_from = tmp_z) %>% 
-  dplyr::select(-row)
-# obs_res1 <- data.frame(res_var,tmp_z1) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>%
-#   mutate(row = row_number()) %>%
-#   tidyr::pivot_wider(names_from = res_var, values_from = tmp_z1) %>%
-#   dplyr::select(-row)
-# tmp <- rbind(obs_res,obs_res1) %>% mutate("parameter"=factor(c(rep("true",nrow(obs_res)),rep("estimated",nrow(obs_res1)))))
-# pairs(obs_res)
-# library(GGally)
-# # compare estimated and a=1,b=0 parameters
-# ggpairs(tmp,columns = 1:4,ggplot2::aes(color=parameter,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5)))
+  Z <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
+    mutate(row = row_number()) %>%
+    tidyr::pivot_wider(names_from = res_var, values_from = tmp_z) %>% 
+    dplyr::select(-row)
+  return(Z)
+}
 
-# transform to Uniform margins
-obs_res1 <- (obs_res %>% apply(c(2),FUN=row_number))/(n_v+1)
-ggpairs(obs_res1)
+# generate from the model
+set.seed(5524)
+N <- 200000
+v <- 0.99
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+# explore residuals transformed to uniform margins
+# ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
+# transform to Uniform margins and fit a vine
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 5,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)+1),
+                        trunclevel = 3)
+fit3
 #sims1 <- (sims %>% apply(c(2),FUN=row_number))/(N+1) #transform data to uniform margins
 # model using VineCopula package
 fit1 <- RVineStructureSelect(obs_res1,trunclevel = 1)
