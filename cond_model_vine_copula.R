@@ -49,8 +49,8 @@ observed_residuals <- function(df=sims,given=1,v=0.99) {
 }
 
 # generate from the model
-set.seed(5524)
-N <- 200000
+set.seed(11)
+N <- 5000
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
@@ -58,23 +58,22 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 # explore residuals transformed to uniform margins
 # ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
 # transform to Uniform margins and fit a vine
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 5,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)+1),
-                        trunclevel = 3)
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 3,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+                        trunclevel = 3, indeptest = FALSE)
 fit3
-#sims1 <- (sims %>% apply(c(2),FUN=row_number))/(N+1) #transform data to uniform margins
-# model using VineCopula package
-fit1 <- RVineStructureSelect(obs_res1,trunclevel = 1)
-fit1
-fit2 <- RVineStructureSelect(obs_res1,trunclevel = 2)
+fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 3,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+                             trunclevel = 2, indeptest = FALSE)
 fit2
-fit3 <- RVineStructureSelect(obs_res1,trunclevel = 3)
-fit3
-aic1 <- RVineAIC(obs_res1,RVM=fit1)$AIC
-aic2 <- RVineAIC(obs_res1,RVM=fit2)$AIC
-aic3 <- RVineAIC(obs_res1,RVM=fit3)$AIC
-aic3-aic2
-aic2-aic1
-RVineClarkeTest(data=obs_res1,RVM1 = fit1,RVM2 = fit2)
+fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 3,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+                             trunclevel = 1, indeptest = FALSE)
+fit1
+# aic1 <- RVineAIC(obs_res1,RVM=fit1)$AIC
+# aic2 <- RVineAIC(obs_res1,RVM=fit2)$AIC
+# aic3 <- RVineAIC(obs_res1,RVM=fit3)$AIC
+# aic3-aic2
+# aic2-aic1
+RVineVuongTest(data=(observed_residuals(df = sims,given = 5,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+                RVM1 = fit1,RVM2 = fit2)
 
 plot(fit,edge.labels = "family")
 # simulate from the copula
