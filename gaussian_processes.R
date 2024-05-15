@@ -69,8 +69,8 @@ for (i in 1:1000) {
   tmp1[from:to,] <- cbind(tmp[from:to,],data.frame(ite=rep(as.character(i),m)))
 }
 
-ggplot(tmp1) + geom_line(aes(x=t,y=xt,col=ite),alpha=0.2,linewidth=0.05)+ylab(TeX(paste0("$X($","$s$","$)")))+   theme(legend.position="none") + 
-  scale_color_manual(values=c(rep("#C11432",500),rep("#009ADA",500)))
+ggplot(tmp1) + geom_line(aes(x=t,y=xt,col=ite),alpha=0.2,linewidth=0.05)+ylab(TeX(paste0("$X($","$s$","$)"))) + theme(legend.position="none") 
+ # scale_color_manual(values=c(rep("#C11432",500),rep("#009ADA",500)))
 ggplot() + geom_density(tmp1 %>% mutate(t=as.character(t)), mapping=aes(x = xt, col = t),alpha = 0.1,linewidth=0.3)+ theme(legend.position="none") +
   geom_density(data.frame(x=rnorm(1000)),mapping=aes(x=x))
 
@@ -252,11 +252,11 @@ grid.arrange(ggplot(sims) + geom_point(aes(x=Y1,y=Y2),alpha=0.5),
 # calculate the residuals
 sims1 <- sims[,1:9]
 names(sims1) <- paste0("Y",1:2)
-tmp <- par_est(sims1,v=0.99)
-tmp <- tmp %>% mutate(t=abs(res-given)/(m-1)) %>% mutate(given=factor(given,levels = 1:(m-1)))
+tmp_est <- par_est(sims,v=0.9)
+tmp <- tmp_est %>% mutate(t=factor(round(abs(res-given)/(m-1),2))) %>% mutate(given=factor(given,levels = 1:(m-1)))
 ggplot(tmp) + geom_point(aes(x=t,y=lik,col=given)) + geom_line(aes(x=t,y=lik,col=given))
-ggplot(tmp) + geom_point(aes(x=t,y=a,col=given)) + geom_line(aes(x=t,y=a,col=given))
-ggplot(tmp) + geom_point(aes(x=t,y=b,col=given)) + geom_line(aes(x=t,y=b,col=given))
-ggplot(tmp) + geom_point(aes(x=t,y=mu,col=given)) + geom_line(aes(x=t,y=mu,col=given))
-ggplot(tmp) + geom_point(aes(x=t,y=sig,col=given)) + geom_line(aes(x=t,y=sig,col=given))
+ggplot(tmp) + geom_point(aes(x=t,y=a,col=t)) + labs(color = "Distance")
+ggplot(tmp) + geom_point(aes(x=t,y=b,col=t)) + labs(color = "Distance")
+ggplot(tmp) + geom_point(aes(x=t,y=mu,col=t)) + labs(color = "Distance")
+ggplot(tmp) + geom_point(aes(x=t,y=sig,col=t)) + labs(color = "Distance")
 
