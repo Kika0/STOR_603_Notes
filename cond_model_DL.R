@@ -6,7 +6,8 @@ library(gridExtra)
 library(viridis)
 library(MASS) # use dplyr::select to avoid function conflict
 library(gnorm)
-source(c("cond_model_helpers.R","sample_distribution_helpers.R"))
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
 
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
@@ -22,6 +23,7 @@ ggplot() + xlim(-10,20) +
   geom_function(fun=g_laplace,args=list(a=0.25),col="#C11432")+
   geom_function(fun=g_laplace,args=list(a=1/2),col="#009ADA")+
   geom_function(fun=g_laplace,args=list(a=0.75),col="#66A64F") + ylim(0,1) + xlab(TeX("$z$")) + ylab(TeX("$g(z)$"))
+
 
 # compare different methods to model univariate residual ----
 # two-step DL (Gaussian regression in the first step)
