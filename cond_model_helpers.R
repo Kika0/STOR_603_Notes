@@ -5,8 +5,8 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   b <- theta[2]
   mu <- theta[3]
   sig <- theta[4]
-  Y1 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(given))) %>% pull()
-  Y2 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(sim))) %>% pull()
+  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
+  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
   #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
   if (a<(-1) | a>1 | b<0 | b>=1) {
     log_lik <- (-10^6)
@@ -22,9 +22,8 @@ Y_likelihood_initial <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   b <- 0
   mu <- theta[2]
   sig <- theta[3]
-  Y1 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(given))) %>% pull()
-  Y2 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(sim))) %>% pull()
-  #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
+  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
+  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
   if (a<(-1) | a>1 | b<0 | b>=1) {
     log_lik <- (-10^6)
   }
@@ -187,17 +186,8 @@ par_summary <- function(sims,v=0.9) {
 }
 
 # generate a table of a,b,mu,sig,rho estimates given each of the variables
-par_est <- function(sims,v=0.9) {
-  df <- sims %>% dplyr::select(starts_with("Y"))
-  #par_sum <- data.frame(lik=numeric(),a=numeric(),b=numeric(),mu=numeric(),sig=numeric(),given=as.character())
-  # Y_not_1_extreme <- df %>% filter(Y_1<quantile(Y_1,v))
-  given <- c()
-  lik <- c()
-  a_hat <- c()
-  b_hat <- c()
-  mu_hat <- c()
-  sig_hat <- c()
-  res_var <- c()
+par_est <- function(df=sims,v=0.99) {
+  lik <- a_hat <- b_hat <- mu_hat <- sig_hat <- res_var <- c()
   d <- ncol(df)
   for (j in 1:d) {
     Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
