@@ -123,7 +123,7 @@ ggplot() + geom_line(data=tmp,aes(x=t,y=xt),col="#C11432") +geom_point(data=df,a
 # sample in two dimensions ----
 x <- seq(0,1)
 gaussprocess2d <- function(from = 0, to = 1, K = function(s, t) {exp(-(sqrt((s[1]-t[1])^2+(s[2]-t[2])^2)/lambda)^alpha)},
-                         start = NULL, rho=NULL, sig=NULL, m = 1000,alpha=1,lambda=1) {
+                         start = NULL, rho=NULL, sig=NULL, m = 10,alpha=1,lambda=1) {
   
   x <- seq(from = from, to = to, length.out = m)
   y <- seq(from = from, to = to, length.out = m)
@@ -217,7 +217,7 @@ Y <- MASS::mvrnorm(1,rep(0,dim(Sigma)[1]), Sigma)
 pp <- data.frame(y=Y,x1=X[,1],x2=X[,2])
 
 # combine GP with conditional models----
-m <- 10
+m <- 30
 n <- 1000
 
 # sample many times to illustrate the Gaussian density at each 1:m ----
@@ -235,8 +235,6 @@ ggplot(tmp1) + geom_line(aes(x=t,y=xt,col=ite),alpha=0.5,linewidth=0.1)+ylab(TeX
  # scale_color_manual(values=c(rep("#C11432",500),rep("#009ADA",500)))
 ggplot() + geom_density(tmp1 %>% mutate(t=as.character(t)), mapping=aes(x = xt, col = t),alpha = 0.1,linewidth=0.3)+ theme(legend.position="none") +
   geom_density(data.frame(x=rnorm(n)),mapping=aes(x=x))
-
-paste0("Y",1:m)
 # transform data to a correct format
 tmp <- tmp1 %>% dplyr::select(xt,t) %>%   mutate(id = row_number(), .by =t) %>%
   pivot_wider(names_from = t, values_from = xt, id_cols = id) %>% dplyr::select(-id)
@@ -250,13 +248,59 @@ grid.arrange(ggplot(sims) + geom_point(aes(x=Y1,y=Y2),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y2,y=Y3),alpha=0.5),
              ggplot(sims) + geom_point(aes(x=Y1,y=Y3),alpha=0.5),ncol=3)
 # calculate the residuals
-sims1 <- sims[,1:9]
-names(sims1) <- paste0("Y",1:2)
 tmp_est <- par_est(sims,v=0.9)
-tmp <- tmp_est %>% mutate(t=factor(round(abs(res-given)/(m-1),2))) %>% mutate(given=factor(given,levels = 1:(m-1)))
+tmp <- tmp_est %>% mutate(t=factor(round(abs(res-given)/(m-1),2))) %>% mutate(given=factor(given,levels = 1:m))
 ggplot(tmp) + geom_point(aes(x=t,y=lik,col=given)) + geom_line(aes(x=t,y=lik,col=given))
-ggplot(tmp) + geom_point(aes(x=t,y=a,col=t)) + labs(color = "Distance")
-ggplot(tmp) + geom_point(aes(x=t,y=b,col=t)) + labs(color = "Distance")
-ggplot(tmp) + geom_point(aes(x=t,y=mu,col=t)) + labs(color = "Distance")
+ggplot(tmp) + geom_point(aes(x=t,y=a,col=given)) + labs(color = "Distance")
+ggplot(tmp) + geom_point(aes(x=t,y=b,col=given)) + labs(color = "Distance")
+ggplot(tmp) + geom_line(aes(x=t,y=mu,col=given)) + labs(color = "Distance")
 ggplot(tmp) + geom_point(aes(x=t,y=sig,col=t)) + labs(color = "Distance")
+
+# try in two dimensions ----
+m <- 10
+n <- 1000
+
+# sample many times to illustrate the Gaussian density at each 1:m ----
+tmp <- data.frame(x=as.numeric(),y=as.numeric(),xt=as.numeric())
+tmp1 <- data.frame(x=as.numeric(),y=as.numeric(),xt=as.numeric(),ite=as.character())
+set.seed(1234)
+for (i in 1:n) {
+  from <- (i-1)*m^2+1
+  to <- m^2*i
+  tmp[from:to,] <- gaussprocess2d(m=m)
+  tmp1[from:to,] <- cbind(tmp[from:to,],data.frame(ite=rep(as.character(i),m^2)))
+}
+
+ggplot(tmp1) + geom_line(aes(x=x,y=xt,col=ite),alpha=0.5,linewidth=0.1)+ylab(TeX(paste0("$X($","$s$","$)")))+   theme(legend.position="none") 
+# scale_color_manual(values=c(rep("#C11432",500),rep("#009ADA",500)))
+ggplot() + geom_density(tmp1 %>% mutate(x=as.character(x)), mapping=aes(x = xt, col = x),alpha = 0.1,linewidth=0.3)+ theme(legend.position="none") +
+  geom_density(data.frame(x=rnorm(n)),mapping=aes(x=x))
+# transform data to a correct format
+tmp <- tmp1 %>% dplyr::select(xt) %>% mutate(var_id = rep(1:m^2,n)) %>% mutate(id=row_number(),.by=var_id) %>%
+  pivot_wider(names_from = var_id, values_from = xt, id_cols = id) %>% dplyr::select(-id)
+colnames(tmp) <- paste0("Y",1:m^2)
+# save distance information
+point_dist <- as.matrix(dist(tmp1[1:m^2,1:2]))
+# PIT to Laplace
+sims <- apply(tmp,c(1,2),norm_laplace_pit) %>% as.data.frame()
+
+# check it looks Laplace 
+ggplot(sims %>% dplyr::select(Y1,Y2,Y3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
+grid.arrange(ggplot(sims) + geom_point(aes(x=Y1,y=Y2),alpha=0.5),
+             ggplot(sims) + geom_point(aes(x=Y2,y=Y3),alpha=0.5),
+             ggplot(sims) + geom_point(aes(x=Y1,y=Y3),alpha=0.5),ncol=3)
+# calculate the residuals
+tmp_est <- par_est(sims,v=0.9,given=c(1))
+pair_dist <- c()
+for (i in 1:nrow(tmp_est)) {
+  pair_dist[i] <- point_dist[tmp_est[i,6],tmp_est[i,7]]
+}
+tmp <- tmp_est %>% mutate(pair_dist) %>% mutate(given=factor(given,levels = 1:m^2))
+ggplot(tmp) + geom_point(aes(x=pair_dist,y=lik,col=given)) 
+ggplot(tmp) + geom_point(aes(x=pair_dist,y=a,col=given)) + labs(color = "Distance")
+ggplot(tmp) + geom_point(aes(x=pair_dist,y=b,col=given)) + labs(color = "Distance")
+ggplot(tmp) + geom_point(aes(x=pair_dist,y=mu,col=given)) + labs(color = "Distance")
+ggplot(tmp) + geom_point(aes(x=pair_dist,y=sig,col=given)) + labs(color = "Distance")
+
+# UKCP 18 data ----
 

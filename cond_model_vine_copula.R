@@ -6,7 +6,8 @@ library(latex2exp)
 library(gridExtra)
 library(GGally) # for ggpairs function
 library(MASS) # use dplyr::select to avoid function conflict
-source(c("cond_model_helpers.R","sample_distribution_helpers.R"))
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
 
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
@@ -50,7 +51,7 @@ observed_residuals <- function(df=sims,given=1,v=0.99) {
 
 # generate from the model
 set.seed(11)
-N <- 5000
+N <- 50000
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
@@ -80,6 +81,7 @@ plot(fit,edge.labels = "family")
 Zsim <- RVineSim(N=500,RVM=fit3)
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
+obs_res <- observed_residuals(df = sims,given = 3,v = 0.99) 
 to_opt <- function(z) {
   return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
 }
@@ -96,18 +98,16 @@ pairs(obs_res)
 Z_star <- as.data.frame(Z)
 U <- runif(500)
 Y_1_gen <- -log(2*(1-0.99)) + rexp(500)
-Gen_Y_1 <- data.frame(Y_1=Y_1_gen)
+Gen_Y_1 <- data.frame(Y1=Y_1_gen)
 
 # for each Y, generate a residual and calculate Y_2
-Y_1 <- Gen_Y_1$Y_1
-# Y_2 <- a_hat*Y_1 + Y_1^b_hat *x
-# Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
-Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,1]
-Y_3 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,2]
-Y_4 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,3]
-Y_5 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,4]
+Y1 <- Gen_Y_1$Y1
+Y2 <- a_hat*Y1 + Y1^b_hat *Z_star[,1]
+Y3 <-  a_hat*Y1 + Y1^b_hat *Z_star[,2]
+Y4 <- a_hat*Y1 + Y1^b_hat *Z_star[,3]
+Y5 <-  a_hat*Y1 + Y1^b_hat *Z_star[,4]
 
-Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2,Y_3=Y_3,Y_4=Y_4,Y_5=Y_5) %>% mutate(sim=rep("model",500))
+Gen_Y_1 <- Gen_Y_1 %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim=rep("model",nrow(Z_star)))
 names(Gen_Y_1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
 # generate Y_1 (extrapolate so above largest observed value)
 
@@ -117,14 +117,16 @@ Y2 <- Y_given_1_extreme[,res[1]]
 Y3 <- Y_given_1_extreme[,res[2]]
 Y4 <- Y_given_1_extreme[,res[3]]
 Y5 <- Y_given_1_extreme[,res[4]]
-tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",500))
+tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",nrow(Y_given_1_extreme)))
 names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
 thres <- frechet_laplace_pit( qfrechet(0.999))
 v <- 0.99
 l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
 u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
 Gen_orig <- rbind(Gen_Y_1,tmp)
-ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5)))
+2
+ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+  scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
 # p1 <- ggplot(Gen_orig) +  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432") + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
 #   scale_color_manual(values = c("data"="black","model" = cond_colours[j])) + xlab(TeX("$Y_1$")) +ylab(TeX("$Y_2$")) +
 #   xlim(c(l,u)) + ylim(c(l,u)) 

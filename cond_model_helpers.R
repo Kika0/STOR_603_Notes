@@ -186,10 +186,10 @@ par_summary <- function(sims,v=0.9) {
 }
 
 # generate a table of a,b,mu,sig,rho estimates given each of the variables
-par_est <- function(df=sims,v=0.99) {
+par_est <- function(df=sims,v=0.99,given=c(1)) {
   lik <- a_hat <- b_hat <- mu_hat <- sig_hat <- res_var <- c()
   d <- ncol(df)
-  for (j in 1:d) {
+  for (j in given) {
     Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
     res <- c(1:d)[-j]
     init_par <- c()
@@ -198,7 +198,7 @@ par_est <- function(df=sims,v=0.99) {
       # optimise using the initial parameters
       init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
       init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
-      opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+      opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1,maxit=2000))
       a_hat <- append(a_hat,opt$par[1])
       b_hat <- append(b_hat,opt$par[2])
       mu_hat <- append(mu_hat,opt$par[3])
@@ -207,7 +207,7 @@ par_est <- function(df=sims,v=0.99) {
       res_var <- append(res_var,res[i-1])
     }
   }
-  par_sum <- data.frame("lik" = lik, "a" = a_hat, "b" = b_hat, "mu" = mu_hat, "sig" = sig_hat, "given" = rep(1:d,each=(d-1)), "res" = res_var)
+  par_sum <- data.frame("lik" = lik, "a" = a_hat, "b" = b_hat, "mu" = mu_hat, "sig" = sig_hat, "given" = rep(given,each=(d-1)), "res" = res_var)
   return(par_sum)
 }
 

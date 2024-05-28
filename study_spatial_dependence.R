@@ -4,7 +4,7 @@ library(maps)
 library(tmap)
 library(mapdata)
 library(PCICt)
-library(rgdal)
+#library(rgdal)
 library(viridis) # for palettes
 library(tidyverse)
 library(sf)
@@ -12,11 +12,34 @@ library(units)
 #library(gridExtra)
 source("rotate_unrotate_coordinates.R")
 
+### read one year of data ----
+flist  <- "data/tasmax_rcp85_land-cpm_uk_2.2km_01_day_19991201-20001130.nc"
+### read netcdf file
+nc1 <- nc_open(flist[1])
+# time coordinate
+time1    <- ncvar_get(nc1,'time')
+time1att <- ncatt_get(nc1,'time')
+# read all 360 days
+# time dimension is last in the start argument
+v1    <- ncvar_get(nc1,'tasmax',start=c(1,1,1,1), count=c(-1,-1,360,1))
+# lat long of grid
+rlon     <- apply(ncvar_get(nc1,"grid_longitude_bnds"),2,mean)
+rlat     <- apply(ncvar_get(nc1,"grid_latitude_bnds"),2,mean)
+cpm.pole <- ncatt_get(nc1,'rotated_latitude_longitude')
+# the CPM grid has the pole in a different place to usual.  therefore need to transform the map coordinates
+gr_npole_lat <- cpm.pole$grid_north_pole_latitude
+gr_npole_lon <- cpm.pole$grid_north_pole_longitude
+nc_close(nc1)
+# this climate model has a 360 day year so needs special treatment
+# PCICt does this for us
+origin   <- tail(unlist(strsplit(time1att$units,'hours since ')),1)
+pcictime <- as.PCICt( time1*(60*60), cal=time1att$calendar ,origin=origin)
+
 ### subset to show only UK mainland overlapping grid points ----
 lad <- st_read("data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 # UK is comprised of many polygons (islands), simplify to only
 # take mainland UK (Great Britain)
-uk <- (lad %>% st_union() %>% st_cast( "MULTIPOLYGON" ) %>% st_cast("POLYGON"))[1019]
+uk <- (lad %>% st_union() %>% st_cast( "MULTIPOLYGON" ) %>% st_cast("POLYGON"))[1531]
 uk <- st_simplify(uk,dTolerance = 7000)
 # rotate coordinates of uk polygon
 long <- st_coordinates(uk %>% st_transform(4326))[,1]
@@ -37,32 +60,6 @@ uk_rot <-  df %>%
   summarise(geometry = st_combine(geometry)) %>%
   st_cast("POLYGON") %>% st_make_valid()
 rm(df)
-
-### read one year of data ----
-flist  <- "data/tasmax_rcp85_land-cpm_uk_2.2km_01_day_19991201-20001130.nc"
-### read netcdf file
-nc1 <- nc_open(flist[1])
-# time coordinate
-time1    <- ncvar_get(nc1,'time')
-time1att <- ncatt_get(nc1,'time')
-# read all 360 days
-# time dimension is last in the start argument
-v1    <- ncvar_get(nc1,'tasmax',start=c(1,1,1,1), count=c(-1,-1,360,1))
-# lat long of grid
-rlon     <- apply(ncvar_get(nc1,"grid_longitude_bnds"),2,mean)
-rlat     <- apply(ncvar_get(nc1,"grid_latitude_bnds"),2,mean)
-cpm.pole <- ncatt_get(nc1,'rotated_latitude_longitude')
-nc_close(nc1)
-# this climate model has a 360 day year so needs special treatment
-# PCICt does this for us
-origin   <- tail(unlist(strsplit(time1att$units,'hours since ')),1)
-pcictime <- as.PCICt( time1*(60*60), cal=time1att$calendar ,origin=origin)
-
-# the CPM grid has the pole in a different place to usual.  therefore need to transform the map coordinates
-gr_npole_lat <- cpm.pole$grid_north_pole_latitude
-gr_npole_lon <- cpm.pole$grid_north_pole_longitude
-
-
 ### plot a single field -----
 longitude <- rlon
 latitude <- rlat
