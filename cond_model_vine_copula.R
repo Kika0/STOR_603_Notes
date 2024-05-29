@@ -59,13 +59,13 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 # explore residuals transformed to uniform margins
 # ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
 # transform to Uniform margins and fit a vine
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 3,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                         trunclevel = 3, indeptest = FALSE)
 fit3
-fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 3,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 2, indeptest = FALSE)
 fit2
-fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 3,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 1, indeptest = FALSE)
 fit1
 # aic1 <- RVineAIC(obs_res1,RVM=fit1)$AIC
@@ -119,7 +119,7 @@ Y4 <- Y_given_1_extreme[,res[3]]
 Y5 <- Y_given_1_extreme[,res[4]]
 tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",nrow(Y_given_1_extreme)))
 names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
-thres <- frechet_laplace_pit( qfrechet(0.999))
+thres <- frechet_laplace_pit( qfrechet(0.99))
 v <- 0.99
 l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
 u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
@@ -138,3 +138,56 @@ ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(c
 #   xlim(c(l,u)) + ylim(c(l,u))
 # 
 # p <- grid.arrange(p1,p2,p3,ncol=3)
+
+# for loop to condition on each variable
+for (l in 1:1) {
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+                             trunclevel = 3, indeptest = FALSE)
+Zsim <- RVineSim(N=500,RVM=fit3)
+d <- 5
+res <- c(1:d)[-l]
+# transform back residuals to original margins
+# can use kernel smoothed distribution as initial step
+obs_res <- observed_residuals(df = sims,given = l,v = 0.99) 
+to_opt <- function(z) {
+  return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
+}
+Z <- Zsim
+for (i in 1:nrow(Zsim)) {
+  for (k in 1:ncol(Zsim)) {
+    Z[i,k] <- optim(fn=to_opt,par=1)$par
+  }
+}
+# simulate
+Z_star <- as.data.frame(Z)
+Y_1_gen <- -log(2*(1-0.99)) + rexp(500)
+Gen_Y_1 <- data.frame(Y1=Y_1_gen)
+# for each Y, generate a residual and calculate Y_2
+Y1 <- Gen_Y_1$Y1
+Y2 <- a_hat*Y1 + Y1^b_hat *Z_star[,1]
+Y3 <-  a_hat*Y1 + Y1^b_hat *Z_star[,2]
+Y4 <- a_hat*Y1 + Y1^b_hat *Z_star[,3]
+Y5 <-  a_hat*Y1 + Y1^b_hat *Z_star[,4]
+
+Gen_Y_1 <- Gen_Y_1 %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim=rep("model",nrow(Z_star)))
+names(Gen_Y_1) <- c(paste0("Y",l),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+# generate Y_1 (extrapolate so above largest observed value)
+
+#plot
+Y1 <- Y_given_1_extreme[,l]
+Y2 <- Y_given_1_extreme[,res[1]]
+Y3 <- Y_given_1_extreme[,res[2]]
+Y4 <- Y_given_1_extreme[,res[3]]
+Y5 <- Y_given_1_extreme[,res[4]]
+tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",500))
+names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+thres <- frechet_laplace_pit( qfrechet(0.99))
+v <- 0.99
+l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
+u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
+Gen_orig <- rbind(Gen_Y_1,tmp)
+2
+p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+  scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
+ggsave(p,filename=(paste0("cond",j,".pdf")),device="pdf")
+}
