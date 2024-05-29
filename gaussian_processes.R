@@ -302,5 +302,37 @@ ggplot(tmp) + geom_point(aes(x=pair_dist,y=b,col=given)) + labs(color = "Distanc
 ggplot(tmp) + geom_point(aes(x=pair_dist,y=mu,col=given)) + labs(color = "Distance")
 ggplot(tmp) + geom_point(aes(x=pair_dist,y=sig,col=given)) + labs(color = "Distance")
 
-# UKCP 18 data ----
+# UKCP 18 data (summer max daily temperatures 1999-2018) ----
+ukcp18 <- readRDS("data/uk_1999_2018_summer.RDS")
+London_temp <- ukcp18 %>% filter(is_location==tolower("London")) %>% select(!contains("i")) %>% t() 
+Birmingham_temp <- ukcp18 %>% filter(is_location==tolower("Birmingham")) %>% select(!contains("i")) %>% t() 
+Glasgow_temp <- ukcp18 %>% filter(is_location==tolower("Glasgow")) %>% select(!contains("i")) %>% t() 
+Other_temp <- ukcp18 %>% filter(is_location==tolower("no")) %>% select(!contains("i")) %>% t() 
+sims <- cbind(London_temp,Birmingham_temp,Glasgow_temp,Other_temp)
+colnames(sims) <- paste0("Y",1:ncol(sims))
+
+sims <- ukcp18 %>% arrange(is_location)%>% select(!contains("i")) %>% t() %>% as.data.frame()
+# ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
+colnames(sims) <- paste0("Y",1:ncol(sims))
+# transform to Laplace margins
+sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+# calculate the residuals
+tmp_est <- par_est(sims,v=0.9,given=c(1))
+tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>%filter(is_location != tolower("Birmingham")) %>%  select(dist_birmingham) %>% pull()
+write.csv(tmp,"tmp.csv")
+
+tmp <- tmp_est %>% mutate(given=factor(given,levels = 1))
+p1 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=lik)) 
+p2 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=a)) 
+p3 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=b)) 
+p4 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=mu)) 
+p5 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=sig)) 
+p6 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=deltal)) 
+p7 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=deltau)) 
+grid.arrange(p2,p3,p4,p5,p6,p7,p1,ncol=2)
+
+# plot only density of delta parameter estimates
+p1 <- ggplot(tmp) + geom_density(aes(x=deltal)) + xlim(c(0,5))
+p2 <- ggplot(tmp) + geom_density(aes(x=deltau)) + xlim(c(0,5))
+grid.arrange(p1,p2,ncol=1)
 
