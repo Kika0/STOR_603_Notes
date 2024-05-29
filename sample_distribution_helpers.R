@@ -192,3 +192,9 @@ norm_laplace_pit <-  function(x) {
   else { y <- -log(2*(1-pnorm(x))) }
   return(y)
 }
+
+unif_laplace_pit <-  function(x) {
+  if (x<0.5) { y <-log(2*x) }
+  else { y <- -log(2*(1-x)) }
+  return(y)
+}
