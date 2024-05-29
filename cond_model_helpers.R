@@ -187,7 +187,7 @@ par_summary <- function(sims,v=0.9) {
 
 # generate a table of a,b,mu,sig,rho estimates given each of the variables
 par_est <- function(df=sims,v=0.99,given=c(1)) {
-  lik <- a_hat <- b_hat <- mu_hat <- sig_hat <- res_var <- c()
+  lik <- a_hat <- b_hat <- mu_hat <- sig_hat <- deltal_hat <- deltau_hat <- res_var <- c()
   d <- ncol(df)
   for (j in given) {
     Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
@@ -196,18 +196,25 @@ par_est <- function(df=sims,v=0.99,given=c(1)) {
     init_lik <- c()
     for (i in 2:d) {
       # optimise using the initial parameters
-      init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-      init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
-      opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1,maxit=2000))
-      a_hat <- append(a_hat,opt$par[1])
-      b_hat <- append(b_hat,opt$par[2])
-      mu_hat <- append(mu_hat,opt$par[3])
-      sig_hat <- append(sig_hat,opt$par[4])
-      lik <- append(lik,opt$value)
+      Y1 <- Y_given_1_extreme[,j]
+      Y2 <- Y_given_1_extreme[,res[i-1]]
+      # tmp_z2 <- (Y2-opt$par[1]*Y1)/(Y1^opt$par[2])
+      # init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+      # init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
+      # opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1,maxit=2000))
+      opt <- optim(fn=DLLLsk,x=data.frame(Y1,Y2),par=c(0,1,1.5,1.5,0.8,0.3),control=list(maxit=2000))
+      a_hat <- append(a_hat,opt$par[5])
+      b_hat <- append(b_hat,opt$par[6])
+      mu_hat <- append(mu_hat,opt$par[1])
+      sig_hat <- append(sig_hat,opt$par[2])
+      deltal_hat <- append(deltal_hat,opt$par[3])
+      deltau_hat <- append(deltau_hat,opt$par[4])
+      lik <- append(lik,-opt$value)
       res_var <- append(res_var,res[i-1])
     }
   }
-  par_sum <- data.frame("lik" = lik, "a" = a_hat, "b" = b_hat, "mu" = mu_hat, "sig" = sig_hat, "given" = rep(given,each=(d-1)), "res" = res_var)
+  par_sum <- data.frame("lik" = lik, "a" = a_hat, "b" = b_hat, "mu" = mu_hat, "sig" = sig_hat,
+                        "deltal" = deltal_hat, "deltau" = deltau_hat,"given" = rep(given,each=(d-1)), "res" = res_var)
   return(par_sum)
 }
 
