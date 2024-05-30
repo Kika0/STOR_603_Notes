@@ -787,7 +787,7 @@ for (i in 1:197) {
  y[i] <- abs(x[i+1]-x[i]) 
 }
 
-# generate from 4 variables with logistic links
+# generate from 4 variables with logistic links ----
 
 x_y <- as.data.frame(exp(evd::rbvevd(N,dep=1/2,model="log")))
 names(x_y) <- c("x1","y1")
@@ -802,3 +802,40 @@ p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),alpha=0.5) + xlab("") + ylab("
 p3 <- ggplot(x_y %>% filter(x> frechet_laplace_pit(qfrechet(0.99)))%>% filter(y> frechet_laplace_pit(qfrechet(0.99)))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
 p4 <- ggplot(xy %>% filter(x>qnorm(0.99))%>% filter(y>qnorm(0.99))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
 grid.arrange(p1,p2,p3,p4,ncol=2)
+
+# simulation study for different margin methods ----
+set.seed(88)
+N <- 50000
+v <- 0.99
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+tmp_est <- par_est(sims,v=v,given=c(1),method="Normal")
+tmp_est1 <- par_est(sims,v=v,given=c(1),method="AGG")
+ 
+for (i in 1:100) {
+  set.seed(89*i)
+  N <- 50000
+  sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+    apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+  tmp_est <- rbind(tmp_est,par_est(sims,v=v,given=c(1),method="Normal"))
+  tmp_est1 <- rbind(tmp_est1,par_est(sims,v=v,given=c(1),method="AGG"))
+}
+
+# calculate root mean square error
+sqrt(mean((tmp_est$a - 1)^2))
+sqrt(mean((tmp_est1$a - 1)^2))
+sqrt(mean((tmp_est$b - 0)^2))
+sqrt(mean((tmp_est1$b - 0)^2))
+
+p1 <- ggplot(,aes(x=x,y=y))+
+  
+  ggplot(tmp_est) + geom_boxplot(aes(y=a))
+  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\mu}$")) 
+p2 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=sigboot),aes(x=x,y=y))+
+  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\sigma}$")) 
+p3 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=aboot),aes(x=x,y=y))+
+  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\alpha}$")) 
+p4 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=bboot),aes(x=x,y=y))+
+  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\beta}$")) 
+grid.arrange(p3,p4,p1,p2,ncol=2)
+
