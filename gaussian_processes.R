@@ -317,9 +317,9 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 # transform to Laplace margins
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals
-tmp_est <- par_est(sims,v=0.9,given=c(1))
+tmp_est <- par_est(sims,v=0.9,given=c(1),method = "AGG")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>%filter(is_location != tolower("Birmingham")) %>%  select(dist_birmingham) %>% pull()
-write.csv(tmp,"tmp.csv")
+#write.csv(tmp,"tmp.csv") # save for potential use later
 
 tmp <- tmp_est %>% mutate(given=factor(given,levels = 1))
 p1 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=lik)) 
@@ -329,10 +329,14 @@ p4 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=mu))
 p5 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=sig)) 
 p6 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=deltal)) 
 p7 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=deltau)) 
-grid.arrange(p2,p3,p4,p5,p6,p7,p1,ncol=2)
+p8 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal-deltau))) + ylim(c(-2,5))
+p9 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal+deltau)/2)) +ylim(c(0,5))
+grid.arrange(p2,p3,p4,p5,p6,p7,p8,p9,p1,ncol=2)
 
 # plot only density of delta parameter estimates
-p1 <- ggplot(tmp) + geom_density(aes(x=deltal)) + xlim(c(0,5))
-p2 <- ggplot(tmp) + geom_density(aes(x=deltau)) + xlim(c(0,5))
-grid.arrange(p1,p2,ncol=1)
+p1 <- ggplot(tmp) + geom_density(aes(x=deltal)) + xlim(c(-2,5))
+p2 <- ggplot(tmp) + geom_density(aes(x=deltau)) + xlim(c(-2,5))
+p3 <- ggplot(tmp) + geom_density(aes(x=(deltal-deltau))) + xlim(c(-2,5))
+p4 <- ggplot(tmp) + geom_density(aes(x=(deltau+deltal)/2)) + xlim(c(-2,5))
+grid.arrange(p1,p2,p3,p4,ncol=1)
 
