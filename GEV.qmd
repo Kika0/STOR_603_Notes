@@ -323,7 +323,7 @@ plot(I,shift_tmp)
 ```
 
 ```{r}
-x <- shift
+x <- tmp
 mle <- gev_fit(x)$mle
 temp <- data.frame(Temperature=sort(x))
 # calculate upper and lower bounds for 95% CI to add to the plots
@@ -396,7 +396,7 @@ ggplot() +
 
 ```{r}
 u <- 32
-x <- sort(shift_tmp[shift_tmp>u])
+x <- sort(tmp[tmp>u])
 mle <- gpd.fit(x,threshold=u)$mle
 # CI for xi
 # f <- gpd.fit(x,threshold=u)
