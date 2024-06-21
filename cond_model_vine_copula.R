@@ -59,7 +59,7 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 # explore residuals transformed to uniform margins
 # ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
 # transform to Uniform margins and fit a vine
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 3,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                         trunclevel = 3, indeptest = FALSE)
 fit3
 fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
@@ -68,7 +68,7 @@ fit2
 fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 1, indeptest = FALSE)
 fit1
-RVineVuongTest(data=(observed_residuals(df = sims,given = 5,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+RVineClarkeTest(data=(observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                 RVM1 = fit1,RVM2 = fit2)
 
 plot(fit3,edge.labels = "family")
@@ -89,6 +89,23 @@ for (i in 1:nrow(Zsim)) {
 pairs(Z)
 ggpairs(Z)
 pairs(obs_res)
+obsr <- (obs_res %>% 
+    apply(c(2),FUN=row_number)) 
+for (i in 1:nrow(obsr)) {
+  for (j in 1:ncol(obsr)) {
+    obsr[i,j] <- obsr[i,j]/(nrow(sims)*(1-v)+1)
+  }
+}
+
+obsr %>% 
+  ggpairs()
+
+rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",500)),
+      Z %>% as.data.frame() %>%
+        mutate(res=rep("model",500))) %>% 
+  ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+  scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
+
 # simulate
 Z_star <- as.data.frame(Z)
 U <- runif(500)
@@ -183,3 +200,17 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 
 combn(x=c(1,2,3,4,5),m=2,simplify=TRUE)
+
+# calculate true probability of trivariate extreme
+# 0.00194
+# simulate above threshold
+y <- 0.995
+Y2_gen <- -log(2*(1-y)) + rexp(1000)
+# transform to frechet margins
+df <- data.frame(Y2=Y2_gen)%>%
+  apply(c(1,2),FUN=laplace_frechet_pit) %>% 
+  as.data.frame() %>% link_log() %>% relocate(Y2) %>% 
+  link_log() 
+thres <- qfrechet(0.995)
+p <- mean(df$Y1>thres & df$Y2>thres & df$Y3>thres)*(1-y)
+0.00196-1/(2*(sqrt(1000)))
