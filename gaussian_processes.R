@@ -5,7 +5,8 @@ library(viridis)
 library(plgp)
 library(gridExtra)
 library(here)
-source(here("cond_model_helpers.R"))
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
 theme_replace(
@@ -304,21 +305,21 @@ ggplot(tmp) + geom_point(aes(x=pair_dist,y=sig,col=given)) + labs(color = "Dista
 
 # UKCP 18 data (summer max daily temperatures 1999-2018) ----
 ukcp18 <- readRDS("data/uk_1999_2018_summer.RDS")
-London_temp <- ukcp18 %>% filter(is_location==tolower("London")) %>% select(!contains("i")) %>% t() 
-Birmingham_temp <- ukcp18 %>% filter(is_location==tolower("Birmingham")) %>% select(!contains("i")) %>% t() 
-Glasgow_temp <- ukcp18 %>% filter(is_location==tolower("Glasgow")) %>% select(!contains("i")) %>% t() 
-Other_temp <- ukcp18 %>% filter(is_location==tolower("no")) %>% select(!contains("i")) %>% t() 
+London_temp <- ukcp18 %>% filter(is_location==tolower("London")) %>% dplyr::select(!contains("i")) %>% t() 
+Birmingham_temp <- ukcp18 %>% filter(is_location==tolower("Birmingham")) %>% dplyr::select(!contains("i")) %>% t() 
+Glasgow_temp <- ukcp18 %>% filter(is_location==tolower("Glasgow")) %>% dplyr::select(!contains("i")) %>% t() 
+Other_temp <- ukcp18 %>% filter(is_location==tolower("no")) %>% dplyr::select(!contains("i")) %>% t() 
 sims <- cbind(London_temp,Birmingham_temp,Glasgow_temp,Other_temp)
 colnames(sims) <- paste0("Y",1:ncol(sims))
 
-sims <- ukcp18 %>% arrange(is_location)%>% select(!contains("i")) %>% t() %>% as.data.frame()
+sims <- ukcp18 %>% arrange(is_location)%>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
 # ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
 colnames(sims) <- paste0("Y",1:ncol(sims))
 # transform to Laplace margins
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals
 tmp_est <- par_est(sims,v=0.9,given=c(1),method = "AGG")
-tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>%filter(is_location != tolower("Birmingham")) %>%  select(dist_birmingham) %>% pull()
+tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>%filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
 #write.csv(tmp,"tmp.csv") # save for potential use later
 
 tmp <- tmp_est %>% mutate(given=factor(given,levels = 1))
@@ -339,4 +340,18 @@ p2 <- ggplot(tmp) + geom_density(aes(x=deltau)) + xlim(c(-2,5))
 p3 <- ggplot(tmp) + geom_density(aes(x=(deltal-deltau))) + xlim(c(-2,5))
 p4 <- ggplot(tmp) + geom_density(aes(x=(deltau+deltal)/2)) + xlim(c(-2,5))
 grid.arrange(p1,p2,p3,p4,ncol=1)
+
+tmp1 <- rbind(rep(NA,10),tmp)
+# match back to spatial locations and plot
+uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
+   arrange(is_location) 
+
+uk_tmp1 <- cbind(uk_tmp,tmp1)
+tm_shape(uk_tmp1) + tm_dots(col="lik",style="cont",size=0.3,palette="viridis")
+tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis")
+tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis")
+tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis")
+tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis")
+tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis")
+tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis")
 
