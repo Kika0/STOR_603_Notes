@@ -583,11 +583,11 @@ to_opt <- function(z) {
   (  (  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )-Unif)^2
 }
 
-integrand <- function(y) {
-  (1-  y^(-(1/a)+1)*(y^(-1/a)+x^(-1/a))^(a-1)*exp(-(y^(-1/a)+x^(-1/a))^a)*exp(1/y)  )*
-    y^(-2)*exp(-1/y)*
-    (1-  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )
-}
+# integrand <- function(y) {
+#   (1-  y^(-(1/a)+1)*(y^(-1/a)+x^(-1/a))^(a-1)*exp(-(y^(-1/a)+x^(-1/a))^a)*exp(1/y)  )*
+#     y^(-2)*exp(-1/y)*
+#     (1-  y^(-(1/a)+1)*(y^(-1/a)+z^(-1/a))^(a-1)*exp(-(y^(-1/a)+z^(-1/a))^a)*exp(1/y)  )
+# }
 
 integrand <- function(y) {
   (1-  (1+(x/y)^(-1/a))^(a-1)*exp( y^(-1)*( 1- ( 1+(x/y)^(-1/a) )^a) )  )*
@@ -596,7 +596,7 @@ integrand <- function(y) {
 }
 
 x <- z <- qfrechet(0.995)
-integrate(integrand,lower=qfrechet(0.998),upper=Inf)
+integrate(integrand,lower=qfrechet(0.995),upper=Inf)
 
 s <- seq(0.9,0.997,length.out=50)
 cdf <- c()
