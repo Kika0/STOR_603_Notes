@@ -68,15 +68,10 @@ fit2
 fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 1, indeptest = FALSE)
 fit1
-# aic1 <- RVineAIC(obs_res1,RVM=fit1)$AIC
-# aic2 <- RVineAIC(obs_res1,RVM=fit2)$AIC
-# aic3 <- RVineAIC(obs_res1,RVM=fit3)$AIC
-# aic3-aic2
-# aic2-aic1
 RVineVuongTest(data=(observed_residuals(df = sims,given = 5,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                 RVM1 = fit1,RVM2 = fit2)
 
-plot(fit,edge.labels = "family")
+plot(fit3,edge.labels = "family")
 # simulate from the copula
 Zsim <- RVineSim(N=500,RVM=fit3)
 # transform back residuals to original margins
@@ -97,7 +92,7 @@ pairs(obs_res)
 # simulate
 Z_star <- as.data.frame(Z)
 U <- runif(500)
-Y_1_gen <- -log(2*(1-0.99)) + rexp(500)
+Y_1_gen <- -log(2*(1-0.999)) + rexp(500)
 Gen_Y_1 <- data.frame(Y1=Y_1_gen)
 
 # for each Y, generate a residual and calculate Y_2
@@ -106,41 +101,28 @@ Y2 <- a_hat*Y1 + Y1^b_hat *Z_star[,1]
 Y3 <-  a_hat*Y1 + Y1^b_hat *Z_star[,2]
 Y4 <- a_hat*Y1 + Y1^b_hat *Z_star[,3]
 Y5 <-  a_hat*Y1 + Y1^b_hat *Z_star[,4]
-
+res <- c(1:d)[-j]
 Gen_Y_1 <- Gen_Y_1 %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim=rep("model",nrow(Z_star)))
 names(Gen_Y_1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
 # generate Y_1 (extrapolate so above largest observed value)
 
 #plot
-Y1 <- Y_given_1_extreme[,j]
-Y2 <- Y_given_1_extreme[,res[1]]
-Y3 <- Y_given_1_extreme[,res[2]]
-Y4 <- Y_given_1_extreme[,res[3]]
-Y5 <- Y_given_1_extreme[,res[4]]
-tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",nrow(Y_given_1_extreme)))
+d <- ncol(df)
+Y_given_1_extreme <- sims %>% filter(sims[,j]>quantile(sims[,j],v))
+
+tmp <- data.frame(Y_given_1_extreme[,j],
+                Y_given_1_extreme[,res[1]],
+                Y_given_1_extreme[,res[2]],
+                Y_given_1_extreme[,res[3]],
+                Y_given_1_extreme[,res[4]]) %>%
+  mutate(sim=rep("data",nrow(Y_given_1_extreme)))
 names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
-thres <- frechet_laplace_pit( qfrechet(0.99))
-v <- 0.99
-l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
-u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
 Gen_orig <- rbind(Gen_Y_1,tmp)
-2
 ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-# p1 <- ggplot(Gen_orig) +  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432") + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
-#   scale_color_manual(values = c("data"="black","model" = cond_colours[j])) + xlab(TeX("$Y_1$")) +ylab(TeX("$Y_2$")) +
-#   xlim(c(l,u)) + ylim(c(l,u)) 
-# p2 <- ggplot(Gen_orig)+  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432")  + geom_point(aes(x=Y2,y=Y3,col=sim),alpha=0.5) + 
-#   scale_color_manual(values = c("data"="black","model" = cond_colours[j])) + xlab(TeX("$Y_2$")) +ylab(TeX("$Y_3$")) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
-#   xlim(c(l,u)) + ylim(c(l,u))
-# p3 <- ggplot(Gen_orig)+  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432")  + geom_point(aes(x=Y1,y=Y3,col=sim),alpha=0.5) + 
-#   scale_color_manual(values = c("data"="black","model" = cond_colours[j]))+ xlab(TeX("$Y_1$")) +ylab(TeX("$Y_3$"))  + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
-#   xlim(c(l,u)) + ylim(c(l,u))
-# 
-# p <- grid.arrange(p1,p2,p3,ncol=3)
 
 # for loop to condition on each variable
-for (l in 1:1) {
+for (l in 1:5) {
 fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 3, indeptest = FALSE)
 Zsim <- RVineSim(N=500,RVM=fit3)
@@ -174,20 +156,30 @@ names(Gen_Y_1) <- c(paste0("Y",l),paste0("Y",res[1]),paste0("Y",res[2]),paste0("
 # generate Y_1 (extrapolate so above largest observed value)
 
 #plot
+Y_given_1_extreme <- sims %>% filter(sims[,l]>quantile(sims[,l],v))
 Y1 <- Y_given_1_extreme[,l]
 Y2 <- Y_given_1_extreme[,res[1]]
 Y3 <- Y_given_1_extreme[,res[2]]
 Y4 <- Y_given_1_extreme[,res[3]]
 Y5 <- Y_given_1_extreme[,res[4]]
 tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",500))
-names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+names(tmp) <- c(paste0("Y",l),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
 thres <- frechet_laplace_pit( qfrechet(0.99))
 v <- 0.99
-l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
-u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
+# l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
+# u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
 Gen_orig <- rbind(Gen_Y_1,tmp)
-2
 p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-ggsave(p,filename=(paste0("cond",j,".pdf")),device="pdf")
+ggsave(p,filename=(paste0("cond",l,".pdf")),device="pdf")
 }
+
+# calculate probabilities
+set.seed(11)
+N <- 5000000
+v <- 0.99
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+
+combn(x=c(1,2,3,4,5),m=2,simplify=TRUE)
