@@ -7,7 +7,8 @@ library(viridis)
 library(MASS) #use dplyr::select to avoid function conflict
 library(xtable)
 library(gnorm)
-source("cond_model_helpers.R")
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
 
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
