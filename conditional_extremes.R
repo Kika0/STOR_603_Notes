@@ -574,8 +574,8 @@ for (i in 1:1) {
   }
 }
 
-sims[(sims$Y_1>quantile(sims$Y_1,v1) & sims$Y_2>quantile(sims$Y_2,v) & sims$Y_3>quantile(sims$Y_3,v1)),] %>% glimpse()
-sims[(sims$Y_1>quantile(sims$Y_1,v) & sims$Y_2>quantile(sims$Y_2,v)),] %>% glimpse()
+sims[(sims$Y1>quantile(sims$Y1,v1) & sims$Y2>quantile(sims$Y2,v) & sims$Y3>quantile(sims$Y_3,v1)),] %>% glimpse()
+sims[(sims$Y1>quantile(sims$Y1,v) & sims$Y2>quantile(sims$Y2,v)),] %>% glimpse()
 
 # calculate the exact probability
 to_opt <- function(z) {
@@ -822,20 +822,48 @@ for (i in 1:100) {
 }
 
 # calculate root mean square error
-sqrt(mean((tmp_est$a - 1)^2))
-sqrt(mean((tmp_est1$a - 1)^2))
-sqrt(mean((tmp_est$b - 0)^2))
-sqrt(mean((tmp_est1$b - 0)^2))
+mse_an <- (mean((tmp_est$a - 1)^2))
+mse_aa <- (mean((tmp_est1$a - 1)^2))
+mse_bn <- (mean((tmp_est$b - 0)^2))
+mse_ba <- (mean((tmp_est1$b - 0)^2))
+bias_an <- mean(tmp_est$a)-1
+bias_aa <- mean(tmp_est1$a)-1
+bias_bn <- mean(tmp_est$b)-0
+bias_ba <- mean(tmp_est1$b)-0
+# calculate variance
+var_an <- sum((tmp_est$a-mean(tmp_est$a))^2)/nrow(tmp_est)
+var_aa <- sum((tmp_est1$a-mean(tmp_est1$a))^2)/nrow(tmp_est1)
+var_bn <- sum((tmp_est$b-mean(tmp_est$b))^2)/nrow(tmp_est)
+var_ba <- sum((tmp_est1$b-mean(tmp_est1$b))^2)/nrow(tmp_est1)
+var_an+bias_an^2
+var_aa+bias_aa^2
+var_bn+bias_bn^2
+var_ba+bias_ba^2
 
-p1 <- ggplot(,aes(x=x,y=y))+
+summary(tmp_est)
+summary(tmp_est1)
+ggpairs(tmp_est,col=2:3)
+ggpairs(tmp_est1,col=2:3)
+names(tmp_est1) <- paste0(names(tmp_est1),"1")
+tmp <- cbind(tmp_est,tmp_est1)
+# exploratory plots to try identify source of the rmse
+ggplot(tmp[1:100,]) + geom_segment(aes(x=a,y=b,xend=a1,yend=b1)) +
+  geom_point(aes(x=a,y=b))+
+  geom_point(aes(x=a1,y=b1),col="#C11432") +
+  xlab(TeX("$\\hat{\\alpha}$")) +
+  ylab(TeX("$\\hat{\\beta}$"))
+ggpairs(tmp_est1 %>% filter(a1<0.9 | b1>0.3),col=2:7)
+
+ggplot(tmp[1:100,]) + geom_segment(aes(x=mu,y=sig,xend=mu1,yend=sig1)) +
+  geom_point(aes(x=mu,y=sig))+
+  geom_point(aes(x=mu1,y=sig1),col="#C11432") +
+  xlab(TeX("$\\hat{\\alpha}$")) +
+  ylab(TeX("$\\hat{\\beta}$"))
+
+ggplot(tmp[1:100,]) + geom_segment(aes(x=deltal1,y=deltau1,xend=deltal1,yend=deltau1)) +
+  geom_point(aes(x=deltal1,y=deltau1))+
+  geom_point(aes(x=deltal1,y=deltau1),col="#C11432")
+
+#ggplot(tmp) + geom_point(aes(x=a,y=deltal1))+ geom_point(aes(x=a,y=deltau1),col="red")
   
   ggplot(tmp_est) + geom_boxplot(aes(y=a))
-  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\mu}$")) 
-p2 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=sigboot),aes(x=x,y=y))+
-  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\sigma}$")) 
-p3 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=aboot),aes(x=x,y=y))+
-  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\alpha}$")) 
-p4 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=bboot),aes(x=x,y=y))+
-  geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\beta}$")) 
-grid.arrange(p3,p4,p1,p2,ncol=2)
-
