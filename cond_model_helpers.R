@@ -1,6 +1,4 @@
-
-
-# generate from the empirical distribution of the residuals
+# generate from the smoothed empirical distribution of the residuals
 F_smooth_Z <- function(Z) {
   Z_smooth <- c()
   for (i in seq_along(Z)) {
@@ -520,75 +518,5 @@ g_laplace <- function(z,a) {
 G_laplace <- function(z,a) {
 (1+exp(-z/a))^(a-1)
 }
-
-
-#' Calculate negative log-likelihood for delta-Laplace distribution
-#'
-#' @param x A vector of observed values.
-#' @param theta A vector of 3 parameter values.
-#'
-#' @return A negative log-likelihood.
-#' @export
-#'
-#' @examples 
-#' DLLL2step(x=rgnorm(50),theta=c(0,1,1))
- DLLL2step <- function(x,theta) {
-   mu <- theta[1]
-   sig <- theta[2]
-   delta <- theta[3]
-   if(sig<=0 | delta<=0 ){return(10e10)}
-   -sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T))
- }
- 
-DLLL <- function(x,theta) {
-    mu <- theta[1]
-  sig <- theta[2]
-  delta <- theta[3]
-  a <- theta[4]
-  b <- theta[5]
-  Y1 <- x[,1]
-  Y2 <- x[,2]
-obs_res <- (Y2-a*Y1)/(Y1^b)
-    if(sig<=0 | delta<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
-    -sum((dgnorm(obs_res,mu=mu,alpha=sig,beta=delta,log=TRUE)-log(Y1^b)))
-  }
-  
-  dgnormsk <- function(x,mu,sig,deltal,deltau) {
-    z <- c()
-    C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )^(-1)
-    for (i in 1:length(x)) {
-      if (x[i]<0) {
-        z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltal)
-      }
-      z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltau)
-    }
-    return(z)
-  }
-  DLLLsk <- function(x,theta) {
-    mu <- theta[1]
-    sig <- theta[2]
-    deltal <- theta[3]
-    deltau <- theta[4]
-    a <- theta[5]
-    b <- theta[6]
-    Y1 <- x[,1]
-    Y2 <- x[,2]
-    obs_res <- (Y2-a*Y1)/(Y1^b)
-    if(sig<=0 | deltal<=0 |deltau<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
-  #  -sum(log(dgnormsk(obs_res,mu=mu,sig=sig,deltal=delta1,deltau=deltau))-log(Y1^b))
-    z <- c()
-    C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )
-    for (i in 1:length(obs_res)) {
-      if (obs_res[i]<0) {
-       # z[i] <- C/(sig*Y1[i]^b)*exp(-abs((obs_res[i]-mu)/sig)^deltal)
-        z[i] <- -log(C)-log(sig)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sig)^deltal
-      }
-      else {
-    #  z[i] <- C/(sig*Y1[i]^b)*exp(-abs((obs_res[i]-mu)/sig)^deltau)
-      z[i] <- -log(C)-log(sig)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sig)^deltau
-      }
-    }
-    return(-sum(z))
-  }
   
   
