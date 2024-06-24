@@ -1,13 +1,12 @@
-# conditioning on Y_1 being extreme to model Y_2 (conditional model in bivariate case)
-# calculates MLE a_hat, b_hat, mu_hat and sig_hat
 #' Calculate negative log-likelihood of Normal regression
+#' 
+#' Conditioning on Y_1 being extreme to model Y_2 (conditional model in bivariate case)
 #'
-#' @param theta A set of 4 parameters: a,b,mu,sig
-#' @param df A dataset with column names of paste0("Y",number)
-#' @param given A numeric specifying column name of cond. variable Y1
-#' @param sim A numeric specifying column name of other variable Y2
-#'
-#' @return
+#' @param theta A set of 4 parameters: a,b,mu,sig.
+#' @param df A dataset with column names of paste0("Y",number).
+#' @param given A numeric specifying column name of cond. variable Y1.
+#' @param sim A numeric specifying column name of other variable Y2.
+#' @return A numeric negative log-likelihood.
 #' @export
 #'
 #' @examples
@@ -27,6 +26,18 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   return(log_lik)
 }
 
+#' Calculate initial negative log-likelihood of Normal regression
+#' 
+#' Fixing b=0, calculate the initial values for other 3 parameters
+#'
+#' @param theta A set of 3 parameters: a,mu,sig
+#' @param df A dataset with column names of paste0("Y",number).
+#' @param given A numeric specifying column name of cond. variable Y1.
+#' @param sim A numeric specifying column name of other variable Y2.#'
+#' @return A numeric of negative log-likelihood.
+#' @export
+#'
+#' @examples
 Y_likelihood_initial <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   a <- theta[1]
   b <- 0
@@ -35,7 +46,7 @@ Y_likelihood_initial <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
   Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
   if (a<(-1) | a>1 | b<0 | b>=1) {
-    log_lik <- (-10^6)
+    log_lik <- (-10^6) # low log-likelihood outside bounds
   }
   else {
     log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
@@ -46,21 +57,33 @@ Y_likelihood_initial <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
 Y_likelihood_fix_ab <- function(theta,a=1,b=0,df=Y_given_1_extreme,given=1,sim=2) {
   mu <- theta[1]
   sig <- theta[2]
-  Y1 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(given))) %>% pull()
-  Y2 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(sim))) %>% pull()
+  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
+  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
   log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
   return(log_lik)
 }
 
-Y_likelihood_constrained <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
-  v <- 0.99
+#' Calculate negative log-likelihood for Normal regression with Keef constraints
+#' 
+#' Currently under development of including constraints of Keef et al. (2013) on a,b.
+#'
+#' @param theta A set of 4 parameters: a,b,mu,sig.
+#' @param df A dataset with column names of paste0("Y",number).
+#' @param given A numeric specifying column name of cond. variable Y1.
+#' @param sim A numeric specifying column name of other variable Y2.
+#' @param v A numeric quantile threshold.
+#'
+#' @return Anumeric negative log-likelihood.
+#' @export
+#'
+#' @examples
+Y_likelihood_constrained <- function(theta,df=Y_given_1_extreme,given=1,sim=2,v=0.99) {
   a <- theta[1]
   b <- theta[2]
   mu <- theta[3]
   sig <- theta[4]
-  Y1 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(given))) %>% pull()
-  Y2 <- df %>% dplyr::select(starts_with("Y") & contains(as.character(sim))) %>% pull()
-  #lik <-  prod(1/(Y_1^b *sig)*exp(-(Y_2-a*Y_1-mu*Y_1^b)^2/(2*(Y_1^b*sig)^2)) )
+  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
+  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
   # positive residual quantile
   q <- 0.9
   # zp <- quantile(Y2-Y1,q)
@@ -82,5 +105,72 @@ Y_likelihood_constrained <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
     log_lik <- (-10^6)
   }
   return(log_lik)
+}
+
+DLLL <- function(x,theta) {
+  mu <- theta[1]
+  sig <- theta[2]
+  delta <- theta[3]
+  a <- theta[4]
+  b <- theta[5]
+  Y1 <- x[,1]
+  Y2 <- x[,2]
+  obs_res <- (Y2-a*Y1)/(Y1^b)
+  if(sig<=0 | delta<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
+  -sum((dgnorm(obs_res,mu=mu,alpha=sig,beta=delta,log=TRUE)-log(Y1^b)))
+}
+
+dgnormsk <- function(x,mu,sig,deltal,deltau) {
+  z <- c()
+  C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )^(-1)
+  for (i in 1:length(x)) {
+    if (x[i]<0) {
+      z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltal)
+    }
+    z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltau)
+  }
+  return(z)
+}
+
+DLLLsk <- function(x,theta) {
+  mu <- theta[1]
+  sig <- theta[2]
+  deltal <- theta[3]
+  deltau <- theta[4]
+  a <- theta[5]
+  b <- theta[6]
+  Y1 <- x[,1]
+  Y2 <- x[,2]
+  obs_res <- (Y2-a*Y1)/(Y1^b)
+  if(sig<=0 | deltal<=0 |deltau<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
+  z <- c()
+  C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )
+  for (i in 1:length(obs_res)) {
+    if (obs_res[i]<0) {
+      z[i] <- -log(C)-log(sig)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sig)^deltal
+    }
+    else {
+      z[i] <- -log(C)-log(sig)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sig)^deltau
+    }
+  }
+  return(-sum(z))
+}
+
+#' Calculate negative log-likelihood for AGG distribution
+#'
+#' @param x A vector of observed values.
+#' @param theta A vector of 3 parameters: mu,sig,delta.
+#'
+#' @return A negative log-likelihood.
+#' @export
+#'
+#' @examples 
+#' DLLL2step(x=rgnorm(50),theta=c(0,1,1))
+DLLL2step <- function(x,theta) {
+  mu <- theta[1]
+  sig <- theta[2]
+  delta <- theta[3]
+  if(sig<=0 | delta<=0 ){return(10e10)}
+  -sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T))
 }
 
