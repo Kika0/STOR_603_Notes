@@ -59,7 +59,7 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 # explore residuals transformed to uniform margins
 # ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
 # transform to Uniform margins and fit a vine
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 3,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                         trunclevel = 3, indeptest = FALSE)
 fit3
 fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
@@ -68,7 +68,7 @@ fit2
 fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 1, indeptest = FALSE)
 fit1
-RVineClarkeTest(data=(observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+RVineClarkeTest(data=(observed_residuals(df = sims,given = 2,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                 RVM1 = fit1,RVM2 = fit2)
 
 plot(fit3,edge.labels = "family")
@@ -76,7 +76,7 @@ plot(fit3,edge.labels = "family")
 Zsim <- RVineSim(N=500,RVM=fit3)
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
-obs_res <- observed_residuals(df = sims,given = 3,v = 0.99) 
+obs_res <- observed_residuals(df = sims,given = 1,v = 0.99) 
 to_opt <- function(z) {
   return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
 }
@@ -93,8 +93,8 @@ obsr <- (obs_res %>%
     apply(c(2),FUN=row_number)) 
 for (i in 1:nrow(obsr)) {
   for (j in 1:ncol(obsr)) {
-    obsr[i,j] <- obsr[i,j]/(nrow(sims)*(1-v)+1)
-  }
+    obsr[i,j] <- obsr[i,j]/(nrow(sims)*(1
+  }-v)+1)
 }
 
 obsr %>% 
@@ -157,6 +157,13 @@ for (i in 1:nrow(Zsim)) {
     Z[i,k] <- optim(fn=to_opt,par=1)$par
   }
 }
+# plot observed residuals
+rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",500)),
+      Z %>% as.data.frame() %>%
+        mutate(res=rep("model",500))) %>% 
+p <-   ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+  scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
+ggsave(p,filename=(paste0("giv",l,"obsmodelres.pdf")),device="pdf")
 # simulate
 Z_star <- as.data.frame(Z)
 Y_1_gen <- -log(2*(1-0.99)) + rexp(500)
