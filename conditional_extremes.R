@@ -868,3 +868,76 @@ ggplot(tmp[1:100,]) + geom_segment(aes(x=deltal1,y=deltau1,xend=deltal1,yend=del
 #ggplot(tmp) + geom_point(aes(x=a,y=deltal1))+ geom_point(aes(x=a,y=deltau1),col="red")
   
   ggplot(tmp_est) + geom_boxplot(aes(y=a))
+
+# incomplete gamma function
+library(pracma)
+# sample from AGG ----
+AGG_cdf  <- function(x,theta) {
+    sigl <- theta[1]
+    sigu <- theta[2]
+    deltal <- theta[3]
+    deltau <- theta[4]
+    C <- (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+if (x<0) {
+  C*sigl/deltal*pracma::gammainc((-x/sigl)^deltal,1/deltal)[2]
+}
+    else {
+      C*sigl/deltal*gamma(1/deltal) + C*sigu/deltau*pracma::gammainc((x/sigu)^deltau,1/deltau)[1]
+    }
+  }
+
+s <- seq(-3,3,length.out=500)
+cdf <- c()
+s <- seq(0.01,0.99,length.out=1000)
+  cdf <- c()
+  for (i in 1:length(s)) {
+    x <- s[i]
+    cdf[i] <- AGG_cdf(x,theta = c(1,1,1,2))
+  }
+# generate from CDF
+theta <- c(1,1,2,2)
+to_opt <- function(x) {
+  (AGG_cdf(x=x,theta=theta)-s[i])^2
+}
+x <- c()
+for (i in 1:1000) {
+  x[i] <- optim(par=0,fn=to_opt,lower=-10,upper=10,method="Brent")$par
+}
+plot(density(x)) 
+  plot(x)
+
+rAGG <- function(n,theta) {
+  sigl <- theta[1]
+  sigu <- theta[2]
+  deltal <- theta[3]
+  deltau <- theta[4]
+  C <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  AGG_sample <- c()
+  for (i in 1:n) {
+  U <- runif(1)
+  to_opt <- function(x) {
+  if (x<0) {
+   ( C*sigl/deltal*pracma::gammainc((-x/sigl)^deltal,1/deltal)[2] - U)^2
+  }
+  else {
+   ( C*sigl/deltal*gamma(1/deltal) + C*sigu/deltau*pracma::gammainc((x/sigu)^deltau,1/deltau)[1] - U)^2
+  }
+  }
+  AGG_sample[i] <- optim(par=0,fn=to_opt)$par
+  }
+  return(AGG_sample)
+}  
+
+df <- data.frame(matrix(nrow=0,ncol=3))
+names(df) <- c("AGG_sample", "param","sim")
+thetas <- data.frame("sigl"=c(1/2,1,1/2,1),"sigu"=c(1,1,1/2,1/2),
+           "deltal"=c(2,2,1,1),"deltau"=c(1,1,2,2))
+N <- 10000
+for (i in 1:nrow(thetas)) {
+df <-   rbind(df,data.frame("AGG_sample"=rAGG(n=N,theta=as.numeric(thetas[i,])),
+              "param"=rep(paste0(thetas[i,1],",",thetas[i,2],",",thetas[i,3],",",thetas[i,4]),N),
+              "sim"=rep(i,N)))
+}
+df <- df %>% mutate(sim=as.factor(sim))
+ggplot(df,aes(x=AGG_sample,color=param)) + geom_density() + xlim(c(-5,5)) +
+  scale_color_manual(values=c("#C11432","#009ADA","#C11432","#009ADA"))
