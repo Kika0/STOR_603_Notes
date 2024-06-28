@@ -930,14 +930,20 @@ rAGG <- function(n,theta) {
 
 df <- data.frame(matrix(nrow=0,ncol=3))
 names(df) <- c("AGG_sample", "param","sim")
-thetas <- data.frame("sigl"=c(1/2,1,1/2,1),"sigu"=c(1,1,1/2,1/2),
-           "deltal"=c(2,2,1,1),"deltau"=c(1,1,2,2))
-N <- 10000
+thetas <- data.frame("sigl"=c(1/2,1,1/2,1),"sigu"=c(1,1,1,1),
+           "deltal"=c(2,2,1,1),"deltau"=c(2,2,2,2))
+N <- 200000
 for (i in 1:nrow(thetas)) {
 df <-   rbind(df,data.frame("AGG_sample"=rAGG(n=N,theta=as.numeric(thetas[i,])),
               "param"=rep(paste0(thetas[i,1],",",thetas[i,2],",",thetas[i,3],",",thetas[i,4]),N),
               "sim"=rep(i,N)))
 }
 df <- df %>% mutate(sim=as.factor(sim))
-ggplot(df,aes(x=AGG_sample,color=param)) + geom_density() + xlim(c(-5,5)) +
-  scale_color_manual(values=c("#C11432","#009ADA","#C11432","#009ADA"))
+ggplot(df,aes(x=AGG_sample,color=sim)) + geom_density(linewidth=1,alpha=0.7) + xlim(c(-5,5)) +
+  scale_color_manual(name="Left tail\nparameters",
+                     labels=c(TeX(paste0("$\\sigma_l=",thetas[1,1],", \\delta_l=$",thetas[1,3])),
+                              TeX(paste0("$\\sigma_l=",thetas[2,1],", \\delta_l=$",thetas[2,3])),
+                              TeX(paste0("$\\sigma_l=",thetas[3,1],", \\delta_l=$",thetas[3,3])),
+                              TeX(paste0("$\\sigma_l=",thetas[4,1],", \\delta_l=$",thetas[4,3]))),
+                     breaks=c(1,2,3,4),
+                     values=c("#C11432","#66A64F","#FDD10A","#009ADA"))
