@@ -49,7 +49,7 @@ observed_residuals <- function(df=sims,given=1,v=0.99) {
   return(Z)
 }
 
-# generate from the model
+# generate from the model ----
 set.seed(11)
 N <- 50000
 v <- 0.99
@@ -93,8 +93,8 @@ obsr <- (obs_res %>%
     apply(c(2),FUN=row_number)) 
 for (i in 1:nrow(obsr)) {
   for (j in 1:ncol(obsr)) {
-    obsr[i,j] <- obsr[i,j]/(nrow(sims)*(1
-  }-v)+1)
+    obsr[i,j] <- obsr[i,j]/(nrow(sims)*(1-v)+1)
+  }
 }
 
 obsr %>% 
