@@ -138,7 +138,7 @@ Gen_orig <- rbind(Gen_Y_1,tmp)
 ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
 
-# for loop to condition on each variable
+# for loop to condition on each variable ----
 for (l in 1:5) {
 fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 3, indeptest = FALSE)
@@ -158,12 +158,12 @@ for (i in 1:nrow(Zsim)) {
   }
 }
 # plot observed residuals
-rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",500)),
+p <- rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",500)),
       Z %>% as.data.frame() %>%
         mutate(res=rep("model",500))) %>% 
-p <-   ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-ggsave(p,filename=(paste0("giv",l,"obsmodelres.pdf")),device="pdf")
+ggsave(p,filename=(paste0("plots/giv",l,"obsmodelres.pdf")),device="pdf")
 # simulate
 Z_star <- as.data.frame(Z)
 Y_1_gen <- -log(2*(1-0.99)) + rexp(500)
@@ -195,7 +195,7 @@ v <- 0.99
 Gen_orig <- rbind(Gen_Y_1,tmp)
 p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-ggsave(p,filename=(paste0("cond",l,".pdf")),device="pdf")
+ggsave(p,filename=(paste0("plots/cond",l,".pdf")),device="pdf")
 }
 
 # calculate probabilities
