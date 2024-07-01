@@ -139,15 +139,19 @@ ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(c
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
 
 # for loop to condition on each variable ----
-for (l in 1:5) {
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
-                             trunclevel = 3, indeptest = FALSE)
-Zsim <- RVineSim(N=500,RVM=fit3)
+v <- 0.99 # threshold for conditioning
+v_sim <- 0.999 # threshold for simulation
+N_sim <- 5000 # number of observations to simulate
 d <- 5
+p_est <- c() # numeric of estimated probabilities of all extreme
+for (l in 1:5) {
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+                             trunclevel = 3, indeptest = FALSE)
+Zsim <- RVineSim(N=N_sim,RVM=fit3)
 res <- c(1:d)[-l]
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
-obs_res <- observed_residuals(df = sims,given = l,v = 0.99) 
+obs_res <- observed_residuals(df = sims,given = l,v = v) 
 to_opt <- function(z) {
   return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
 }
@@ -158,15 +162,17 @@ for (i in 1:nrow(Zsim)) {
   }
 }
 # plot observed residuals
-p <- rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",500)),
+p <- rbind(
       Z %>% as.data.frame() %>%
-        mutate(res=rep("model",500))) %>% 
+        mutate(res=rep("model",N_sim)),
+      obs_res %>% as.data.frame() %>%
+        mutate(res=rep("data",nrow(sims)*(1-v)))) %>% 
 ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-ggsave(p,filename=(paste0("plots/giv",l,"obsmodelres.pdf")),device="pdf")
+#ggsave(p,filename=(paste0("plots/giv",l,"obsmodelres.pdf")),device="pdf")
 # simulate
 Z_star <- as.data.frame(Z)
-Y_1_gen <- -log(2*(1-0.99)) + rexp(500)
+Y_1_gen <- -log(2*(1-v_sim)) + rexp(N_sim)
 Gen_Y_1 <- data.frame(Y1=Y_1_gen)
 # for each Y, generate a residual and calculate Y_2
 Y1 <- Gen_Y_1$Y1
@@ -186,16 +192,18 @@ Y2 <- Y_given_1_extreme[,res[1]]
 Y3 <- Y_given_1_extreme[,res[2]]
 Y4 <- Y_given_1_extreme[,res[3]]
 Y5 <- Y_given_1_extreme[,res[4]]
-tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",500))
+tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",nrow(sims)*(1-v)))
 names(tmp) <- c(paste0("Y",l),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
-thres <- frechet_laplace_pit( qfrechet(0.99))
-v <- 0.99
 # l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
 # u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
 Gen_orig <- rbind(Gen_Y_1,tmp)
 p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-ggsave(p,filename=(paste0("plots/cond",l,".pdf")),device="pdf")
+#ggsave(p,filename=(paste0("plots/cond",l,".pdf")),device="pdf")
+# calculate probability of all extreme
+vL_sim <- frechet_laplace_pit(qfrechet(v_sim))
+p_est[l] <- Gen_Y_1 %>% filter(Y1>vL_sim,Y2>vL_sim,Y3>vL_sim,Y4>vL_sim,Y5>vL_sim) %>% 
+  nrow()/N_sim*(1-v_sim)
 }
 
 # calculate probabilities
@@ -221,3 +229,14 @@ df <- data.frame(Y2=Y2_gen)%>%
 thres <- qfrechet(0.995)
 p <- mean(df$Y1>thres & df$Y2>thres & df$Y3>thres)*(1-y)
 0.00196-1/(2*(sqrt(1000)))
+
+# calculate true probability of all extreme
+v_sim <- 0.999
+Y2_gen <- -log(2*(1-v_sim)) + rexp(50000)
+df <- data.frame(Y2=Y2_gen)%>%
+  apply(c(1,2),FUN=laplace_frechet_pit) %>% 
+  as.data.frame() %>% link_log() %>% relocate(Y2) %>% 
+  link_log() %>% link_log() %>% link_log()
+vF_sim <- qfrechet(v_sim)
+p_true <- df %>% filter(Y1>vF_sim,Y2>vF_sim,Y3>vF_sim,Y4>vF_sim,Y5>vF_sim) %>% 
+  nrow()/50000*(1-v_sim)
