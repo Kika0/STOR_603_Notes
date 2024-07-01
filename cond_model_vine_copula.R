@@ -141,7 +141,7 @@ ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(c
 # for loop to condition on each variable ----
 v <- 0.99 # threshold for conditioning
 v_sim <- 0.999 # threshold for simulation
-N_sim <- 5000 # number of observations to simulate
+N_sim <- 3000 # number of observations to simulate
 d <- 5
 p_est <- c() # numeric of estimated probabilities of all extreme
 for (l in 1:5) {
@@ -205,6 +205,12 @@ vL_sim <- frechet_laplace_pit(qfrechet(v_sim))
 p_est[l] <- Gen_Y_1 %>% filter(Y1>vL_sim,Y2>vL_sim,Y3>vL_sim,Y4>vL_sim,Y5>vL_sim) %>% 
   nrow()/N_sim*(1-v_sim)
 }
+p_lowest <- (p_est*1000 - 1.96 *(p_est*1000*(1-p_est*1000)/N_sim)^(1/2))
+p_uppest <- (p_est*1000 + 1.96 *(p_est*1000*(1-p_est*1000)/N_sim)^(1/2))
+p_est*1000
+df <- data.frame("p_est"=p_est*1000,"CI"=paste0("(",p_lowest,", ",p_uppest,")"))
+df
+#/(1-N_sim)
 
 # calculate probabilities
 set.seed(11)
@@ -232,11 +238,11 @@ p <- mean(df$Y1>thres & df$Y2>thres & df$Y3>thres)*(1-y)
 
 # calculate true probability of all extreme
 v_sim <- 0.999
-Y2_gen <- -log(2*(1-v_sim)) + rexp(50000)
+Y2_gen <- -log(2*(1-v_sim)) + rexp(500000)
 df <- data.frame(Y2=Y2_gen)%>%
   apply(c(1,2),FUN=laplace_frechet_pit) %>% 
   as.data.frame() %>% link_log() %>% relocate(Y2) %>% 
   link_log() %>% link_log() %>% link_log()
 vF_sim <- qfrechet(v_sim)
 p_true <- df %>% filter(Y1>vF_sim,Y2>vF_sim,Y3>vF_sim,Y4>vF_sim,Y5>vF_sim) %>% 
-  nrow()/50000*(1-v_sim)
+  nrow()/500000*(1-v_sim)
