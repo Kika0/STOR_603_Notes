@@ -21,19 +21,28 @@ theme_replace(
 
 
 # generate trivariate sample ----
-N <- 50000
-sims <- generate_dep_X_Y_Y_Z(N=N,dep = c(0.9,1/2))
+N <- 500000
+sims <- generate_dep_X_Y_Y_Z(N=N,dep = c(1/2,1/2))
 
 # PIT to Laplace
-sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
-  mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
-  mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
+sims <- sims %>% mutate(Y1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
+  mutate(Y2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
+  mutate(Y3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
 
 # check it looks Laplace 
-ggplot(sims %>% dplyr::select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
-grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
-             ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
-             ggplot(sims) + geom_point(aes(x=Y_1,y=Y_3),alpha=0.5),ncol=3)
+lim_min <- min(sims$Y1,sims$Y2,sims$Y3)
+lim_max <- max(sims$Y1,sims$Y2,sims$Y3)
+ggplot(sims %>% dplyr::select(Y1,Y2,Y3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
+# simulate a laplace sample
+tmp <- data.frame(Y1=qfrechet(p=seq(0.001,0.999,length.out=5000000))) %>% mutate(Y1=as.numeric(map(.x=Y1,.f=frechet_laplace_pit)))
+p2 <- ggplot(tmp %>% dplyr::select(Y1)) +  geom_density(aes(x=Y1),stat="density") + xlim(c(-6,6)) + xlab("Laplace density function") + ylab("") + ylim(c(0,1))
+# plot uniform
+p1 <- ggplot(data.frame(x=seq(-6,6,length.out=100),y=dunif(seq(-6,6,length.out=100))))+ geom_line(aes(x=x,y=y))+ xlim(c(-6,6)) + xlab("Uniform density function") + ylab("")
+grid.arrange(p1,p2,ncol=2)
+grid.arrange(ggplot(sims) + geom_point(aes(x=Y1,y=Y2),alpha=0.5) 
+             + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + xlim(c(lim_min,lim_max)) + ylim(c(lim_min,lim_max)),
+             ggplot(sims) + geom_point(aes(x=Y1,y=Y3),alpha=0.5)
+             + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + xlim(c(lim_min,lim_max)) + ylim(c(lim_min,lim_max)),ncol=2)
 
 # filter for Y_1 being extreme -----
 v <- 0.99
