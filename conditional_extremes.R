@@ -115,8 +115,28 @@ grid.arrange(ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y
                xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + xlim(c(vL,lim_max)) + ylim(c(lim_min+8,lim_max))+
                theme(legend.position="none"),ncol=2)
 # simulate from observed residuals and Gaussian copula with kernel smoothed density
+# calculate the normal using the PIT
+ZN2 <- qnorm(F_smooth_Z(Z2))
+ZN3 <- qnorm(F_smooth_Z(Z3))
+
+rho_hat <- cor(ZN2,ZN3)
+
+ZN <- mvrnorm(n=,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
+Z <- data.frame(Z2,Z3)
+
+Zs <- as.data.frame(matrix(ncol=2,nrow=0))
+names(Zs) <- c("Z2","Z3")
+for (i in 1:10000) {
+Zs[i,] <- Z[sample(1:nrow(Z),1,replace=TRUE),]
+}
+# transform back to original margins
+Z_star <- norm_to_orig(Z_N=ZN,emp_res = Z)
+# probably a mistake in the function, rather optimize directly than linear segments
 
 
+ggplot(Zs)+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432") + xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) + xlim(-5,2) +ylim(-6,3)
+             
+ggplot(data.frame(Z2=Z_star$X1,Z3=Z_star$X2))+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432")+ xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$"))+ xlim(-10,2) +ylim(-10,3)
 # calculate also true values
 a_hat <- 1
 b_hat <- 0
@@ -274,10 +294,10 @@ grid.arrange(ggplot(X_3_simdf %>% filter(v=="above_threshold")) + geom_point(aes
 
 
 # generate residual Z ----
-Y_1 <- Y_given_1_extreme[,4]
-Y_2 <- Y_given_1_extreme[,5]
-Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
-plot(Y_1,Z)
+Y1 <- Y_given_1_extreme[,4]
+Y2 <- Y_given_1_extreme[,5]
+Z <- (Y2-a_hat*Y1)/(Y1^b_hat)
+plot(Y1,Z)
 
 # generate X_1 from Frechet distribution above 0.9 quantile
  # U <- runif(50000)
@@ -289,16 +309,16 @@ X_1_gen <- sort( -1/(log(U) ) )
 
 U <- runif(50000)
 Y_1_gen <- -log(2*(1-0.99)) + rexp(50000)
-Gen_Y_1 <- data.frame(Y_1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
+Gen_Y_1 <- data.frame(Y1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
 
 # transform to Laplace margins
 Gen_Y_1 <- data.frame(X_1=X_1_gen) %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit)))
 
 # for each Y, generate a residual and calculate Y_2
-Y_1 <- Gen_Y_1$Y_1
-Z_gen <- sample(Z,N,replace=TRUE) +rnorm(N,mean=0,sd=density(Z)$bw) # plus noise
-Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_gen
-Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2) %>% mutate(sim=rep("model",N))
+Y1 <- Gen_Y_1$Y_1
+Z_gen <- sample(Z2,N,replace=TRUE) +rnorm(N,mean=0,sd=density(Z)$bw) # plus noise
+Y2 <- a_hat*Y1 + Y1^b_hat *Z_gen
+Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2) %>% mutate(sim=rep("model",N))
 # generate Y_1 (extrapolate so above largest observed value)
 
 #plot
@@ -385,14 +405,14 @@ a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
 b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
 
 # generate residual Z ----
-Y_1 <- Y_given_1_extreme[,4]
-Y_2 <- Y_given_1_extreme[,5]
-Y_3 <- Y_given_1_extreme[,6]
+Y1 <- Y_given_1_extreme[,4]
+Y2 <- Y_given_1_extreme[,5]
+Y3 <- Y_given_1_extreme[,6]
 
-Z_2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
-Z_3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
-plot(Y_1,Z_2)
-plot(Y_1,Z_3)
+Z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
+Z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
+plot(Y1,Z2)
+plot(Y1,Z3)
 
 # calculate the normal using the PIT
 Z_N_2 <- qnorm(F_smooth_Z(Z_2))
