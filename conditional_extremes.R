@@ -59,20 +59,21 @@ v <- 0.99
 sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
   mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
   mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
-Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
-Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
+Y_given_1_extreme <- sims %>% filter(Y1>quantile(Y1,v))
+Y_not_1_extreme <- sims %>% filter(Y1<quantile(Y1,v))
 
 opt <- optim(par=c(0,0.2,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
 a_hat <- opt$par[1]
 b_hat <- opt$par[2]
 # extrapolate using kernel smoothed residuals ----
-Y_1 <- Y_given_1_extreme[,4]
-Y_2 <- Y_given_1_extreme[,5]
-Z <- c()
-for (i in 1:length(Y_1)) {
-Z[i] <-   (Y_2[i]-a_hat*Y_1[i])/(Y_1[i]^b_hat) %>% replace_na(Y_2[i]-a_hat*Y_1[i])
+Y1 <- Y_given_1_extreme[,4]
+Y2 <- Y_given_1_extreme[,5]
+
+Z2 <- c()
+for (i in 1:length(Y1)) {
+Z2[i] <-   (Y2[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y2[i]-a_hat*Y1[i])
 }
-plot(Y_1,Z)
+plot(Y1,Z2)
 # Z_lower <- quantile(Z,0.025)
 # Z_median <- quantile(Z,0.5)
 # Z_upper <- quantile(Z,0.975)
@@ -81,10 +82,40 @@ cond_quantile <- function(x,Z,q,a_hat=a_hat,b_hat=b_hat) {
   a_hat*x + x^b_hat *quantile(Z,q)
 }
 
-x <- seq(min(Y_1)-0.2,max(Y_1)+0.2,length.out=100)
+x <- seq(min(Y1)-0.2,max(Y1)+0.2,length.out=100)
 yl <- cond_quantile(x,Z,q=0.025,a_hat=a_hat,b_hat=b_hat)
 ym <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
 yp <- cond_quantile(x,Z,q=0.975,a_hat=a_hat,b_hat=b_hat)
+
+Y3 <- Y_given_1_extreme[,6]
+Z3 <- c()
+for (i in 1:length(Y1)) {
+  Z3[i] <-   (Y3[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y3[i]-a_hat*Y1[i])
+}
+yl3 <- cond_quantile(x,Z3,q=0.025,a_hat=a_hat,b_hat=b_hat)
+ym3 <- cond_quantile(x,Z3,q=0.5,a_hat=a_hat,b_hat=b_hat)
+yp3 <- cond_quantile(x,Z3,q=0.975,a_hat=a_hat,b_hat=b_hat)
+
+
+# plot again with data
+grid.arrange(ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y=Y2,col=above_thres),alpha=0.5) +
+               scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
+               geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
+               geom_line(data=data.frame(x=x,y=yl),aes(x=x,y=y),col="#C11432",linetype="dashed")+
+               geom_line(data=data.frame(x=x,y=ym),aes(x=x,y=y),col="#C11432")+
+               geom_line(data=data.frame(x=x,y=yp),aes(x=x,y=y),col="#C11432",linetype="dashed")+
+               xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + xlim(c(vL,lim_max)) + ylim(c(lim_min+8,lim_max)) +
+               theme(legend.position = "none"),
+             ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y=Y3,col=above_thres),alpha=0.5) +
+               geom_line(data=data.frame(x=x,y=yl3),aes(x=x,y=y),col="#C11432",linetype="dashed")+
+               geom_line(data=data.frame(x=x,y=ym3),aes(x=x,y=y),col="#C11432")+
+               geom_line(data=data.frame(x=x,y=yp3),aes(x=x,y=y),col="#C11432",linetype="dashed")+
+               scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
+               geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
+               xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + xlim(c(vL,lim_max)) + ylim(c(lim_min+8,lim_max))+
+               theme(legend.position="none"),ncol=2)
+# simulate from observed residuals and Gaussian copula with kernel smoothed density
+
 
 # calculate also true values
 a_hat <- 1
