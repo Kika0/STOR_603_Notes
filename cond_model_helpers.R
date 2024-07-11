@@ -408,7 +408,7 @@ simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
   Z <- data.frame(Z_2,Z_3)
   
   # transform back to original margins
-  Z_star <- <- (Z_N=Z_N,emp_res = Z)
+  Z_star <- norm_to_orig(Z_N=Z_N,emp_res = Z)
   
   U <- runif(1000)
   Y_1_gen <- -log(2*(1-0.999)) + rexp(1000)
