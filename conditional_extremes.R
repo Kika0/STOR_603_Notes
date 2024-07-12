@@ -22,28 +22,28 @@ theme_replace(
 
 # generate trivariate sample ----
 N <- 50000
-sims <- generate_Y(N = 100) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% 
+sims <- generate_Y(N = N) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% 
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 
-# check it looks Laplace 
-ggplot(sims %>% dplyr::select(Y1,Y2,Y3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
+# check it looks Laplace
+# ggplot(sims %>% dplyr::select(Y1,Y2,Y3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
 # simulate a laplace sample
-tmp <- data.frame(Y1=qfrechet(p=seq(0.001,0.999,length.out=5000000))) %>% mutate(Y1=as.numeric(map(.x=Y1,.f=frechet_laplace_pit)))
-p2 <- ggplot(tmp %>% dplyr::select(Y1)) +  geom_density(aes(x=Y1),stat="density") + xlim(c(-6,6)) + xlab("Laplace density function") + ylab("") + ylim(c(0,1))
-# plot uniform
-p1 <- ggplot(data.frame(x=seq(-6,6,length.out=100),y=dunif(seq(-6,6,length.out=100))))+ geom_line(aes(x=x,y=y))+ xlim(c(-6,6)) + xlab("Uniform density function") + ylab("")
-grid.arrange(p1,p2,ncol=2)
+# tmp <- data.frame(Y1=qfrechet(p=seq(0.001,0.999,length.out=5000000))) %>% mutate(Y1=as.numeric(map(.x=Y1,.f=frechet_laplace_pit)))
+# p2 <- ggplot(tmp %>% dplyr::select(Y1)) +  geom_density(aes(x=Y1),stat="density") + xlim(c(-6,6)) + xlab("Laplace density function") + ylab("") + ylim(c(0,1))
+# # plot uniform
+# p1 <- ggplot(data.frame(x=seq(-6,6,length.out=100),y=dunif(seq(-6,6,length.out=100))))+ geom_line(aes(x=x,y=y))+ xlim(c(-6,6)) + xlab("Uniform density function") + ylab("")
+# grid.arrange(p1,p2,ncol=2)
 
-lim_min <- min(sims$Y1,sims$Y2,sims$Y3)
-lim_max <- max(sims$Y1,sims$Y2,sims$Y3)
+lim_min <- min(sims)
+lim_max <- max(sims)
 vL <- frechet_laplace_pit(qfrechet(0.99))
 tmp <- sims %>% mutate(above_thres= as.character(sims$Y1>vL))
-grid.arrange(ggplot(tmp) + geom_point(aes(x=Y1,y=Y2,col=above_thres),alpha=0.5) +
+grid.arrange(ggplot(tmp) + geom_point(aes(x=Y1,y=Y2,col=above_thres),size=0.5,alpha=0.5) +
                scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
                geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
               xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + xlim(c(lim_min,lim_max)) + ylim(c(lim_min,lim_max)) +
                theme(legend.position = "none"),
-             ggplot(sims) + geom_point(aes(x=Y1,y=Y3,col=above_thres),alpha=0.5) +
+             ggplot(tmp) + geom_point(aes(x=Y1,y=Y3,col=above_thres),size=0.5,alpha=0.5) +
              scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
                geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
              xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + xlim(c(lim_min,lim_max)) + ylim(c(lim_min,lim_max))+
@@ -52,34 +52,28 @@ grid.arrange(ggplot(tmp) + geom_point(aes(x=Y1,y=Y2,col=above_thres),alpha=0.5) 
 # filter for Y1 being extreme -----
 v <- 0.99
 Y_given_1_extreme <- sims %>% filter(Y1>quantile(Y1,v))
-Y_not_1_extreme <- sims %>% filter(Y1<quantile(Y1,v))
-
-opt <- optim(par=c(0,0.2,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
-a_hat <- opt$par[1]
-b_hat <- opt$par[2]
+# assume a_hat and b_hat are AD case
+a_hat <- 1
+b_hat <- 0
 # extrapolate using kernel smoothed residuals ----
-Y1 <- Y_given_1_extreme[,4]
-Y2 <- Y_given_1_extreme[,5]
-
-Z2 <- c()
-for (i in 1:length(Y1)) {
-Z2[i] <-   (Y2[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y2[i]-a_hat*Y1[i])
-}
-plot(Y1,Z2)
-# Z_lower <- quantile(Z,0.025)
-# Z_median <- quantile(Z,0.5)
-# Z_upper <- quantile(Z,0.975)
+Y1 <- Y_given_1_extreme$Y1
+Y2 <- Y_given_1_extreme$Y2
 
 cond_quantile <- function(x,Z,q,a_hat=a_hat,b_hat=b_hat) {
   a_hat*x + x^b_hat *quantile(Z,q)
 }
 
-x <- seq(min(Y1)-0.2,max(Y1)+0.2,length.out=100)
-yl <- cond_quantile(x,Z,q=0.025,a_hat=a_hat,b_hat=b_hat)
-ym <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
-yp <- cond_quantile(x,Z,q=0.975,a_hat=a_hat,b_hat=b_hat)
+Z2 <- c()
+for (i in 1:length(Y1)) {
+Z2[i] <-   (Y2[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y2[i]-a_hat*Y1[i])
+}
 
-Y3 <- Y_given_1_extreme[,6]
+x <- seq(min(sims)-1,max(sims)+1,length.out=10000)
+yl <- cond_quantile(x,Z=Z2,q=0.025,a_hat=a_hat,b_hat=b_hat)
+ym <- cond_quantile(x,Z=Z2,q=0.5,a_hat=a_hat,b_hat=b_hat)
+yp <- cond_quantile(x,Z=Z2,q=0.975,a_hat=a_hat,b_hat=b_hat)
+
+Y3 <- Y_given_1_extreme$Y3
 Z3 <- c()
 for (i in 1:length(Y1)) {
   Z3[i] <-   (Y3[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y3[i]-a_hat*Y1[i])
@@ -90,15 +84,16 @@ yp3 <- cond_quantile(x,Z3,q=0.975,a_hat=a_hat,b_hat=b_hat)
 
 
 # plot again with data
-grid.arrange(ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y=Y2,col=above_thres),alpha=0.5) +
+grid.arrange(ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y=Y2,col=above_thres),size=0.8,alpha=0.5) +
                scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
                geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
                geom_line(data=data.frame(x=x,y=yl),aes(x=x,y=y),col="#C11432",linetype="dashed")+
                geom_line(data=data.frame(x=x,y=ym),aes(x=x,y=y),col="#C11432")+
+               # geom_ribbon(data=data.frame(x=x,yl=yl,yp=yp),aes(x=x,ymin=yl,ymax=yp), fill="#009ADA", alpha=0.2) +
                geom_line(data=data.frame(x=x,y=yp),aes(x=x,y=y),col="#C11432",linetype="dashed")+
                xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + xlim(c(vL,lim_max)) + ylim(c(lim_min+8,lim_max)) +
                theme(legend.position = "none"),
-             ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y=Y3,col=above_thres),alpha=0.5) +
+             ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y=Y3,col=above_thres),size=0.8,alpha=0.5) +
                geom_line(data=data.frame(x=x,y=yl3),aes(x=x,y=y),col="#C11432",linetype="dashed")+
                geom_line(data=data.frame(x=x,y=ym3),aes(x=x,y=y),col="#C11432")+
                geom_line(data=data.frame(x=x,y=yp3),aes(x=x,y=y),col="#C11432",linetype="dashed")+
