@@ -22,15 +22,10 @@ theme_replace(
 
 # generate trivariate sample ----
 N <- 50000
-sims <- generate_dep_X_Y_Y_Z(N=N,dep = c(1/2,1/2))
-
-# PIT to Laplace
-sims <- sims %>% mutate(Y1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
-  mutate(Y2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
-  mutate(Y3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
+sims <- generate_Y(N = 100) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% 
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 
 # check it looks Laplace 
-
 ggplot(sims %>% dplyr::select(Y1,Y2,Y3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
 # simulate a laplace sample
 tmp <- data.frame(Y1=qfrechet(p=seq(0.001,0.999,length.out=5000000))) %>% mutate(Y1=as.numeric(map(.x=Y1,.f=frechet_laplace_pit)))
@@ -54,11 +49,8 @@ grid.arrange(ggplot(tmp) + geom_point(aes(x=Y1,y=Y2,col=above_thres),alpha=0.5) 
              xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + xlim(c(lim_min,lim_max)) + ylim(c(lim_min,lim_max))+
                theme(legend.position="none"),ncol=2)
 
-# filter for Y_1 being extreme -----
+# filter for Y1 being extreme -----
 v <- 0.99
-sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
-  mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
-  mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
 Y_given_1_extreme <- sims %>% filter(Y1>quantile(Y1,v))
 Y_not_1_extreme <- sims %>% filter(Y1<quantile(Y1,v))
 
@@ -140,24 +132,24 @@ ggplot(data.frame(Z2=Z_star$X1,Z3=Z_star$X2))+geom_point(aes(x=Z2,y=Z3),alpha=0.
 # calculate also true values
 a_hat <- 1
 b_hat <- 0
-Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
+Z <- (Y2-a_hat*Y1)/(Y1^b_hat)
 ylt <- cond_quantile(x,Z,q=0.025,a_hat=a_hat,b_hat=b_hat)
 ymt <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
 ypt <- cond_quantile(x,Z,q=0.975,a_hat=a_hat,b_hat=b_hat)
-plot(Y_1,Z)
+plot(Y1,Z)
 # also optimise using beta=0
 opt <- optim(par=c(0.5,0,1),fn = Y_likelihood_initial,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
 a_hat <- opt$par[1]
 b_hat <- 0
-Z <- (Y_2-a_hat*Y_1)/(Y_1^b_hat)
-plot(Y_1,Z)
+Z <- (Y2-a_hat*Y1)/(Y1^b_hat)
+plot(Y1,Z)
 ylb <- cond_quantile(x,Z,q=0.25,a_hat=a_hat,b_hat=b_hat)
 ymb <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
 ypb <- cond_quantile(x,Z,q=0.75,a_hat=a_hat,b_hat=b_hat)
 
 # create a loop to count points in each region
 q <- seq(0.05,0.95,by=0.05)
-tmp <- rep(NA,length(Y_1))
+tmp <- rep(NA,length(Y1))
 # bottom edge case
 y1 <- cond_quantile(x,Z,q=min(q),a_hat=a_hat,b_hat=b_hat)
 A <- c(min(x),y1[which.min(x)])
@@ -190,7 +182,7 @@ rowSums(no) # check it is all ones
 colSums(no) %>% as.vector()
 tmp[pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp)] <- paste0(length(q)+1)
 
-ggplot() + geom_point(data=Y_given_1_extreme %>% mutate(check=tmp),aes(x=Y_1,y=Y_2,col=check),alpha=0.5)+
+ggplot() + geom_point(data=Y_given_1_extreme %>% mutate(check=tmp),aes(x=Y1,y=Y2,col=check),alpha=0.5)+
   geom_polygon(data=df_tmp,aes(x=X1,y=X2),fill="#009ada",alpha=0.2)
 
 # plot likelihood
@@ -218,80 +210,37 @@ tmp_df %>% filter(Lik>quantile(Lik,0)) %>%
   xlab(TeX("$\\alpha$")) +
   ylab(TeX("$\\beta$"))
 
-ggplot(Y_given_1_extreme %>% select(Y_1,Y_2_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") +
+ggplot(Y_given_1_extreme %>% select(Y1,Y2_sim,Y2,Y3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") +
   facet_wrap(~name)
 
-Y_2_sim <- bind_rows(Y_not_1_extreme %>% mutate(Y_2_sim=Y_2),Y_given_1_extreme) %>% 
+Y2_sim <- bind_rows(Y_not_1_extreme %>% mutate(Y_2_sim=Y_2),Y_given_1_extreme) %>% 
   mutate(X_2_sim=rep(0,N))
 
-X_2_simdf <- Y_2_sim %>% 
+X2_simdf <- Y2_sim %>% 
   mutate(X_2=as.numeric(map(.x=Y_2,.f=laplace_frechet_pit))) %>%
   mutate(X_2_sim=as.numeric(map(.x=Y_2_sim,.f=laplace_frechet_pit)))
 
-X_2_simdf <- X_2_simdf %>% mutate(v=c(rep("below_threshold",N*v),rep("above_threshold",N*(1-v))))
+X2_simdf <- X2_simdf %>% mutate(v=c(rep("below_threshold",N*v),rep("above_threshold",N*(1-v))))
 
-grid.arrange(ggplot(X_2_simdf) + geom_point(aes(x=X_1,y=X_2,col=v),alpha=0.5),
-             ggplot(X_2_simdf) + geom_point(aes(x=X_2,y=X_3,col=v),alpha=0.5),
-             ggplot(X_2_simdf) + geom_point(aes(x=X_1,y=X_2_sim,col=v),alpha=0.5),
-             ggplot(X_2_simdf) + geom_point(aes(x=X_2_sim,y=X_3,col=v),alpha=0.5),ncol=2)
+grid.arrange(ggplot(X2_simdf) + geom_point(aes(x=X1,y=X2,col=v),alpha=0.5),
+             ggplot(X2_simdf) + geom_point(aes(x=X2,y=X3,col=v),alpha=0.5),
+             ggplot(X2_simdf) + geom_point(aes(x=X1,y=X2_sim,col=v),alpha=0.5),
+             ggplot(X2_simdf) + geom_point(aes(x=X2_sim,y=X3,col=v),alpha=0.5),ncol=2)
 
-grid.arrange(ggplot(X_2_simdf) + geom_point(aes(x=Y_1,y=Y_2,col=v),alpha=0.5),
-             ggplot(X_2_simdf) + geom_point(aes(x=Y_2,y=Y_3,col=v),alpha=0.5),
-             ggplot(X_2_simdf) + geom_point(aes(x=Y_1,y=Y_2_sim,col=v),alpha=0.5),
-             ggplot(X_2_simdf) + geom_point(aes(x=Y_2_sim,y=Y_3,col=v),alpha=0.5),ncol=2)
+grid.arrange(ggplot(X2_simdf) + geom_point(aes(x=Y1,y=Y2,col=v),alpha=0.5),
+             ggplot(X2_simdf) + geom_point(aes(x=Y2,y=Y3,col=v),alpha=0.5),
+             ggplot(X2_simdf) + geom_point(aes(x=Y1,y=Y2_sim,col=v),alpha=0.5),
+             ggplot(X2_simdf) + geom_point(aes(x=Y2_sim,y=Y3,col=v),alpha=0.5),ncol=2)
 # plot only extremes
 grid.arrange(ggplot(X_2_simdf %>% filter(v=="above_threshold")) + geom_point(aes(x=X_1,y=X_2),alpha=0.5),
              ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=X_2,y=X_3),alpha=0.5),
              ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=X_1,y=X_2_sim),alpha=0.5),
              ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=X_2_sim,y=X_3),alpha=0.5),ncol=2)
 
-grid.arrange(ggplot(X_2_simdf %>% filter(v=="above_threshold")) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
-             ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
-             ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_1,y=Y_2_sim),alpha=0.5),
-             ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_2_sim,y=Y_3),alpha=0.5),ncol=2)
-
-# repeat the simulation procedure for X_3 given X_1 is extreme
-v <- 0.99
-Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
-Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
-
-opt <- optim(par=c(1,0,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=1,sim=3,control = list(fnscale=-1))
-a_hat <- opt$par[1]
-b_hat <- opt$par[2]
-# plot the values inferenced on ----
-
-Y_given_1_extreme <- Y_given_1_extreme %>% mutate(Y_3_sim=Y_3_sim)
-ggplot(Y_given_1_extreme %>% select(Y_1,Y_3_sim,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),,stat="density") + facet_wrap(~name)
-
-Y_3_sim <- bind_rows(Y_not_1_extreme %>% mutate(Y_3_sim=Y_3),Y_given_1_extreme) %>% 
-  mutate(X_3_sim=rep(0,N))
-
-X_3_simdf <- Y_3_sim %>% 
-  mutate(X_3=as.numeric(map(.x=Y_3,.f=laplace_frechet_pit))) %>%
-  mutate(X_3_sim=as.numeric(map(.x=Y_3_sim,.f=laplace_frechet_pit)))
-
-X_3_simdf <- X_3_simdf %>% mutate(v=c(rep("below_threshold",45000),rep("above_threshold",5000)))
-
-grid.arrange(ggplot(X_3_simdf) + geom_point(aes(x=X_1,y=X_2,col=v),alpha=0.5),
-             ggplot(X_3_simdf) + geom_point(aes(x=X_2,y=X_3,col=v),alpha=0.5),
-             ggplot(X_3_simdf) + geom_point(aes(x=X_1,y=X_3,col=v),alpha=0.5),
-             ggplot(X_3_simdf) + geom_point(aes(x=X_1,y=X_3_sim,col=v),alpha=0.5),ncol=2)
-
-grid.arrange(ggplot(X_3_simdf) + geom_point(aes(x=Y_1,y=Y_2,col=v),alpha=0.5),
-             ggplot(X_3_simdf) + geom_point(aes(x=Y_2,y=Y_3,col=v),alpha=0.5),
-             ggplot(X_3_simdf) + geom_point(aes(x=Y_1,y=Y_3_sim,col=v),alpha=0.5),
-             ggplot(X_3_simdf) + geom_point(aes(x=Y_2,y=Y_3_sim,col=v),alpha=0.5),ncol=2)
-# plot only extremes
-grid.arrange(ggplot(X_3_simdf %>% filter(v=="above_threshold")) + geom_point(aes(x=X_1,y=X_2),alpha=0.5),
-             ggplot(X_3_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=X_2,y=X_3),alpha=0.5),
-             ggplot(X_3_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=X_1,y=X_3_sim),alpha=0.5),
-             ggplot(X_3_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=X_2,y=X_3_sim),alpha=0.5),ncol=2)
-
-grid.arrange(ggplot(X_3_simdf %>% filter(v=="above_threshold")) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
-             ggplot(X_3_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
-             ggplot(X_3_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_1,y=Y_3_sim),alpha=0.5),
-             ggplot(X_3_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y_2,y=Y_3_sim),alpha=0.5),ncol=2)
-
+grid.arrange(ggplot(X_2_simdf %>% filter(v=="above_threshold")) + geom_point(aes(x=Y1,y=Y_2),alpha=0.5),
+             ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y2,y=Y_3),alpha=0.5),
+             ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y1,y=Y_2_sim),alpha=0.5),
+             ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y2_sim,y=Y_3),alpha=0.5),ncol=2)
 
 # generate residual Z ----
 Y1 <- Y_given_1_extreme[,4]
@@ -307,8 +256,8 @@ N <- 50000
 U <- runif(min=0.99,max=1,N)
 X_1_gen <- sort( -1/(log(U) ) )
 
-U <- runif(50000)
-Y_1_gen <- -log(2*(1-0.99)) + rexp(50000)
+U <- runif(N)
+Y_1_gen <- -log(2*(1-0.99)) + rexp(N)
 Gen_Y_1 <- data.frame(Y1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
 
 # transform to Laplace margins
@@ -378,19 +327,8 @@ ggplot(d, aes(x = x, y = 0, fill = stat(quantile))) +
 # start from the beginning ----
 # generate trivariate sample
 N <- 50000
-sims <- generate_dep_X_Y_Y_Z(N=N)
-
-# PIT to Laplace
-sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_3,.f=frechet_laplace_pit))) %>% 
-  mutate(Y_2=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>%
-  mutate(Y_3=as.numeric(map(.x=X_2,.f=frechet_laplace_pit)))
-
-ggplot(sims %>% dplyr::select(Y_1,Y_2,Y_3) %>% pivot_longer(everything())) + geom_density(aes(x=value),stat="density") + facet_wrap(~name)
-
-grid.arrange(ggplot(sims) + geom_point(aes(x=Y_1,y=Y_2),alpha=0.5),
-             ggplot(sims) + geom_point(aes(x=Y_2,y=Y_3),alpha=0.5),
-             ggplot(sims) + geom_point(aes(x=Y_1,y=Y_3),alpha=0.5),ncol=3)
-
+sims <- generate_Y(N = 100) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% 
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 # filter for Y_1 being extreme -----
 v <- 0.99
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
