@@ -42,12 +42,12 @@ grid.arrange(ggplot(tmp) + geom_point(aes(x=Y1,y=Y2,col=above_thres),size=0.5,al
                scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
                geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
               xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + xlim(c(lim_min,lim_max)) + ylim(c(lim_min,lim_max)) +
-               theme(legend.position = "none"),
+               theme(legend.position = "none") + coord_fixed(),
              ggplot(tmp) + geom_point(aes(x=Y1,y=Y3,col=above_thres),size=0.5,alpha=0.5) +
              scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
                geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
              xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + xlim(c(lim_min,lim_max)) + ylim(c(lim_min,lim_max))+
-               theme(legend.position="none"),ncol=2)
+               theme(legend.position="none") + coord_fixed(),ncol=2)
 
 # filter for Y1 being extreme -----
 v <- 0.99
@@ -119,8 +119,6 @@ Zs[i,] <- Z[sample(1:nrow(Z),1,replace=TRUE),]
 # transform back to original margins
 Z_star <- norm_to_orig(Z_N=ZN,emp_res = Z)
 # probably a mistake in the function, rather optimize directly than linear segments
-
-
 ggplot(Zs)+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432") + xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) + xlim(-5,2) +ylim(-6,3)
              
 ggplot(data.frame(Z2=Z_star$X1,Z3=Z_star$X2))+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432")+ xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$"))+ xlim(-10,2) +ylim(-10,3)
