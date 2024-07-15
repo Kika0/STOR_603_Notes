@@ -58,14 +58,16 @@ b_hat <- 0
 # extrapolate using kernel smoothed residuals ----
 Y1 <- Y_given_1_extreme$Y1
 Y2 <- Y_given_1_extreme$Y2
+Y3 <- Y_given_1_extreme$Y3
 
 cond_quantile <- function(x,Z,q,a_hat=a_hat,b_hat=b_hat) {
   a_hat*x + x^b_hat *quantile(Z,q)
 }
 
-Z2 <- c()
+Z2 <- Z3 <- c()
 for (i in 1:length(Y1)) {
 Z2[i] <-   (Y2[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y2[i]-a_hat*Y1[i])
+Z3[i] <-   (Y3[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y3[i]-a_hat*Y1[i])
 }
 
 x <- seq(min(sims)-1,max(sims)+1,length.out=10000)
@@ -73,15 +75,9 @@ yl <- cond_quantile(x,Z=Z2,q=0.025,a_hat=a_hat,b_hat=b_hat)
 ym <- cond_quantile(x,Z=Z2,q=0.5,a_hat=a_hat,b_hat=b_hat)
 yp <- cond_quantile(x,Z=Z2,q=0.975,a_hat=a_hat,b_hat=b_hat)
 
-Y3 <- Y_given_1_extreme$Y3
-Z3 <- c()
-for (i in 1:length(Y1)) {
-  Z3[i] <-   (Y3[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y3[i]-a_hat*Y1[i])
-}
 yl3 <- cond_quantile(x,Z3,q=0.025,a_hat=a_hat,b_hat=b_hat)
 ym3 <- cond_quantile(x,Z3,q=0.5,a_hat=a_hat,b_hat=b_hat)
 yp3 <- cond_quantile(x,Z3,q=0.975,a_hat=a_hat,b_hat=b_hat)
-
 
 # plot again with data
 grid.arrange(ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y=Y2,col=above_thres),size=0.8,alpha=0.5) +
@@ -122,25 +118,8 @@ Z_star <- norm_to_orig(Z_N=ZN,emp_res = Z)
 ggplot(Zs)+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432") + xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) + xlim(-5,2) +ylim(-6,3)
              
 ggplot(data.frame(Z2=Z_star$X1,Z3=Z_star$X2))+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432")+ xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$"))+ xlim(-10,2) +ylim(-10,3)
-# calculate also true values
-a_hat <- 1
-b_hat <- 0
-Z <- (Y2-a_hat*Y1)/(Y1^b_hat)
-ylt <- cond_quantile(x,Z,q=0.025,a_hat=a_hat,b_hat=b_hat)
-ymt <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
-ypt <- cond_quantile(x,Z,q=0.975,a_hat=a_hat,b_hat=b_hat)
-plot(Y1,Z)
-# also optimise using beta=0
-opt <- optim(par=c(0.5,0,1),fn = Y_likelihood_initial,df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))
-a_hat <- opt$par[1]
-b_hat <- 0
-Z <- (Y2-a_hat*Y1)/(Y1^b_hat)
-plot(Y1,Z)
-ylb <- cond_quantile(x,Z,q=0.25,a_hat=a_hat,b_hat=b_hat)
-ymb <- cond_quantile(x,Z,q=0.5,a_hat=a_hat,b_hat=b_hat)
-ypb <- cond_quantile(x,Z,q=0.75,a_hat=a_hat,b_hat=b_hat)
 
-# create a loop to count points in each region
+# create a loop to count points in each region ----
 q <- seq(0.05,0.95,by=0.05)
 tmp <- rep(NA,length(Y1))
 # bottom edge case
