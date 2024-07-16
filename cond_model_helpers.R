@@ -9,35 +9,35 @@ F_smooth_Z <- function(Z) {
 }
 
 # transform from normal back to kernel smoothed by minimising the square difference
-norm_to_orig <- function(Z_N,emp_res) {
-  Z <- data.frame(matrix(ncol=ncol(Z_N),nrow=nrow(Z_N)))
-  s <- seq(0.02,0.98,length.out=49)
-  Zs <- data.frame(matrix(ncol=ncol(Z_N),nrow=length(s)))
+norm_to_orig <- function(ZN,emp_res) {
+  Z <- data.frame(matrix(ncol=ncol(ZN),nrow=nrow(ZN)))
+  s <- seq(0.05,0.95,length.out=49)
+  Zs <- data.frame(matrix(ncol=ncol(ZN),nrow=length(s)))
   # optimise for these 49 values of s
-  to_opt <- function(z) {
-    return( (mean(pnorm((z-emp_res[,i])/density(emp_res[,i])$bw)) - s[j])^2)
+  to_opts <- function(z) {
+    return( (mean(pnorm((z-emp_res[,l])/density(emp_res[,l])$bw)) - s[m])^2)
   }
-  for (i in 1:ncol(Z_N)) {
-  for (j in 1:length(s)) {
-    Zs[j,i] <- optim(fn=to_opt,par=1)$par
+  for (l in 1:ncol(ZN)) {
+  for (m in 1:length(s)) {
+    Zs[m,l] <- optim(fn=to_opts,par=1,lower = -12, upper = 12, method="Brent")$par
   }
   }
 
- to_opt <- function(z) {
- return( (mean(pnorm((z-emp_res[,i])/density(emp_res[,i])$bw)) - pnorm(Z_N[j,i]))^2)
+ to_optZ <- function(z) {
+ return( (mean(pnorm((z-emp_res[,i])/density(emp_res[,i])$bw)) - pnorm(ZN[j,i]))^2)
  }
  
-for (i in 1:ncol(Z_N)) {
-  for (j in 1:nrow(Z_N)) {
+for (i in 1:ncol(ZN)) {
+  for (j in 1:nrow(ZN)) {
     # optimise cdf using 49 linear segments rather than optimising all directly
-    if (pnorm(Z_N[j,i])< min(s) | pnorm(Z_N[j,i])>= max(s) ) {
-    Z[j,i] <- optim(fn=to_opt,par=1)$par
+    if (pnorm(ZN[j,i])< min(s) | pnorm(ZN[j,i])>= max(s) ) {
+    Z[j,i] <- optim(fn=to_optZ,par=1,lower = -12,upper = 12,method="Brent")$par
     }
     else {
-      k <- which.min(pnorm(Z_N[j,i])>s)-1
-      a <- 0.02/(Zs[k+1,i]-Zs[k,i])
+      k <- which.min(pnorm(ZN[j,i])>s)-1
+      a <- (s[2]-s[1])/(Zs[k+1,i]-Zs[k,i])
       b <- -a*Zs[k,i]+s[k]
-      Z[j,i] <- (pnorm(Z_N[j,i])-b)/(a)
+      Z[j,i] <- (pnorm(ZN[j,i])-b)/(a)
     }
   }
 }
