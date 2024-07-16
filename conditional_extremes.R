@@ -97,27 +97,27 @@ grid.arrange(ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y
                geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
                xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + xlim(c(vL,lim_max)) + ylim(c(lim_min+8,lim_max))+
                theme(legend.position="none"),ncol=2)
+
+# simulate residuals Zs from the empirical distribution
+Z <- data.frame(Z2,Z3) # dataframe of observed residuals
+Zs <- as.data.frame(matrix(ncol=2,nrow=0))
+names(Zs) <- c("Z2","Z3")
+for (i in 1:1000) {
+Zs[i,] <- Z[sample(1:nrow(Z),1,replace=TRUE),]
+}
+# probably a mistake in the function, rather optimize directly than linear segments
+ggplot(Zs)+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432") + xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) + xlim(-5,2) +ylim(-6,3)
+
 # simulate from observed residuals and Gaussian copula with kernel smoothed density
 # calculate the normal using the PIT
 ZN2 <- qnorm(F_smooth_Z(Z2))
 ZN3 <- qnorm(F_smooth_Z(Z3))
-
 rho_hat <- cor(ZN2,ZN3)
-
-ZN <- mvrnorm(n=,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
-Z <- data.frame(Z2,Z3)
-
-Zs <- as.data.frame(matrix(ncol=2,nrow=0))
-names(Zs) <- c("Z2","Z3")
-for (i in 1:10000) {
-Zs[i,] <- Z[sample(1:nrow(Z),1,replace=TRUE),]
-}
+ZN <- mvrnorm(n=5000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
 # transform back to original margins
-Z_star <- norm_to_orig(Z_N=ZN,emp_res = Z)
-# probably a mistake in the function, rather optimize directly than linear segments
-ggplot(Zs)+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432") + xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) + xlim(-5,2) +ylim(-6,3)
-             
-ggplot(data.frame(Z2=Z_star$X1,Z3=Z_star$X2))+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432")+ xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$"))+ xlim(-10,2) +ylim(-10,3)
+Z_star <- norm_to_orig(ZN=ZN,emp_res = Z)
+ggplot(data.frame(Z2=Z_star$X1,Z3=Z_star$X2))+geom_point(aes(x=Z2,y=Z3),size=0.9,alpha=0.5,col="#C11432")+ 
+  xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) + xlim(min(Z_star),max(Z_star)) + ylim(min(Z_star),max(Z_star)) + coord_fixed()
 
 # create a loop to count points in each region ----
 q <- seq(0.05,0.95,by=0.05)
