@@ -106,7 +106,8 @@ for (i in 1:1000) {
 Zs[i,] <- Z[sample(1:nrow(Z),1,replace=TRUE),]
 }
 # probably a mistake in the function, rather optimize directly than linear segments
-ggplot(Zs)+geom_point(aes(x=Z2,y=Z3),alpha=0.5,col="#C11432") + xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) + xlim(-5,2) +ylim(-6,3)
+ggplot(Zs)+geom_point(aes(x=Z2,y=Z3),size=0.9,alpha=0.5,col="#C11432") + xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) +
+   xlim(min(Zs),max(Zs)) + ylim(min(Zs),max(Zs)) + coord_fixed()
 
 # simulate from observed residuals and Gaussian copula with kernel smoothed density
 # calculate the normal using the PIT
