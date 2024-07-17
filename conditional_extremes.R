@@ -779,11 +779,19 @@ x_y$tf <- (x_y$x>frechet_laplace_pit(qfrechet(0.99)) & x_y$y>frechet_laplace_pit
 xy <- as.data.frame(mvrnorm(N,mu=c(0,0),Sigma = matrix(c(1,1/2,1/2,1),ncol=2)))
 names(xy) <- c("x","y")
 xy$tf <- (xy$x>qnorm(0.99) &  xy$y>qnorm(0.99))
-p1 <- ggplot(x_y) + geom_point(aes(x=x,y=y,col=tf),alpha=0.5) + xlab("") + ylab("") + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none")
-p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),alpha=0.5) + xlab("") + ylab("")+ scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) + theme(legend.position="none")
-p3 <- ggplot(x_y %>% filter(x> frechet_laplace_pit(qfrechet(0.99)))%>% filter(y> frechet_laplace_pit(qfrechet(0.99)))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
-p4 <- ggplot(xy %>% filter(x>qnorm(0.99))%>% filter(y>qnorm(0.99))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
-grid.arrange(p1,p2,p3,p4,ncol=2)
+xy <- xy %>% mutate(x=as.numeric(map(.x=qfrechet(pnorm(x)),.f=frechet_laplace_pit))) %>% 
+  mutate(y=as.numeric(map(.x=qfrechet(pnorm(y)),.f=frechet_laplace_pit)))
+vL <- frechet_laplace_pit(qfrechet(0.99))
+p1 <- ggplot(x_y) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab("") + ylab("") + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-12,12) + ylim(-12,12)+
+               geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
+              geom_hline(yintercept=vL,color="#009ADA",linetype="dashed") 
+                 
+p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab("") + ylab("")+ scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) + theme(legend.position="none") + coord_fixed()+ xlim(-12,12) + ylim(-12,12) +
+  geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
+  geom_hline(yintercept=vL,color="#009ADA",linetype="dashed") 
+# p3 <- ggplot(x_y %>% filter(x> frechet_laplace_pit(qfrechet(0.99)))%>% filter(y> frechet_laplace_pit(qfrechet(0.99)))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
+# p4 <- ggplot(xy %>% filter(x>qnorm(0.99))%>% filter(y>qnorm(0.99))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
+grid.arrange(p1,p2,ncol=2)
 
 # simulation study for different margin methods ----
 set.seed(88)
