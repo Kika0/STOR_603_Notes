@@ -59,13 +59,13 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 # explore residuals transformed to uniform margins
 # ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
 # transform to Uniform margins and fit a vine
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
-                        trunclevel = 3, indeptest = FALSE)
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 2,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+                        trunclevel = 3, indeptest = TRUE)
 fit3
-fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 2, indeptest = FALSE)
 fit2
-fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 1, indeptest = FALSE)
 fit1
 RVineClarkeTest(data=(observed_residuals(df = sims,given = 2,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
