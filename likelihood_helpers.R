@@ -13,8 +13,8 @@
 Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
   a <- theta[1]
   b <- theta[2]
-  mu <- theta[3]
-  sig <- theta[4]
+  mu <- theta[2]
+  sig <- theta[3]
   Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
   Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
   if (a<(-1) | a>1 | b<0 | b>=1) {
@@ -137,10 +137,10 @@ DLLLsk <- function(x,theta) {
   sig <- theta[2]
   deltal <- theta[3]
   deltau <- theta[4]
-  # a <- theta[5]
-  # b <- theta[6]
-  a <- 1
-  b <- 0
+  a <- theta[5]
+  b <- theta[6]
+  # a <- a_hat
+  # b <- b_hat
   Y1 <- x[,1]
   Y2 <- x[,2]
   obs_res <- (Y2-a*Y1)/(Y1^b)

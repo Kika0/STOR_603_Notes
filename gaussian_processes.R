@@ -5,6 +5,7 @@ library(viridis)
 library(plgp)
 library(gridExtra)
 library(here)
+library(tmap)
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
 # set theme defaults to be black rectangle
@@ -318,7 +319,7 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 # transform to Laplace margins
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals
-tmp_est <- par_est(sims,v=0.9,given=c(1),method = "AGG")
+tmp_est <- par_est(sims,v=0.9,given=c(1),method = "Normal")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>%filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
 #write.csv(tmp,"tmp.csv") # save for potential use later
 
@@ -347,11 +348,21 @@ uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>%
    arrange(is_location) 
 
 uk_tmp1 <- cbind(uk_tmp,tmp1)
-tm_shape(uk_tmp1) + tm_dots(col="lik",style="cont",size=0.3,palette="viridis")
-tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis")
-tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis")
-tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis")
-tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis")
-tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis")
-tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis")
+lik_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="lik",style="cont",size=0.3,palette="viridis")
+lik_agg2 <- tm_shape(uk_tmp1) + tm_dots(col="lik",style="cont",size=0.3,palette="viridis")
+
+a
+a_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis")
+b_norm <- tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis")
+
+mu_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis")
+sig_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis")
+deltal_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis")
+deltau_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis")
+
+grid.arrange(a_norm,a_agg1,ncol=2)
+grid.arrange(b_norm,b_agg1,ncol=2)
+grid.arrange(lik_agg1,lik_agg2,ncol=2)
+grid.arrange(a_norm,a_agg1,ncol=2)
+grid.arrange(a_norm,a_agg1,ncol=2)
 
