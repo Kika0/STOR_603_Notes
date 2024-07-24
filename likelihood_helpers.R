@@ -137,8 +137,10 @@ DLLLsk <- function(x,theta) {
   sig <- theta[2]
   deltal <- theta[3]
   deltau <- theta[4]
-  a <- theta[5]
-  b <- theta[6]
+  # a <- theta[5]
+  # b <- theta[6]
+  a <- 1
+  b <- 0
   Y1 <- x[,1]
   Y2 <- x[,2]
   obs_res <- (Y2-a*Y1)/(Y1^b)
