@@ -11,11 +11,10 @@
 #'
 #' @examples
 Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_hat=NULL) {
- theta <- c()
-  if (is.NULL(a_hat)==FALSE) {
+  if (is.null(a_hat)==FALSE) {
    a <- a_hat
  } else {a <- theta[1]}
-  if (is.NULL(b_hat)==FALSE) {
+  if (is.null(b_hat)==FALSE) {
     b <- b_hat
   } else {b <- theta[length(theta)-2]}
   mu <- theta[length(theta)-1]
