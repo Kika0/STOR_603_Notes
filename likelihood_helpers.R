@@ -17,7 +17,7 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_h
  } else {a <- theta[1]}
   if (is.NULL(b_hat)==FALSE) {
     b <- b_hat
-  } else {b <- theta[2]}
+  } else {b <- theta[length(theta)-2]}
   mu <- theta[length(theta)-1]
   sig <- theta[length(theta)]
   Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
