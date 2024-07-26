@@ -6,6 +6,7 @@ library(plgp)
 library(gridExtra)
 library(here)
 library(tmap)
+library(units)
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
 # set theme defaults to be black rectangle
@@ -319,11 +320,21 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 # transform to Laplace margins
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals
-tmp_est <- par_est(sims,v=0.9,given=c(1),method = "Normal")
-tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>%filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
-#write.csv(tmp,"tmp.csv") # save for potential use later
-
+tmp_est <- par_est(sims,v=0.9,given=c(1),margin = "AGG", method="two_step")
+tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
 tmp <- tmp_est %>% mutate(given=factor(given,levels = 1))
+tmp1 <- rbind(rep(NA,ncol(tmp)),tmp)
+# match back to spatial locations and plot
+uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
+   arrange(is_location) 
+uk_tmp1 <- cbind(uk_tmp,tmp1)
+tm_shape(uk_tmp1) + tm_dots(col="lik",style="cont",size=0.3,palette="viridis")
+tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis"),
+tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis"),ncol=2)
+tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis")
+tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis")
+
+# plot parameter estimates with pairwise distance from the conditioning site
 p1 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=lik)) 
 p2 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=a)) 
 p3 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=b)) 
@@ -334,35 +345,3 @@ p7 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=deltau))
 p8 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal-deltau))) + ylim(c(-2,5))
 p9 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal+deltau)/2)) +ylim(c(0,5))
 grid.arrange(p2,p3,p4,p5,p6,p7,p8,p9,p1,ncol=2)
-
-# plot only density of delta parameter estimates
-p1 <- ggplot(tmp) + geom_density(aes(x=deltal)) + xlim(c(-2,5))
-p2 <- ggplot(tmp) + geom_density(aes(x=deltau)) + xlim(c(-2,5))
-p3 <- ggplot(tmp) + geom_density(aes(x=(deltal-deltau))) + xlim(c(-2,5))
-p4 <- ggplot(tmp) + geom_density(aes(x=(deltau+deltal)/2)) + xlim(c(-2,5))
-grid.arrange(p1,p2,p3,p4,ncol=1)
-
-tmp1 <- rbind(rep(NA,10),tmp)
-# match back to spatial locations and plot
-uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
-   arrange(is_location) 
-
-uk_tmp1 <- cbind(uk_tmp,tmp1)
-lik_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="lik",style="cont",size=0.3,palette="viridis")
-lik_agg2 <- tm_shape(uk_tmp1) + tm_dots(col="lik",style="cont",size=0.3,palette="viridis")
-
-a
-a_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis")
-b_norm <- tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis")
-
-mu_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis")
-sig_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis")
-deltal_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis")
-deltau_agg1 <- tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis")
-
-grid.arrange(a_norm,a_agg1,ncol=2)
-grid.arrange(b_norm,b_agg1,ncol=2)
-grid.arrange(lik_agg1,lik_agg2,ncol=2)
-grid.arrange(a_norm,a_agg1,ncol=2)
-grid.arrange(a_norm,a_agg1,ncol=2)
-
