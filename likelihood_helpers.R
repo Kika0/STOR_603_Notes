@@ -136,15 +136,17 @@ dgnormsk <- function(x,mu,sig,deltal,deltau) {
   return(z)
 }
 
-DLLLsk <- function(x,theta) {
+DLLLsk <- function(x,theta,a_hat=NULL,b_hat=NULL) {
+  if (is.null(a_hat)==FALSE) {
+    a <- a_hat
+  } else {a <- theta[5]}
+  if (is.null(b_hat)==FALSE) {
+    b <- b_hat
+  } else {b <- theta[6]}
   mu <- theta[1]
   sig <- theta[2]
   deltal <- theta[3]
   deltau <- theta[4]
-  a <- theta[5]
-  b <- theta[6]
-  # a <- a_hat
-  # b <- b_hat
   Y1 <- x[,1]
   Y2 <- x[,2]
   obs_res <- (Y2-a*Y1)/(Y1^b)
