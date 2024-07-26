@@ -331,8 +331,8 @@ uk_tmp1 <- cbind(uk_tmp,tmp1)
 tm_shape(uk_tmp1) + tm_dots(col="lik",style="cont",size=0.3,palette="viridis")
 tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis"),
 tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis"),ncol=2)
-tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis")
-tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis")
+tm_shape(uk_tmp1) + tm_dots(col="deltal",size=0.3,palette="viridis",style="quantile")
+tm_shape(uk_tmp1) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile")
 
 # plot parameter estimates with pairwise distance from the conditioning site
 p1 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=lik)) 
