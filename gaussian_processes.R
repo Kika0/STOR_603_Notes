@@ -348,29 +348,29 @@ uk_tmp3 <- rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),me
 
 tm_shape(uk_tmp1) + tm_dots(col="lik",style="cont",size=0.3,palette="viridis")
 
-tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(title="AGG 2 step"),
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(title="AGG 1 step"),ncol=3)
+tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="AGG 2 step"),
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="AGG 1 step"),ncol=3)
 
-tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")),
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")),             
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")),ncol=3)
+tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"))+ tm_layout(main.title="AGG 2 step"),
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
 
-tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")),
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")),             
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")),ncol=3)
+tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"))+ tm_layout(main.title="AGG 2 step"),
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
 
-tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="sig_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_{AGG}$")),
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="sig_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_{AGG}$")),             
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="sig_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_{AGG}$")),ncol=3)
+tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="sig_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_{AGG}$"))+ tm_layout(main.title="AGG 2 step"),
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="sig_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_{AGG}$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="sig_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_{AGG}$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
 
-tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_l$")),
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_l$")),             
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_l$")),ncol=3)
+tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="deltal",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_l$"))+ tm_layout(main.title="AGG 2 step"),
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="deltal",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_l$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="deltal",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_l$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
 
-tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$")),
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$")),             
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$")),ncol=3)
+tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$"))+ tm_layout(main.title="AGG 2 step"),
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
+             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
 
 
 tm_shape(uk_tmp1) + tm_dots(col="deltal",size=0.3,palette="viridis",style="quantile")
