@@ -109,7 +109,7 @@ par_summary <- function(sims,v=0.9) {
 
 # generate a table of parameter estimates given each of the specified vector of variables
 par_est <- function(df=sims,v=0.99,given=c(1),margin,method="two_step") {
-  lik <- lik1a <- lik1b <- lik2 <- a_hat <- b_hat <- mu_hat <- mu_agg_hat <- sig_hat <- sig_agg_hat <- deltal_hat <- deltau_hat <- res_var <- c()
+  lik <- lika <- likb <- lik2 <- a_hat <- b_hat <- mu_hat <- mu_agg_hat <- sig_hat <- sig_agg_hat <- deltal_hat <- deltau_hat <- res_var <- c()
   d <- ncol(df)
   for (j in given) {
     Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
@@ -124,13 +124,13 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin,method="two_step") {
         init_para <- c(0.8,0,1)
         opta <- optim(par=init_para,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],b_hat=0,control = list(fnscale=-1,maxit=2000))
         a_hat <- append(a_hat,opta$par[1])
-        lik1a <- append(lik1a,-opta$value)
+        lika <- append(lika,-opta$value)
         init_parb <- c(0.2,0,1)
         optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=opta$par[1],control = list(fnscale=-1,maxit=2000))
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
         mu_hat <- append(mu_hat,optb$par[length(optb$par)-1])
         sig_hat <- append(sig_hat,optb$par[length(optb$par)])         
-        lik1b <- append(lik1b,-optb$value)
+        likb <- append(likb,-optb$value)
       }
       if (method=="two_step") {
         init_par <- c(0.8,0.2,0,1)
