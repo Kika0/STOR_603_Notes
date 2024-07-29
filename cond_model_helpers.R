@@ -44,69 +44,6 @@ for (i in 1:ncol(ZN)) {
   return(Z)
 }
 
-# generate a table of a,b,mu,sig,rho estimates given each of the variables
-par_summary <- function(sims,v=0.9) {
-  df <- sims %>% dplyr::select(starts_with("Y"))
-  par_sum <- data.frame(matrix(nrow=6,ncol=0))
-  par_sum_init <- data.frame(matrix(nrow=5,ncol=0))
-  # Y_not_1_extreme <- df %>% filter(Y_1<quantile(Y_1,v))
-  Z_2 <- c()
-  Z_3 <- c()
-  Z_N_2 <- c()
-  Z_N_3 <- c()
-  given <- c()
-  d <- ncol(df)
-  lik <- a_hat <- b_hat <- mu_hat <- sig_hat <- init_lik <- a_hat_init <- b_hat_init <- mu_hat_init <- sig_hat_init <- c()
-  for (j in 1:ncol(df)) {
-    Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
-    res <- c(1:d)[-j]
-    opt <- list()
-    init_par <- list()
-  for (i in 2:d) {
-    # get initial parameters
-    init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-    init_lik <- append(init_lik,init_opt$value)
-    init_par[[i-1]] <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
-    # optimise using the initial parameters
-    opt[[i-1]] <- optim(par=init_par[[i-1]],fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-  }
-  a_hat <- append(a_hat,c(opt[[1]]$par[1],opt[[2]]$par[1]))
-  b_hat <- append(b_hat,c(opt[[1]]$par[2],opt[[2]]$par[2]))
-  mu_hat <- append(mu_hat,c(opt[[1]]$par[3],opt[[2]]$par[3]))
-  sig_hat <- append(sig_hat,c(opt[[1]]$par[4],opt[[2]]$par[4]))
-  lik <- append(lik,c(opt[[1]]$value,opt[[2]]$value))
-  
-  a_hat_init <- append(a_hat_init,c(init_par[[1]][1],init_par[[2]][1]))
-  b_hat_init <- append(b_hat_init,c(0.2,0.2))
-  mu_hat_init <- append(mu_hat_init,c(init_par[[1]][3],init_par[[2]][3]))
-  sig_hat_init <- append(sig_hat_init,c(init_par[[1]][4],init_par[[2]][4]))
-  
-  # generate residual Z ----
-  Y1 <- Y_given_1_extreme[,j]
-  Y2 <- Y_given_1_extreme[,res[1]]
-  Y3 <- Y_given_1_extreme[,res[2]]
-  
-  tmp_z2 <- (Y2-a_hat[1]*Y1)/(Y1^b_hat[1])
-  tmp_z3 <- (Y3-a_hat[2]*Y1)/(Y1^b_hat[2])
-  
-  Z_2 <- append(Z_2,tmp_z2)
-  Z_3 <- append(Z_3,tmp_z3)
-  given <- append(given,rep(j,(N*(1-v)) ))
-  
-  # calculate the normal using the PIT
-  tmp_zn2 <- qnorm(F_smooth_Z(tmp_z2))
-  tmp_zn3 <- qnorm(F_smooth_Z(tmp_z3))
-  Z_N_2 <- append(Z_N_2,tmp_zn2)
-  Z_N_3 <- append(Z_N_3,tmp_zn3)
-  
-  rho_hat <- cor(tmp_zn2,tmp_zn3)
-  }
-  par_sum <- data.frame("lik" = lik,"a" = a_hat, "b" = b_hat,"mu" = mu_hat,"sig" = sig_hat,
-                        "lik_init" = init_lik,"a_init" = a_hat_init, "b_init" = b_hat_init,"mu_init" = mu_hat_init,"sig_init" = sig_hat_init,
-                        "given" = rep(1:d,each=(d-1)), "res" = c(2,3,1,3,1,2))
-  return(par_sum)
-}
-
 # generate a table of parameter estimates conditional on (given) each of the specified vector of variables
 par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
   lik <- lika <- likb <- lik2 <- a_hat <- b_hat <- mu_hat <- mu_agg_hat <- sig_hat <- sig_agg_hat <- deltal_hat <- deltau_hat <- res_var <- c()
