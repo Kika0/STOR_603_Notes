@@ -319,12 +319,12 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 # transform to Laplace margins
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals for Birmingham (1), then Glasgow (2) and London (3)
+sites <- c("Birmingham","Glasgow","London")
 given <- 2
 tmp_est <- par_est(sims,v=0.9,given=c(given),margin = "AGG", method="two_step")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
-tmp <- tmp_est %>% mutate(given=factor(given,levels = 1))
-# tmp1 <- rbind(rep(NA,ncol(tmp)),tmp)
-tmp1 <- tmp %>% add_row(rep(NA,ncol(tmp)),.before=given)
+tmp <- tmp_est %>% mutate(given=factor(given,levels = given))
+tmp1 <- tmp %>% add_row(.before=given)
 # match back to spatial locations and plot
 uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
    arrange(is_location) 
@@ -332,8 +332,8 @@ uk_tmp1 <- cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=r
 
 tmp_est <- par_est(sims,v=0.9,given=c(given),margin = "AGG", method="one_step")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
-tmp <- tmp_est %>% mutate(given=factor(given,levels = 1))
-tmp1 <- tmp %>% add_row(rep(NA,ncol(tmp)),.before=given)
+tmp <- tmp_est %>% mutate(given=factor(given,levels = given))
+tmp1 <- tmp %>% add_row(.before=given)
 # match back to spatial locations and plot
 uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
   arrange(is_location) 
@@ -341,16 +341,17 @@ uk_tmp2 <- rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),me
 
 tmp_est <- par_est(sims,v=0.9,given=c(given),margin = "AGG", method="sequential")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
-tmp <- tmp_est %>% mutate(given=factor(given,levels = 1))
-tmp1 <- tmp %>% add_row(rep(NA,ncol(tmp)),.before=given)
+tmp <- tmp_est %>% mutate(given=factor(given,levels = given))
+tmp1 <- tmp %>% add_row(.before=given)
 # match back to spatial locations and plot
 uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
   arrange(is_location) 
 uk_tmp3 <- rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("sequential",nrow(uk_tmp))),uk_tmp2)
 
-tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="AGG 2 step"),
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
-             tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="AGG 1 step"),ncol=3)
+pa <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==given & method=="two_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="AGG 2 step"),
+             tm_shape(uk_tmp3 %>% filter(given==given & method=="sequential")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
+             tm_shape(uk_tmp3 %>% filter(given==given & method=="one_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="AGG 1 step"),ncol=3)
+tmap::tmap_save(tm = pa, filename = paste0("plots/map_a_agg3methods",sites[given],".png"))
 
 tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"))+ tm_layout(main.title="AGG 2 step"),
              tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
@@ -371,12 +372,6 @@ tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_do
 tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==1 & method=="two_step")) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$"))+ tm_layout(main.title="AGG 2 step"),
              tm_shape(uk_tmp3 %>% filter(given==1 & method=="sequential")) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
              tm_shape(uk_tmp3 %>% filter(given==1 & method=="one_step")) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
-
-
-tm_shape(uk_tmp1) + tm_dots(col="deltal",size=0.3,palette="viridis",style="quantile")
-tm_shape(uk_tmp1) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile")
-
-
 
 # plot parameter estimates with pairwise distance from the conditioning site
 p1 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=lik)) 
