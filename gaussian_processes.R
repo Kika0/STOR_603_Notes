@@ -320,29 +320,29 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals for Birmingham (1), then Glasgow (2) and London (3)
 sites <- c("Birmingham","Glasgow","London")
-given <- 2
-tmp_est <- par_est(sims,v=0.9,given=c(given),margin = "AGG", method="two_step")
+cond_var <- 2
+tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="two_step")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
-tmp <- tmp_est %>% mutate(given=factor(given,levels = given))
-tmp1 <- tmp %>% add_row(.before=given)
+tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
+tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
 uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
    arrange(is_location) 
 uk_tmp1 <- cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("two_step",nrow(uk_tmp)))
 
-tmp_est <- par_est(sims,v=0.9,given=c(given),margin = "AGG", method="one_step")
+tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="one_step")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
-tmp <- tmp_est %>% mutate(given=factor(given,levels = given))
-tmp1 <- tmp %>% add_row(.before=given)
+tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
+tmp1 <- tmp %>% add_row(.before = cond_var)
 # match back to spatial locations and plot
 uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
   arrange(is_location) 
 uk_tmp2 <- rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("one_step",nrow(uk_tmp))),uk_tmp1)
 
-tmp_est <- par_est(sims,v=0.9,given=c(given),margin = "AGG", method="sequential")
+tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
-tmp <- tmp_est %>% mutate(given=factor(given,levels = given))
-tmp1 <- tmp %>% add_row(.before=given)
+tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
+tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
 uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
   arrange(is_location) 
