@@ -320,7 +320,7 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals for Birmingham (1), then Glasgow (2) and London (3)
 sites <- c("Birmingham","Glasgow","London")
-cond_var <- 2
+cond_var <- 3
 tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="two_step")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower("Birmingham")) %>%  dplyr::select(dist_birmingham) %>% pull()
 tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
@@ -363,14 +363,15 @@ tmap::tmap_save(tm = pmu, filename = paste0("plots/map_mu_agg3methods",sites[con
 psig <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="two_step")) + tm_dots(col="sig_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_{AGG}$"))+ tm_layout(main.title="AGG 2 step"),
              tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="sequential")) + tm_dots(col="sig_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_{AGG}$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
              tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="one_step")) + tm_dots(col="sig_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_{AGG}$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
-tmap::tmap_save(tm = p, filename = paste0("plots/map_sig_agg3methods",sites[cond_var],".png"))
-pdeltal <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="two_step")) + tm_dots(col="deltal",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_l$"))+ tm_layout(main.title="AGG 2 step"),
-             tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="sequential")) + tm_dots(col="deltal",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_l$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
-             tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="one_step")) + tm_dots(col="deltal",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_l$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
+#n=10,style="quantile",
+tmap::tmap_save(tm = psig, filename = paste0("plots/map_sig_agg3methods",sites[cond_var],".png"))
+pdeltal <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="two_step")) + tm_dots(col="deltal",n=10,style="quantile",size=0.3,palette="viridis",title=TeX("$\\delta_l$"))+ tm_layout(main.title="AGG 2 step"),
+             tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="sequential")) + tm_dots(col="deltal",size=0.3,n=10,style="quantile",palette="viridis",title=TeX("$\\delta_l$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
+             tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="one_step")) + tm_dots(col="deltal",size=0.3,n=10,style="quantile",palette="viridis",title=TeX("$\\delta_l$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
 tmap::tmap_save(tm = pdeltal, filename = paste0("plots/map_deltal_agg3methods",sites[cond_var],".png"))
-pdeltau <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="two_step")) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$"))+ tm_layout(main.title="AGG 2 step"),
-             tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="sequential")) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
-             tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="one_step")) + tm_dots(col="deltau",size=0.3,palette="viridis",style="quantile",title=TeX("$\\delta_u$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
+pdeltau <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="two_step")) + tm_dots(col="deltau",size=0.3,n=10,style="quantile",palette="viridis",title=TeX("$\\delta_u$"))+ tm_layout(main.title="AGG 2 step"),
+             tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="sequential")) + tm_dots(col="deltau",size=0.3,n=10,style="quantile",palette="viridis",title=TeX("$\\delta_u$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
+             tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="one_step")) + tm_dots(col="deltau",size=0.3,n=10,style="quantile",palette="viridis",title=TeX("$\\delta_u$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
 tmap::tmap_save(tm = pdeltau, filename = paste0("plots/map_deltau_agg3methods",sites[cond_var],".png"))
 # plot parameter estimates with pairwise distance from the conditioning site
 p1 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=lik)) 
