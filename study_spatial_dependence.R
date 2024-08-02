@@ -120,8 +120,8 @@ for (i in 2:30) {
   colnames(lon_lat_temp)[length(lon_lat_temp)] <- as.character(i)
 }
 # convert to sf points object
-temp_sf <- st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
-tm_shape(temp_sf) + tm_dots(col="temp",style="cont")
+temp_sf <- sf::st_as_sf(lon_lat_temp,coords = c("lon","lat"),crs=4326)
+tm_shape(temp_sf %>% select(Temperature)) + tm_dots(col="Temperature",size=0.3,palette="viridis",style="cont")
 
 # subset to only include grid points in Lancaster ----
 lanc_temp_sf <- st_filter(temp_sf,lanc_rot)
@@ -150,13 +150,6 @@ tm_shape(lanc_temp_sf_long) +
 
 # back to UK dataset----
 month <- c("December","January","February","March","April","May","June","July","August","September","October","November")
-uk_temp_sf_long <- uk_temp_sf %>% select(Temperature) %>%
-  mutate("day"=as.factor(rep(1,nrow(uk_temp_sf)))) %>% 
-  mutate("month"=as.factor(rep(month[1],nrow(uk_temp_sf))))
-#  mutate("date"=rep(pcictime[1],nrow(uk_temp_sf)))
-# December subset 
-#pcictime[1:30] # last day is missing
-
 # for loop for all other days of year
 first_of_month <- seq(1,360,30)
 for (j in (2:(dim(v1_sub)[3]/1))) {
