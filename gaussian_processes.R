@@ -18,6 +18,20 @@ theme_replace(
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
 
+#' Gaussian process simulation in one dimension
+#'
+#' @param from lower bound
+#' @param to upper bound
+#' @param K kernel function, default is exponential family
+#' @param start initial value
+#' @param m number of points equally spaced between lower and upper bound
+#' @param alpha parameter of kernel function
+#' @param lambda parameter of kernel function
+#'
+#' @return
+#' @export
+#'
+#' @examples
 gaussprocess <- function(from = 0, to = 1, K = function(s, t) {exp(-(abs(s-t)/lambda)^alpha)},
                          start = NULL, m = 50,alpha=1,lambda=1) {
   
@@ -320,7 +334,7 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals for Birmingham (1), then Glasgow (2) and London (3)
 sites <- c("Birmingham","Glasgow","London")
-cond_var <- 1
+cond_var <- 3
 tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="two_step")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(3+cond_var) %>% pull()
 tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
