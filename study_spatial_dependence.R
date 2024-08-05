@@ -53,6 +53,16 @@ for (i in 1:length(long)){
   long_rot[i] <- r.latlon[2]
 }
 
+# write inverse rotation
+lat <- 50
+long <- 30
+rotat <- pp.ll.to.rg(lat=lat,long = long,pole.lat = gr_npole_lat, pole.long = gr_npole_lon)
+rotat
+my_fun <- function(theta) {sum(abs(pp.ll.to.rg(lat=rotat[1],long=rotat[2],theta[1],theta[2])-c(lat,long)))}
+rot_pole <- optim(par=c(30,30),fn=my_fun)$par
+rot_pole
+pp.ll.to.rg(lat= rotat[1],long = rotat[2],pole.lat = rot_pole[1], pole.long = rot_pole[2])
+
 df <- data.frame("lon"=long_rot,"lat"=lat_rot)
 # convert back to sf polygon
 uk_rot <-  df %>%
@@ -152,7 +162,7 @@ tm_shape(lanc_temp_sf_long) +
 month <- c("December","January","February","March","April","May","June","July","August","September","October","November")
 # for loop for all other days of year
 first_of_month <- seq(1,360,30)
-for (j in (2:(dim(v1_sub)[3]/1))) {
+for (j in (2:360)) {
   to_bind <- uk_temp_sf  %>% select(all_of(j)) %>% 
     mutate("day"=as.factor(rep(j,nrow(uk_temp_sf)))) %>% 
     mutate("month"=as.factor(rep(month[(((j-(j%%30))/30)+1)],nrow(uk_temp_sf))))
