@@ -334,7 +334,16 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals for Birmingham (1), then Glasgow (2) and London (3)
 sites <- c("Birmingham","Glasgow","London")
-cond_var <- 3
+uk_tmp3 <- data.frame("lik" = numeric(),"lika" = numeric() ,"likb" = numeric(),"lik2" = numeric(),
+                      "a" = numeric() , "b" = numeric(),
+                      "mu" = numeric() ,"mu_agg" = numeric(),
+                      "sig" = numeric() ,"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
+                      "delta" = numeric(),"deltal" = numeric(),"deltau" = numeric(),
+                      "given" = numeric(), "res" = numeric(),
+                      "margin" = character(), "method" =character(), "cond_site" = character() )
+
+for (cond_site in 1:3) {
+cond_var <- cond_site
 tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="two_step")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(3+cond_var) %>% pull()
 tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
@@ -360,7 +369,9 @@ tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
 uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
   arrange(is_location) 
-uk_tmp3 <- rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("sequential",nrow(uk_tmp))),uk_tmp2)
+uk_tmp3 <- rbind(uk_tmp3,rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("sequential",nrow(uk_tmp))),uk_tmp2) %>% 
+  mutate(cond_site = sites[cond_var]))  
+}
 
 pa <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="two_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="AGG 2 step"),
              tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="sequential")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
