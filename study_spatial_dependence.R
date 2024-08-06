@@ -58,7 +58,7 @@ lat <- 50
 long <- 30
 rotat <- pp.ll.to.rg(lat=lat,long = long,pole.lat = gr_npole_lat, pole.long = gr_npole_lon)
 rotat
-my_fun <- function(theta) {sum(abs(pp.ll.to.rg(lat=rotat[1],long=rotat[2],theta[1],theta[2])-c(lat,long)))}
+my_fun <- function(theta,rotat,latlong) {sum(abs(pp.ll.to.rg(lat=rotat[1],long=rotat[2],theta[1],theta[2])-latlong))}
 rot_pole <- optim(par=c(30,30),fn=my_fun)$par
 rot_pole
 pp.ll.to.rg(lat= rotat[1],long = rotat[2],pole.lat = rot_pole[1], pole.long = rot_pole[2])
@@ -70,6 +70,33 @@ uk_rot <-  df %>%
   summarise(geometry = st_combine(geometry)) %>%
   st_cast("POLYGON") %>% st_make_valid()
 rm(df)
+# rotate coordinates of uk polygon
+long_rot <- st_coordinates(uk_rot %>% st_transform(4326))[,1]
+lat_rot <- st_coordinates(uk_rot %>% st_transform(4326))[,2]
+# loop to replace coordinates with rotated
+lat_rot1 <- c()
+long_rot1 <- c()
+for (i in 1:length(long)){
+rotat <- c(lat_rot[i],long_rot[i])
+latlong <- c(lat[i],long[i])
+rot_pole <- optim(par=c(30,30),fn=my_fun,rotat=rotat,latlong=latlong)$par
+r.latlon <- pp.ll.to.rg(lat= rotat[1],long = rotat[2],pole.lat = rot_pole[1], pole.long = rot_pole[2])
+  lat_rot1[i] <- r.latlon[1]
+  long_rot1[i] <- r.latlon[2]
+}
+
+df <- data.frame("lon"=long_rot1,"lat"=lat_rot1)
+# convert back to sf polygon
+uk1 <-  df %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  st_cast("POLYGON") %>% st_make_valid()
+rm(df)
+
+tm_shape(uk_rot) + tm_polygons()
+tm_shape(uk) + tm_polygons()
+tm_shape(uk1) + tm_polygons()
+
 ### plot a single field -----
 longitude <- rlon
 latitude <- rlat
