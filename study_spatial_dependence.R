@@ -40,7 +40,7 @@ lad <- st_read("data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 # UK is comprised of many polygons (islands), simplify to only
 # take mainland UK (Great Britain)
 uk <- (lad %>% st_union() %>% st_cast( "MULTIPOLYGON" ) %>% st_cast("POLYGON"))[1531]
-uk <- st_simplify(uk,dTolerance = 7000)
+uk <- st_simplify(uk,dTolerance = 2000)
 # rotate coordinates of uk polygon
 long <- st_coordinates(uk %>% st_transform(4326))[,1]
 lat <- st_coordinates(uk %>% st_transform(4326))[,2]
