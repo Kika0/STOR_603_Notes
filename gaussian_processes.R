@@ -7,6 +7,10 @@ library(gridExtra)
 library(here)
 library(tmap)
 library(units)
+library(texmex)
+data(winter)
+data(summer)
+
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
 # set theme defaults to be black rectangle
@@ -421,15 +425,32 @@ tmap::tmap_save(tm = pdeltau, filename = paste0("plots/map_deltau_agg3methods",s
 uk_tmp3 <- uk_tmp3 %>% mutate(cond_site = factor(cond_site,levels = sites))
 # plot parameter estimates with pairwise distance from the conditioning site
 p1 <- ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=abs(lik),color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
-p2 <- ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=a,color=cond_site,shape=method)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
-p3 <- ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=b,color=cond_site,shape=method)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
-grid.arrange(p1,p2,p3,ncol=1)
+p2 <- ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=a,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
+p3 <- ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=b,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
+ggsave(grid.arrange(p1,p2,p3,ncol=1), filename = "plots/agglikab.png")
 
-p4 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=mu_agg,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))
-p5 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=sig_agg,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))
+p4 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=mu_agg,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))+ facet_wrap(~method,nrow=1)
+p5 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=sig_agg,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))+ facet_wrap(~method,nrow=1)
+ggsave(grid.arrange(p4,p5,ncol=1), filename = "plots/aggmusig.png")
 
-p6 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=deltal,color=cond_site,shape=method)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) +ylim(c(0,5))
-p7 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=deltau,color=cond_site,shape=method)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))+ylim(c(0,5))
+p6 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=deltal,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) +ylim(c(0,5))+ facet_wrap(~method,nrow=1)
+p7 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=deltau,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))+ylim(c(0,5)) + facet_wrap(~method,nrow=1)
 # p8 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal-deltau))) + ylim(c(-2,5))
 # p9 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal+deltau)/2)) +ylim(c(0,5))
-grid.arrange(p2,p3,p4,p5,p6,p7,p1,ncol=2)
+ggsave(grid.arrange(p6,p7,ncol=1), filename = "plots/aggdeltas.png")
+
+# plot parameter estimates with distance from the coast
+p1 <- ggplot(uk_tmp3) + geom_point(aes(x=coast_dist,y=abs(lik),color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
+p2 <- ggplot(uk_tmp3) + geom_point(aes(x=coast_dist,y=a,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
+p3 <- ggplot(uk_tmp3) + geom_point(aes(x=coast_dist,y=b,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
+ggsave(grid.arrange(p1,p2,p3,ncol=1), filename = "plots/agglikabc.png")
+
+p4 <-  ggplot(uk_tmp3) + geom_point(aes(x=coast_dist,y=mu_agg,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))+ facet_wrap(~method,nrow=1)
+p5 <-  ggplot(uk_tmp3) + geom_point(aes(x=coast_dist,y=sig_agg,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))+ facet_wrap(~method,nrow=1)
+ggsave(grid.arrange(p4,p5,ncol=1), filename = "plots/aggmusigc.png")
+
+p6 <-  ggplot(uk_tmp3) + geom_point(aes(x=coast_dist,y=deltal,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) +ylim(c(0,5))+ facet_wrap(~method,nrow=1)
+p7 <-  ggplot(uk_tmp3) + geom_point(aes(x=coast_dist,y=deltau,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))+ylim(c(0,5)) + facet_wrap(~method,nrow=1)
+# p8 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal-deltau))) + ylim(c(-2,5))
+# p9 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal+deltau)/2)) +ylim(c(0,5))
+ggsave(grid.arrange(p6,p7,ncol=1),filename = "plots/aggdeltasc.png")
