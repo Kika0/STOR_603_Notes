@@ -321,6 +321,22 @@ ggplot(tmp) + geom_point(aes(x=pair_dist,y=sig,col=given)) + labs(color = "Dista
 
 # UKCP 18 data (summer max daily temperatures 1999-2018) ----
 ukcp18 <- readRDS("data/uk_1999_2018_summer.RDS") %>% relocate(dist_london,.after=dist_glasgow)
+conv <- CnvRttPol(latlon = data.frame(long=ukcp18$Longitude,lat=ukcp18$Latitude),spol_coor = c(gr_npole_lon, gr_npole_lat))
+uk_sf_rot <- data.frame(lon=conv$lon,lat=conv$lat) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+uk_sf_rot <- st_transform(uk_sf_rot,27700)
+# coast_dist <- st_geometry(obj = uk) %>%
+#   st_cast(to = 'LINESTRING') %>%
+#   st_distance(y=uk_sf_rot)
+# add buffer
+uk_buffered <- st_buffer(uk, 50000)   
+# polygon(s) of only the buffer
+buffer_only <- st_difference(uk_buffered, uk) 
+tm_shape(buffer_only) + tm_polygons()
+coast_dist <- st_distance(uk_sf_rot,buffer_only)
+uk_sf_rot <- cbind(uk_sf_rot,data.frame("coast_dist" = coast_dist))
+tm_shape(uk_sf_rot) + tm_dots("coast_dist",size=1)
+ukcp18 <- ukcp18 %>% mutate("Longitude" = conv$lon, "Latitude" = conv$lat, "coast_dist" = uk_sf_rot$coast_dist) %>% relocate(coast_dist,.before = dist_birmingham)
 Birmingham_temp <- ukcp18 %>% filter(is_location==tolower("Birmingham")) %>% dplyr::select(!contains("i")) %>% t() 
 Glasgow_temp <- ukcp18 %>% filter(is_location==tolower("Glasgow")) %>% dplyr::select(!contains("i")) %>% t() 
 London_temp <- ukcp18 %>% filter(is_location==tolower("London")) %>% dplyr::select(!contains("i")) %>% t() 
@@ -345,29 +361,32 @@ uk_tmp3 <- data.frame("lik" = numeric(),"lika" = numeric() ,"likb" = numeric(),"
 for (cond_site in 1:3) {
 cond_var <- cond_site
 tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="two_step")
-tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(3+cond_var) %>% pull()
+tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4+cond_var) %>% pull()
+tmp_est$coast_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4) %>% pull()
 tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
 tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
-uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
+uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
    arrange(is_location) 
 uk_tmp1 <- cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("two_step",nrow(uk_tmp)))
 
 tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="one_step")
-tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(3+cond_var) %>% pull()
+tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4+cond_var) %>% pull()
+tmp_est$coast_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4) %>% pull()
 tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
 tmp1 <- tmp %>% add_row(.before = cond_var)
 # match back to spatial locations and plot
-uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
+uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
   arrange(is_location) 
 uk_tmp2 <- rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("one_step",nrow(uk_tmp))),uk_tmp1)
 
 tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")
-tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(3+cond_var) %>% pull()
+tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4+cond_var) %>% pull()
+tmp_est$coast_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4) %>% pull()
 tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
 tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
-uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:7]) %>% 
+uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
   arrange(is_location) 
 uk_tmp3 <- rbind(uk_tmp3,rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("sequential",nrow(uk_tmp))),uk_tmp2) %>% 
   mutate(cond_site = sites[cond_var]))  
@@ -398,14 +417,19 @@ pdeltau <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="t
              tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="sequential")) + tm_dots(col="deltau",size=0.3,n=10,style="quantile",palette="viridis",title=TeX("$\\delta_u$")) + tm_layout(main.title=TeX("$\\beta=0 \\rightarrow \\hat{\\alpha} \\rightarrow \\hat{\\beta}$")),             
              tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="one_step")) + tm_dots(col="deltau",size=0.3,n=10,style="quantile",palette="viridis",title=TeX("$\\delta_u$"))+ tm_layout(main.title="AGG 1 step"),ncol=3)
 tmap::tmap_save(tm = pdeltau, filename = paste0("plots/map_deltau_agg3methods",sites[cond_var],".png"),height = 6,width=9)
+
+uk_tmp3 <- uk_tmp3 %>% mutate(cond_site = factor(cond_site,levels = sites))
 # plot parameter estimates with pairwise distance from the conditioning site
-p1 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=lik)) 
-p2 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=a)) 
-p3 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=b)) 
-p4 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=mu)) 
-p5 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=sig)) 
-p6 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=deltal)) 
-p7 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=deltau)) 
-p8 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal-deltau))) + ylim(c(-2,5))
-p9 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal+deltau)/2)) +ylim(c(0,5))
-grid.arrange(p2,p3,p4,p5,p6,p7,p8,p9,p1,ncol=2)
+p1 <- ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=abs(lik),color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
+p2 <- ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=a,color=cond_site,shape=method)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
+p3 <- ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=b,color=cond_site,shape=method)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) + facet_wrap(~method,nrow=1)
+grid.arrange(p1,p2,p3,ncol=1)
+
+p4 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=mu_agg,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))
+p5 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=sig_agg,color=cond_site)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))
+
+p6 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=deltal,color=cond_site,shape=method)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F")) +ylim(c(0,5))
+p7 <-  ggplot(uk_tmp3) + geom_point(aes(x=pair_dist,y=deltau,color=cond_site,shape=method)) + scale_color_manual(values=c("#C11432","#009ADA","#66A64F"))+ylim(c(0,5))
+# p8 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal-deltau))) + ylim(c(-2,5))
+# p9 <- ggplot(tmp) + geom_point(aes(x=pair_dist,y=(deltal+deltau)/2)) +ylim(c(0,5))
+grid.arrange(p2,p3,p4,p5,p6,p7,p1,ncol=2)
