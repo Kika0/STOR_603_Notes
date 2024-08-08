@@ -33,15 +33,14 @@ observed_residuals <- function(df=sims,given=1,v=0.99) {
     init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
     init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
     opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-    a_hat1 <- opt$par[1]
-    a_hat <- 1
-    b_hat1 <- opt$par[2]
-    b_hat <- 0
+    a_hat <- opt$par[1]
+    # a_hat <- 1
+    b_hat <- opt$par[2]
+    # b_hat <- 0
     res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
     Y1 <- Y_given_1_extreme[,j]
     Y2 <- Y_given_1_extreme[,res[i-1]]
     tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
-    tmp_z1 <- append(tmp_z1,(Y2-a_hat1*Y1/(Y1^b_hat1)))
   }
   Z <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
     mutate(row = row_number()) %>%
@@ -250,5 +249,12 @@ p_true <- df %>% filter(Y1>vF_sim,Y2>vF_sim,Y3>vF_sim,Y4>vF_sim,Y5>vF_sim) %>%
 
 # explore summer and winter air pollution data ----
 as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)) %>% ggpairs()
+as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)) %>% ggpairs()
 
-              
+# transform to Laplace margins
+winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+# fit vine copula to the observed residuals
+colnames(winter_lap) <- paste0("Y",1:5)
+est <- par_est(df = winter_lap, v = 0.9, given = 1, method = "one_step", margin = "Normal")           
+obsz1 <- (winter_lap[winter_lap[,1]>quantile(probs=0.9,winter_lap[,1]),c(1:5)[-1]]-est$a*winter_lap[winter_lap[,1]>quantile(probs=0.9,winter_lap[,1]),1]/(winter_lap[winter_lap[,1]>quantile(probs=0.9,winter_lap[,1]),1]^est$b))
+observed_residuals(df = winter_lap,v=0.9,given = 1)
