@@ -6,6 +6,7 @@ library(latex2exp)
 library(gridExtra)
 library(GGally) # for ggpairs function
 library(MASS) # use dplyr::select to avoid function conflict
+library(texmex)
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
 
@@ -246,3 +247,8 @@ df <- data.frame(Y2=Y2_gen)%>%
 vF_sim <- qfrechet(v_sim)
 p_true <- df %>% filter(Y1>vF_sim,Y2>vF_sim,Y3>vF_sim,Y4>vF_sim,Y5>vF_sim) %>% 
   nrow()/500000*(1-v_sim)
+
+# explore summer and winter air pollution data ----
+as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)) %>% ggpairs()
+
+              
