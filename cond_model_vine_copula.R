@@ -250,11 +250,16 @@ p_true <- df %>% filter(Y1>vF_sim,Y2>vF_sim,Y3>vF_sim,Y4>vF_sim,Y5>vF_sim) %>%
 # explore summer and winter air pollution data ----
 as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)) %>% ggpairs()
 as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)) %>% ggpairs()
+# fit vine copula to all the data
+RVineStructureSelect(as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)),
+                     trunclevel = 3, indeptest = FALSE)
+RVineStructureSelect(as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)),
+                     trunclevel = 3, indeptest = FALSE)
 
 # transform to Laplace margins
 winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+
 # fit vine copula to the observed residuals
 colnames(winter_lap) <- paste0("Y",1:5)
-est <- par_est(df = winter_lap, v = 0.9, given = 1, method = "one_step", margin = "Normal")           
-obsz1 <- (winter_lap[winter_lap[,1]>quantile(probs=0.9,winter_lap[,1]),c(1:5)[-1]]-est$a*winter_lap[winter_lap[,1]>quantile(probs=0.9,winter_lap[,1]),1]/(winter_lap[winter_lap[,1]>quantile(probs=0.9,winter_lap[,1]),1]^est$b))
-observed_residuals(df = winter_lap,v=0.9,given = 1)
+obsz <- observed_residuals(df = winter_lap,v=0.9,given = 1)
