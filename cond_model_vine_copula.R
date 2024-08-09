@@ -23,6 +23,8 @@ observed_residuals <- function(df=sims,given=1,v=0.99) {
   j <- given
   a_hat <- b_hat <- res_var <- c()
   tmp_z <- tmp_z1 <- c()
+  df_orig <- df
+  names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
   n_v <- nrow(Y_given_1_extreme)
@@ -46,6 +48,9 @@ observed_residuals <- function(df=sims,given=1,v=0.99) {
     mutate(row = row_number()) %>%
     tidyr::pivot_wider(names_from = res_var, values_from = tmp_z) %>% 
     dplyr::select(-row)
+  if (sum(names(df_orig)!=paste0("Y",1:ncol(df_orig)))==ncol(df_orig)) {
+    names(Z) <- names(df_orig)[-j]
+  }
   return(Z)
 }
 
@@ -262,4 +267,20 @@ summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer
 
 # fit vine copula to the observed residuals
 colnames(winter_lap) <- paste0("Y",1:5)
-obsz <- observed_residuals(df = winter_lap,v=0.9,given = 1)
+obsz <- observed_residuals(df = winter_lap,v=0.7,given = 1)
+v <- 0.7
+RVineStructureSelect((observed_residuals(df = winter_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
+                     trunclevel = 3, indeptest = FALSE)
+for (j in 1:5) {
+  obsz <- observed_residuals(df = winter_lap,v=0.7,given = j)
+  ggsave(ggpairs(obsz),filename = paste0("plots/pollution_winter_obs_z",j,".png"))
+  print(RVineStructureSelect((observed_residuals(df = winter_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
+                       trunclevel = 3, indeptest = FALSE))
+}
+
+for (j in 1:5) {
+  obsz <- observed_residuals(df = summer_lap,v=0.7,given = j)
+  ggsave(ggpairs(obsz),filename = paste0("plots/pollution_summer_obs_z",j,".png"))
+  print(RVineStructureSelect((observed_residuals(df = summer_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1),
+                             trunclevel = 3, indeptest = FALSE))
+}
