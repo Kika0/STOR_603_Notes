@@ -340,6 +340,6 @@ Gen_orig <- rbind(Gen_Y1,tmp)
 Gen_orig <- Gen_orig %>% relocate(1,.before = l+1) # relocate cond variable from first to original position
 names(Gen_orig) <- c(names(winter_lap),"sim")
 p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
-  scale_color_manual(values = c("data"="black","model" = "#009ADA")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
+  scale_color_manual(values = c("data"="black","model" = "#009ADA")) + scale_fill_manual(values = c("data"="black","model" = "#009ADA"))
 ggsave(p,filename = paste0("plots/pollution_winter_sim",l,".png"))
 }
