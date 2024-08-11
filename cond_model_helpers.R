@@ -47,6 +47,7 @@ for (i in 1:ncol(ZN)) {
 # generate a table of parameter estimates conditional on (given) each of the specified vector of variables
 par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
   lik <- lika <- likb <- lik2 <- a_hat <- b_hat <- mu_hat <- mu_agg_hat <- sig_hat <- sig_agg_hat <- deltal_hat <- deltau_hat <- res_var <- c()
+  names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   for (j in given) {
     Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
