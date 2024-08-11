@@ -285,6 +285,7 @@ for (j in 1:5) {
   print(RVineStructureSelect((observed_residuals(df = summer_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1),
                              trunclevel = 3, indeptest = FALSE))
 }
+
 for (l in 1:5) {
 fit3 <- RVineStructureSelect((observed_residuals(df = summer_lap,given = l,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1),
                              trunclevel = 3, indeptest = FALSE)
@@ -305,7 +306,7 @@ for (i in 1:nrow(Zsim)) {
 
 Z_star <- as.data.frame(Z)
 v_sim <- 0.7
-X1_gpd <- ismev::gpd.fit(winter[,l], threshold = quantile(probs=v_sim,winter[,l]))
+X1_gpd <- ismev::gpd.fit(summer[,l], threshold = quantile(probs=v_sim,summer[,l]))
 X1_gen <- rgpd(n=N_sim,sigma = X1_gpd$mle[1],xi=X1_gpd$mle[2],u=X1_gpd$threshold)
 Y1_gen <- as.data.frame((data.frame(X1_gen) %>% apply(c(2),FUN=row_number))/(N_sim+1)*(1-v_sim)+v_sim) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame() 
 Gen_Y1 <- data.frame("Y1"=Y1_gen)
