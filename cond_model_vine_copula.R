@@ -287,13 +287,13 @@ for (j in 1:5) {
 }
 
 for (l in 1:5) {
-fit3 <- RVineStructureSelect((observed_residuals(df = summer_lap,given = l,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1),
+fit3 <- RVineStructureSelect((observed_residuals(df = winter_lap,given = l,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
                              trunclevel = 3, indeptest = FALSE)
-N_sim <- ceiling(nrow(summer_lap)*(1-v))
+N_sim <- ceiling(nrow(winter_lap)*(1-v))
 Zsim <- RVineSim(N=N_sim,RVM=fit3)
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
-obs_res <- observed_residuals(df = summer_lap,given = l,v = v) 
+obs_res <- observed_residuals(df = winter_lap,given = l,v = v) 
 to_opt <- function(z) {
   return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
 }
@@ -306,14 +306,14 @@ for (i in 1:nrow(Zsim)) {
 
 Z_star <- as.data.frame(Z)
 v_sim <- 0.7
-X1_gpd <- ismev::gpd.fit(summer[,l], threshold = quantile(probs=v_sim,summer[,l]))
+X1_gpd <- ismev::gpd.fit(winter[,l], threshold = quantile(probs=v_sim,winter[,l]))
 X1_gen <- rgpd(n=N_sim,sigma = X1_gpd$mle[1],xi=X1_gpd$mle[2],u=X1_gpd$threshold)
 Y1_gen <- as.data.frame((data.frame(X1_gen) %>% apply(c(2),FUN=row_number))/(N_sim+1)*(1-v_sim)+v_sim) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame() 
 Gen_Y1 <- data.frame("Y1"=Y1_gen)
 names(Gen_Y1) <- c("Y1")
 # for each Y, generate a residual and calculate Y_2
-a_hat <- par_est(df = summer_lap, v=v,given = l,margin = "Normal", method = "one_step")$a
-b_hat <- par_est(df = summer_lap, v=v,given = l,margin = "Normal", method = "one_step")$b
+a_hat <- par_est(df = winter_lap, v=v,given = l,margin = "Normal", method = "one_step")$a
+b_hat <- par_est(df = winter_lap, v=v,given = l,margin = "Normal", method = "one_step")$b
 res <- c(1:5)[-l]
 Y1 <- Gen_Y1$Y1
 Y2 <- a_hat[1]*Y1 + Y1^b_hat[1] *Z_star[,1]
@@ -326,7 +326,7 @@ names(Gen_Y1) <- c(paste0("Y",l),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y
 # generate Y1 (extrapolate so above largest observed value)
 
 #plot
-Y_given_1_extreme <- summer_lap %>% filter(summer_lap[,l]>quantile(summer_lap[,l],v))
+Y_given_1_extreme <- winter_lap %>% filter(winter_lap[,l]>quantile(winter_lap[,l],v))
 Y1 <- Y_given_1_extreme[,l]
 Y2 <- Y_given_1_extreme[,res[1]]
 Y3 <- Y_given_1_extreme[,res[2]]
@@ -338,8 +338,8 @@ names(tmp) <- c(paste0("Y",l),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",r
 # u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
 Gen_orig <- rbind(Gen_Y1,tmp)
 Gen_orig <- Gen_orig %>% relocate(1,.before = l+1) # relocate cond variable from first to original position
-names(Gen_orig) <- c(names(summer_lap),"sim")
+names(Gen_orig) <- c(names(winter_lap),"sim")
 p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
-  scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-ggsave(p,filename = paste0("pollution_summer_sim",l,".png"))
+  scale_color_manual(values = c("data"="black","model" = "#009ADA")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
+ggsave(p,filename = paste0("plots/pollution_winter_sim",l,".png"))
 }
