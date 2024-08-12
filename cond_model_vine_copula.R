@@ -65,7 +65,7 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 # explore residuals transformed to uniform margins
 # ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
 # transform to Uniform margins and fit a vine
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 2,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                         trunclevel = 3, indeptest = TRUE)
 fit3
 fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
@@ -79,7 +79,8 @@ RVineClarkeTest(data=(observed_residuals(df = sims,given = 2,v = 0.99) %>% apply
 
 plot(fit3,edge.labels = "family")
 # simulate from the copula
-Zsim <- RVineSim(N=500,RVM=fit3)
+N_sim <- 50
+Zsim <- RVineSim(N=N_sim,RVM=fit3)
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
 obs_res <- observed_residuals(df = sims,given = 1,v = 0.99) 
@@ -106,9 +107,9 @@ for (i in 1:nrow(obsr)) {
 obsr %>% 
   ggpairs()
 
-rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",500)),
+rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",N*(1-v))),
       Z %>% as.data.frame() %>%
-        mutate(res=rep("model",500))) %>% 
+        mutate(res=rep("model",N*(1-v)))) %>% 
   ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
 
@@ -282,8 +283,29 @@ for (j in 1:5) {
 for (j in 1:5) {
   obsz <- observed_residuals(df = summer_lap,v=0.7,given = j)
   ggsave(ggpairs(obsz),filename = paste0("plots/pollution_summer_obs_z",j,".png"))
-  print(RVineStructureSelect((observed_residuals(df = summer_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1),
-                             trunclevel = 3, indeptest = FALSE))
+  fit3 <- RVineStructureSelect((observed_residuals(df = summer_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1),
+                       trunclevel = 3, indeptest = FALSE)
+  print(fit3)
+  N_sim <- nrow(obsz)
+  Zsim <- RVineSim(N=N_sim,RVM=fit3)
+  # transform back residuals to original margins
+  # can use kernel smoothed distribution as initial step
+  obs_res <- observed_residuals(df = sims,given = 1,v = 0.99) 
+  to_opt <- function(z) {
+    return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
+  }
+  Z <- Zsim
+  for (i in 1:nrow(Zsim)) {
+    for (k in 1:ncol(Zsim)) {
+      Z[i,k] <- optim(fn=to_opt,par=1)$par
+    }
+  }
+ p <-  rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",N_sim)),
+        Z %>% as.data.frame() %>%
+          mutate(res=rep("model",N_sim))) %>% 
+    ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+    scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
+  ggsave(p,filename = paste0("plots/pollution_summer_obs_sim_z",j,".png"))
 }
 
 for (l in 1:5) {
