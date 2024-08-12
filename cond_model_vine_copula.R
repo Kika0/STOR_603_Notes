@@ -281,16 +281,16 @@ for (j in 1:5) {
 }
 
 for (j in 1:5) {
-  obsz <- observed_residuals(df = summer_lap,v=0.7,given = j)
-  ggsave(ggpairs(obsz),filename = paste0("plots/pollution_summer_obs_z",j,".png"))
-  fit3 <- RVineStructureSelect((observed_residuals(df = summer_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1),
+  obsz <- observed_residuals(df = winter_lap,v=0.7,given = j)
+  ggsave(ggpairs(obsz),filename = paste0("plots/pollution_winter_obs_z",j,".png"))
+  fit3 <- RVineStructureSelect((observed_residuals(df = winter_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
                        trunclevel = 3, indeptest = FALSE)
   print(fit3)
   N_sim <- nrow(obsz)
   Zsim <- RVineSim(N=N_sim,RVM=fit3)
   # transform back residuals to original margins
   # can use kernel smoothed distribution as initial step
-  obs_res <- observed_residuals(df = sims,given = 1,v = 0.99) 
+  obs_res <- observed_residuals(df = sims,given = j,v = 0.99) 
   to_opt <- function(z) {
     return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
   }
@@ -300,12 +300,12 @@ for (j in 1:5) {
       Z[i,k] <- optim(fn=to_opt,par=1)$par
     }
   }
- p <-  rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",N_sim)),
+ p <-  rbind(obsz %>% as.data.frame() %>% mutate(res=rep("data",N_sim)),
         Z %>% as.data.frame() %>%
           mutate(res=rep("model",N_sim))) %>% 
     ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
-    scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-  ggsave(p,filename = paste0("plots/pollution_summer_obs_sim_z",j,".png"))
+    scale_color_manual(values = c("data"="black","model" = "#009ADA")) + scale_fill_manual(values = c("data"="black","model" = "#009ADA"))
+  ggsave(p,filename = paste0("plots/pollution_winter_obs_sim_z",j,".png"))
 }
 
 for (l in 1:5) {
