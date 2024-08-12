@@ -5,6 +5,7 @@ library(ismev)
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
+library(xtable) # for latex tables
 library(GGally) # for ggpairs function
 library(MASS) # use dplyr::select to avoid function conflict
 library(texmex)
@@ -365,3 +366,12 @@ p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = l
   scale_color_manual(values = c("data"="black","model" = "#009ADA")) + scale_fill_manual(values = c("data"="black","model" = "#009ADA"))
 ggsave(p,filename = paste0("plots/pollution_winter_sim",l,".png"))
 }
+
+tbl_winter <- par_est(df = winter_lap, v=v,given = 1:5,margin = "Normal", method = "one_step") %>% 
+  dplyr::select(lik,a,b,mu,sig,given,res) %>% 
+  mutate(cond_pollutant = recode(given, `1` = names(winter_lap)[1], `2` = names(winter_lap)[2], `3` = names(winter_lap)[3],
+                                 `4` = names(winter_lap)[4], `5` = names(winter_lap)[5])) %>% 
+  mutate(res_pollutant = recode(res, `1` = names(winter_lap)[1], `2` = names(winter_lap)[2], `3` = names(winter_lap)[3],
+                                 `4` = names(winter_lap)[4], `5` = names(winter_lap)[5])) %>% 
+  relocate(6,.after=9) %>% relocate(6,.after = 9)
+xtable(tbl_winter)
