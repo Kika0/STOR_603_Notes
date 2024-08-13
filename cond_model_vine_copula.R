@@ -373,5 +373,10 @@ tbl_winter <- par_est(df = winter_lap, v=v,given = 1:5,margin = "Normal", method
                                  `4` = names(winter_lap)[4], `5` = names(winter_lap)[5])) %>% 
   mutate(res_pollutant = recode(res, `1` = names(winter_lap)[1], `2` = names(winter_lap)[2], `3` = names(winter_lap)[3],
                                  `4` = names(winter_lap)[4], `5` = names(winter_lap)[5])) %>% 
-  relocate(6,.after=9) %>% relocate(6,.after = 9)
-xtable(tbl_winter)
+  relocate(6,.after=9) %>% relocate(6,.after = 9) %>% dplyr::select(c(1:7))
+xtable(tbl_winter[c(1:4,5,9,13,17),])
+xtable(tbl_winter[c(5:8,1,10,14,18),])
+xtable(tbl_winter[c(9:12,2,11,15,19),])
+xtable(tbl_winter[c(13:16,3,12,16,20),])
+xtable(tbl_winter[c(17:20,4,8,12,16),])
+ 
