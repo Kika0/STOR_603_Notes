@@ -322,6 +322,9 @@ ggplot(tmp) + geom_point(aes(x=pair_dist,y=sig,col=given)) + labs(color = "Dista
 
 # UKCP 18 data (summer max daily temperatures 1999-2018) ----
 ukcp18 <- readRDS("data/uk_1999_2018_summer.RDS") %>% relocate(dist_london,.after=dist_glasgow)
+# remove last year of the data due to error (same data as first year)
+ukcp18 <- ukcp18[,1:1716]
+# remove 
 conv <- CnvRttPol(latlon = data.frame(long=ukcp18$Longitude,lat=ukcp18$Latitude),spol_coor = c(gr_npole_lon, gr_npole_lat))
 uk_sf_rot <- data.frame(lon=conv$lon,lat=conv$lat) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
