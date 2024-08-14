@@ -259,10 +259,27 @@ p_true <- df %>% filter(Y1>vF_sim,Y2>vF_sim,Y3>vF_sim,Y4>vF_sim,Y5>vF_sim) %>%
 as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)) %>% ggpairs()
 as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)) %>% ggpairs()
 # fit vine copula to all the data
-RVineStructureSelect(as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)),
+fitw <- RVineStructureSelect(as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)),
                      trunclevel = 3, indeptest = FALSE)
-RVineStructureSelect(as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)),
+# plot simulated and observed data on unifrom margins
+winter_sim <- RVineSim(N=nrow(winter),RVM=fitw)
+
+rbind(as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)) %>% mutate(res=rep("data",nrow(winter))),
+      winter_sim %>% as.data.frame() %>%
+              mutate(res=rep("model",nrow(winter)))) %>% 
+  ggpairs(columns = 1:5,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+  scale_color_manual(values = c("data"="black","model" = "#009ADA")) + scale_fill_manual(values = c("data"="black","model" = "#009ADA"))
+
+fits <- RVineStructureSelect(as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)),
                      trunclevel = 3, indeptest = FALSE)
+summer_sim <- RVineSim(N=nrow(summer),RVM=fits)
+
+rbind(as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)) %>% mutate(res=rep("data",nrow(summer))),
+      summer_sim %>% as.data.frame() %>%
+        mutate(res=rep("model",nrow(summer)))) %>% 
+  ggpairs(columns = 1:5,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+  scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
+
 
 # transform to Laplace margins
 winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
@@ -365,17 +382,17 @@ p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = l
   scale_color_manual(values = c("data"="black","model" = "#009ADA")) + scale_fill_manual(values = c("data"="black","model" = "#009ADA"))
 ggsave(p,filename = paste0("plots/pollution_winter_sim",l,".png"))
 }
-
-tbl_summer <- par_est(df = summer_lap, v=v,given = 1:5,margin = "Normal", method = "one_step") %>% 
+v <- 0.7
+tbl_winter <- par_est(df = winter_lap, v=v,given = 1:5,margin = "Normal", method = "one_step") %>% 
   dplyr::select(lik,a,b,mu,sig,given,res) %>% 
-  mutate(cond_pollutant = recode(given, `1` = names(summer_lap)[1], `2` = names(summer_lap)[2], `3` = names(summer_lap)[3],
-                                 `4` = names(summer_lap)[4], `5` = names(summer_lap)[5])) %>% 
-  mutate(res_pollutant = recode(res, `1` = names(summer_lap)[1], `2` = names(summer_lap)[2], `3` = names(summer_lap)[3],
-                                 `4` = names(summer_lap)[4], `5` = names(summer_lap)[5])) %>% 
+  mutate(cond_pollutant = recode(given, `1` = names(winter_lap)[1], `2` = names(winter_lap)[2], `3` = names(winter_lap)[3],
+                                 `4` = names(winter_lap)[4], `5` = names(winter_lap)[5])) %>% 
+  mutate(res_pollutant = recode(res, `1` = names(winter_lap)[1], `2` = names(winter_lap)[2], `3` = names(winter_lap)[3],
+                                 `4` = names(winter_lap)[4], `5` = names(winter_lap)[5])) %>% 
   relocate(6,.after=9) %>% relocate(6,.after = 9) %>% dplyr::select(c(1:7))
-xtable(tbl_summer[c(1:4,5,9,13,17),])
-xtable(tbl_summer[c(5:8,1,10,14,18),])
-xtable(tbl_summer[c(9:12,2,6,15,19),])
-xtable(tbl_summer[c(13:16,3,7,11,20),])
-xtable(tbl_summer[c(17:20,4,8,12,16),])
+xtable(tbl_winter[c(1:4,5,9,13,17),])
+xtable(tbl_winter[c(5:8,1,10,14,18),])
+xtable(tbl_winter[c(9:12,2,6,15,19),])
+xtable(tbl_winter[c(13:16,3,7,11,20),])
+xtable(tbl_winter[c(17:20,4,8,12,16),])
  
