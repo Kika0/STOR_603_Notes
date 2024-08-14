@@ -303,7 +303,7 @@ for (j in 1:5) {
         Z %>% as.data.frame() %>%
           mutate(res=rep("model",N_sim))) %>% 
     ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
-    scale_color_manual(values = c("data"="black","model" = "#009ADA")) + scale_fill_manual(values = c("data"="black","model" = "#009ADA"))
+    scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
  ggsave(ggpairs(obs_res),filename = paste0("plots/pollution_summer_obs_z",j,".png"))
   ggsave(p,filename = paste0("plots/pollution_summer_obs_sim_z",j,".png"))
 }
@@ -366,16 +366,16 @@ p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = l
 ggsave(p,filename = paste0("plots/pollution_winter_sim",l,".png"))
 }
 
-tbl_winter <- par_est(df = winter_lap, v=v,given = 1:5,margin = "Normal", method = "one_step") %>% 
+tbl_summer <- par_est(df = summer_lap, v=v,given = 1:5,margin = "Normal", method = "one_step") %>% 
   dplyr::select(lik,a,b,mu,sig,given,res) %>% 
-  mutate(cond_pollutant = recode(given, `1` = names(winter_lap)[1], `2` = names(winter_lap)[2], `3` = names(winter_lap)[3],
-                                 `4` = names(winter_lap)[4], `5` = names(winter_lap)[5])) %>% 
-  mutate(res_pollutant = recode(res, `1` = names(winter_lap)[1], `2` = names(winter_lap)[2], `3` = names(winter_lap)[3],
-                                 `4` = names(winter_lap)[4], `5` = names(winter_lap)[5])) %>% 
+  mutate(cond_pollutant = recode(given, `1` = names(summer_lap)[1], `2` = names(summer_lap)[2], `3` = names(summer_lap)[3],
+                                 `4` = names(summer_lap)[4], `5` = names(summer_lap)[5])) %>% 
+  mutate(res_pollutant = recode(res, `1` = names(summer_lap)[1], `2` = names(summer_lap)[2], `3` = names(summer_lap)[3],
+                                 `4` = names(summer_lap)[4], `5` = names(summer_lap)[5])) %>% 
   relocate(6,.after=9) %>% relocate(6,.after = 9) %>% dplyr::select(c(1:7))
-xtable(tbl_winter[c(1:4,5,9,13,17),])
-xtable(tbl_winter[c(5:8,1,10,14,18),])
-xtable(tbl_winter[c(9:12,2,11,15,19),])
-xtable(tbl_winter[c(13:16,3,12,16,20),])
-xtable(tbl_winter[c(17:20,4,8,12,16),])
+xtable(tbl_summer[c(1:4,5,9,13,17),])
+xtable(tbl_summer[c(5:8,1,10,14,18),])
+xtable(tbl_summer[c(9:12,2,6,15,19),])
+xtable(tbl_summer[c(13:16,3,7,11,20),])
+xtable(tbl_summer[c(17:20,4,8,12,16),])
  
