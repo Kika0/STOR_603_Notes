@@ -328,7 +328,7 @@ ukcp18 <- ukcp18[,1:1716]
 # remove mean from the data
 # try shifting all the data with the corresponding yearly coefficients
 
-y <- as.numeric(ukcp18[100,7:1716])
+y <- as.vector(unlist(ukcp18[sample(1:445,size=50),7:1716])) # try pooling all sites together
 I <- seq_along(y)
 gradient <- summary(lm(y~I))$coefficients[2,1]
 
@@ -339,7 +339,7 @@ for (i in seq_along(y)) {
 
 plot(I,y)
 plot(I,shift_tmp)
-ggplot() + geom_point(data.frame(I=I,y=y),mapping=aes(x=I,y=y)) + geom_smooth(data.frame(I=I,y=y),mapping=aes(x=I,y=y))+ geom_point(data.frame(I=I,shift_tmp=shift_tmp),mapping = aes(x=I,y=shift_tmp),col="#C11432")
+ggplot() + geom_point(data.frame(I=I,y=y),mapping=aes(x=I,y=y),size=0.1,alpha=0.5)+ geom_point(data.frame(I=I,shift_tmp=shift_tmp),mapping = aes(x=I,y=shift_tmp),col="#C11432",size=0.1,alpha=0.5)  + geom_smooth(data.frame(I=I,y=y),mapping=aes(x=I,y=y))
 conv <- CnvRttPol(latlon = data.frame(long=ukcp18$Longitude,lat=ukcp18$Latitude),spol_coor = c(gr_npole_lon, gr_npole_lat))
 uk_sf_rot <- data.frame(lon=conv$lon,lat=conv$lat) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
@@ -482,7 +482,7 @@ tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
 uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
   arrange(is_location) 
-uk_tmp1 <- cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("two_step",nrow(uk_tmp)))
+uk_tmp1 <- cbind(uk_tmp,tmp1) %>% mutate(margin="AGG",method=rep("two_step",nrow(uk_tmp)))
 
 cond_var <- 200
 tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")
@@ -511,7 +511,7 @@ uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>%
 uk_tmp3 <- rbind(uk_tmp3,rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("sequential",nrow(uk_tmp))),uk_tmp2) %>% 
                    mutate(cond_site = sites[cond_var]))
 
-pa <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="two_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 50"),
-                   tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="sequential")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 200"),             
-                   tm_shape(uk_tmp3 %>% filter(given==cond_var & method=="one_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 350"),ncol=3)
+pa <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==50 & method=="two_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 50"),
+                   tm_shape(uk_tmp3 %>% filter(given==200 & method=="sequential")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 200"),             
+                   tm_shape(uk_tmp3 %>% filter(given==350 & method=="one_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 350"),ncol=3)
 pa
