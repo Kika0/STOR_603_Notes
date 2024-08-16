@@ -182,3 +182,9 @@ DLLL2step <- function(x,theta) {
   -sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T))
 }
 
+NLL_exp_norm_noise <- function(d,x,theta) {
+  phi <- theta[1]
+  sd <- theta[2]
+  -sum(dnorm(x,mean = exp(-phi*d),sd=sd))
+}
+
