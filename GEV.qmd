@@ -78,11 +78,9 @@ ggplot(df) + geom_point(aes(x=x,y=y,color=block_max)) + scale_color_manual(value
 
 fit <- gev.fit(df$y[df$block_max==TRUE])
 fit$mle
-
-#gamGPDfit(x=df,datvar='y',threshold = 2.5,xiFrhs = xiFrhs)
 ```
 
-Compare the fit with the density.
+Compare the fit with the kernel smoothed density estimate.
 
 ```{r}
 g <- function(x) {
@@ -93,7 +91,6 @@ y_fit <- c()
 for (i in seq_along(x_fit)) {
   y_fit[i] <- g(x_fit[i])
 }
-#plot(x_fit,y_fit)
 df_fit <- data.frame(x_fit,y_fit)
 ggplot() + geom_density(df %>% filter(block_max==TRUE),mapping=aes(y)) + geom_line(df_fit,mapping = aes(x_fit,y_fit),color='#c11432') + theme_minimal()
 ```
@@ -106,9 +103,6 @@ fit <- gev.fit(venice[,2])
 fit$mle
 x_fit <- seq(70,200,1)
 y_fit <- c()
-g <- function(x) {
-  1/fit$mle[2] * (1 + fit$mle[3]*((x - fit$mle[1])/fit$mle[2] )   )^(-(1+1/fit$mle[3]))* exp(-(1 + fit$mle[3]*((x - fit$mle[1])/fit$mle[2] ))^(-1/fit$mle[3]) )
-}
 for (i in seq_along(x_fit)) {
   y_fit[i] <- g(x_fit[i])
 }
@@ -117,32 +111,7 @@ ggplot() + geom_density(venice,mapping=aes(y)) + geom_line(df_fit,mapping = aes(
 
 ```
 
-```{r}
-N <- 1000
-norm <- rnorm(N)
-ex <- rexp(N)
-
-plot(norm,ex)
-
-hist(norm)
-hist(ex)
-
-u_1 <- pnorm(norm)
-u_2 <- pexp(ex)
-
-u_1 %>% head()
-plot(u_1,u_2)
-
-n_1 <- qnorm(u_1)
-n_2 <- qnorm(u_2)
-plot(n_1,n_2)
-
-par_1 <- 1/(1-u_1)
-par_2 <- 1/(1-u_2)
-plot(par_1,par_2)
-```
-
-## Plot Gumbel distribution using PIT
+## Plot Gumbel distribution function using PIT
 
 ```{r}
 mu <- 1
