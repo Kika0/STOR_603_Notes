@@ -56,7 +56,7 @@ observed_residuals <- function(df=sims,given=1,v=0.99) {
   return(Z)
 }
 
-# generate from the model ----
+# simulate from the model ----
 set.seed(11)
 N <- 5000
 v <- 0.99
