@@ -66,13 +66,12 @@ gev.fit(venice[,2])
 ```
 
 ```{r}
-df <- data.frame(x=1:10000, y=rnorm(10000,0,1))
-df$block_max <- rep(FALSE,10000)
-for (i in 1:100) {
-  df$block_max[df$y==(max(df$y[(100*(i-1)+1):(100*i)]))] <- TRUE
+df <- data.frame(x=1:(365*nrow(venice)), y=rnorm(n = 365*nrow(venice),mean = 0,sd = 1))
+df$block_max <- rep(FALSE,365*nrow(venice))
+for (i in 1:nrow(venice)) {
+  df$block_max[df$y==(max(df$y[(365*(i-1)+1):(365*i)]))] <- TRUE
 }
-ggplot(df) + geom_point(aes(x=x,y=y,colour=factor(block_max)))
-
+ggplot(df) + geom_point(aes(x=x,y=y,color=block_max)) + scale_color_manual(values=c("black","#C11432"))
 ```
 
 ```{r}
