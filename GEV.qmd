@@ -22,35 +22,6 @@ theme_update(plot.title = element_text(hjust = 0.5),
         panel.border = element_rect(colour = "black", fill = NA))
 ```
 
-## Block maxima
-
-Suppose we generate from normal distribution. And we have block maxima from every $100$ observations.
-
-```{r}
-df <- data.frame(x=1:10000, y=rnorm(10000,0,1))
-df$block_max <- rep(FALSE,10000)
-for (i in 1:100) {
-  df$block_max[df$y==(max(df$y[(100*(i-1)+1):(100*i)]))] <- TRUE
-}
-ggplot(df) + geom_point(aes(x=x,y=y,colour=factor(block_max)))
-```
-
-Suppose we plot only the block maxima.
-
-```{r}
-ggplot(df %>% filter(block_max==TRUE)) + geom_point(aes(x=x,y=y))
-```
-
-Model with GEV.
-
-```{r}
-ggplot(df %>% filter(block_max==TRUE),aes(y)) + geom_density()
-```
-
-```{r}
-ggplot(df,aes(y) ) + geom_density()
-```
-
 ### Return level plots
 
 Exercise recreating Fig. 3.1 from Coles' book. Possible typo in the book as the $x$-axis should be $- \log(-\log(1-p))$ and not $\log(-\log(1-p))$.
@@ -60,7 +31,7 @@ Exercise recreating Fig. 3.1 from Coles' book. Possible typo in the book as the 
 mu <- rep(0,3)
 sigma <- rep(1,3)
 xi <- c(-0.2,0,0.2)
-U <- runif(10000) %>% sort()
+U <- runif(100000) %>% sort()
 z_p_neg <- c()
 z_p_pos <- c()
 z_p_0 <- c()
@@ -403,14 +374,14 @@ mle <- gpd.fit(x,threshold=u)$mle
 # c(f$mle[2]-qnorm(p=0.975)*f$se[2],f$mle[2]+qnorm(p=0.975)*f$se[2])
 
 temp <- data.frame(Temperature=x)
-# calculate GEV inverse CDF
+# calculate GPD inverse CDF
 GPD_inv <- function(mle,threshold,p) {
   sig <- mle[1]
   xi <- mle[2]
  z <- threshold + (sig * (p^(-xi) - 1))/xi
  return(z)
 }
-# calculate GEV CDF
+# calculate GPD CDF
 GPD <- function(z,mle,threshold) {
   sig <- mle[1]
   xi <- mle[2]
