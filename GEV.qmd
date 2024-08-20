@@ -207,18 +207,18 @@ uk_autumn <- readRDS("data/uk_1999_2079_autumn.RDS")
 ```{r}
 # combine to 1 and take only London
 tmp <- c()
-# for (i in 1:81) {
-#   tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-#                                       (uk_spring[uk_spring$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-#                                       (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-#                                       (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
-# }
 for (i in 1:81) {
-  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_spring[uk_spring$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_summer[uk_summer$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_autumn[uk_autumn$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
+  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_spring[uk_spring$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
 }
+# for (i in 1:81) {
+#   tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+#                                       (uk_spring[uk_spring$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+#                                       (uk_summer[uk_summer$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+#                                       (uk_autumn[uk_autumn$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
+# }
 # calculate yearly maxima
 x <- c()
 for (i in 1:81) {
@@ -252,7 +252,7 @@ plot(I,shift_tmp)
 ```
 
 ```{r}
-x <- tmp
+x <- shift # use annual maxima with removed trend
 mle <- gev_fit(x)$mle
 temp <- data.frame(Temperature=sort(x))
 # calculate upper and lower bounds for 95% CI to add to the plots
@@ -269,7 +269,7 @@ p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), col
   ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
 df <- GEV_QQ(sort(x))%>% mutate(GEV_Ulow=qgev(p=Ulow,loc=mle[1],scale=mle[2],shape=mle[3])) %>%  mutate(Ulow=Ulow) %>% mutate(Uup=Uup)%>% mutate(GEV_Uup=qgev(p=Uup,loc=mle[1],scale=mle[2],shape=mle[3]))
 p2 <- df %>% ggplot()  + 
-  geom_segment(aes(x = min(x), y = min(x), xend = max(x), yend = max(x)), color = "#C11432",size=1.2,alpha=0.5)+
+  geom_segment(aes(x = min(x), y = min(x), xend = max(Model), yend = max(Data)), color = "#C11432",size=1.2,alpha=0.5)+
   geom_point(aes(y=Data,x=Model)) + geom_line(aes(x=Model,y=GEV_Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Model,y=GEV_Ulow), linetype="dashed", color="#C11432")  +
   geom_ribbon(aes(x=Model,ymin=GEV_Uup,ymax=GEV_Ulow), fill="#C11432", alpha=0.2)+
   ggtitle("Quantile Plot ") + ylab("Empirical") + xlab("Model") 
