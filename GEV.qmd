@@ -128,8 +128,7 @@ Port Pirie data not available in the package, maybe try with Venice sea-levels d
 
 ```{r}
 data(portpirie)
-venice[,2]
-x=gev.fit(portpirie[,2])
+x=gev.fit(portpirie)
 gev.diag(x)
 ```
 
@@ -138,14 +137,13 @@ Try to recreate the likelihood function.
 The function gets longer as initial values of the parameters are either pre-specified or calculated from the data. Therefore, `gev_fit.R` script contains the function.
 
 ```{r}
-x <- portpirie[,2]
+x <- portpirie
 gev.diag(gev_fit(x))
 # the function could return very high values 
 # that cannot be minimum negative likelihood like 10^6
-# would include in further development
 ```
 
-Success! The plotting function works with the likelihood function and produces desired output.
+Success! The plotting function works with the likelihood function.
 
 ### GEV plot functions
 
@@ -209,12 +207,12 @@ uk_autumn <- readRDS("data/uk_1999_2079_autumn.RDS")
 ```{r}
 # combine to 1 and take only London
 tmp <- c()
-for (i in 1:81) {
-  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_spring[uk_spring$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
-}
+# for (i in 1:81) {
+#   tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+#                                       (uk_spring[uk_spring$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+#                                       (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+#                                       (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
+# }
 for (i in 1:81) {
   tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
                                       (uk_spring[uk_spring$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
@@ -226,7 +224,7 @@ x <- c()
 for (i in 1:81) {
   x[i] <- max(tmp[(360*(i-1)+1):(i*360)])
 }
-I <- seq_along(X)
+I <- seq_along(x)
 gradient <- summary(lm(x~I))$coefficients[2,1]
 
 shift <- c()
