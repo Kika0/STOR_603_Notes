@@ -20,41 +20,6 @@ theme_replace(
   panel.grid.minor = element_blank(),
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
-# calculate the observed residuals
-observed_residuals <- function(df=sims,given=1,v=0.99) {
-  j <- given
-  a_hat <- b_hat <- res_var <- c()
-  tmp_z <- tmp_z1 <- c()
-  df_orig <- df
-  names(df) <- paste0("Y",1:ncol(df))
-  d <- ncol(df)
-  Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
-  n_v <- nrow(Y_given_1_extreme)
-  res <- c(1:d)[-j]
-  init_par <- c()
-  for (i in 2:d) {
-    # optimise using the initial parameters
-    init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-    init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
-    opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-    a_hat <- opt$par[1]
-    # a_hat <- 1
-    b_hat <- opt$par[2]
-    # b_hat <- 0
-    res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
-    Y1 <- Y_given_1_extreme[,j]
-    Y2 <- Y_given_1_extreme[,res[i-1]]
-    tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
-  }
-  Z <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
-    mutate(row = row_number()) %>%
-    tidyr::pivot_wider(names_from = res_var, values_from = tmp_z) %>% 
-    dplyr::select(-row)
-  if (sum(names(df_orig)!=paste0("Y",1:ncol(df_orig)))==ncol(df_orig)) {
-    names(Z) <- names(df_orig)[-j]
-  }
-  return(Z)
-}
 
 # simulate from the model ----
 set.seed(11)

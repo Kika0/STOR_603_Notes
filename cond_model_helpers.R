@@ -145,54 +145,40 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
   return(par_sum)
 }
 
-plot_residual <- function(sims,v=0.99) {
-  df <- sims %>% dplyr::select(starts_with("Y"))
-  par_sum <- data.frame(matrix(nrow=5,ncol=0))
-  
-  # Y_not_1_extreme <- df %>% filter(Y_1<quantile(Y_1,v))
-  Z_2 <- c()
-  Z_3 <- c()
-  Z_N_2 <- c()
-  Z_N_3 <- c()
-  given <- c()
+# calculate the observed residuals
+observed_residuals <- function(df=sims,given=1,v=0.99) {
+  j <- given
+  a_hat <- b_hat <- res_var <- c()
+  tmp_z <- tmp_z1 <- c()
+  df_orig <- df
+  names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
-  for (j in 1:ncol(df)) {
-    Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
-    res <- c(1:d)[-j]
-    opt <- list()
-    for (i in 2:d) {
-      # get initial parameters
-      init_opt <- optim(par=c(1,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))$par
-      init_par <- c(init_opt[1],0.2,init_opt[2],init_opt[3])
-      # optimise using the initial parameters
-      opt[[i-1]] <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
-    }
-    a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
-    b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
-    mu_hat <- c(opt[[1]]$par[3],opt[[2]]$par[3])
-    sig_hat <- c(opt[[1]]$par[4],opt[[2]]$par[4])
-    
-    # generate residual Z ----
-    Y_1 <- Y_given_1_extreme[,j]
-    Y_2 <- Y_given_1_extreme[,res[1]]
-    Y_3 <- Y_given_1_extreme[,res[2]]
-    
-   tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
-   tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
-    
-   Z_2 <- append(Z_2,tmp_z2)
-   Z_3 <- append(Z_3,tmp_z3)
-   given <- append(given,rep(j,50))
-    
-    # calculate the normal using the PIT
-    Z_N_2 <- append(Z_N_2,qnorm(F_smooth_Z(tmp_z2)))
-    Z_N_3 <- append(Z_N_3,qnorm(F_smooth_Z(tmp_z3)))
-    
-    rho_hat <- cor(Z_N_2,Z_N_3)
-    # par_sum <- cbind(par_sum,data.frame(matrix(round(c(a_hat,b_hat,mu_hat,sig_hat,rep(rho_hat,2)),3),nrow=5,ncol=2,byrow=TRUE)))
- par_sum <- data.frame(Z_2,Z_3,Z_N_2,Z_N_3,given)
-     }
-  return(par_sum)
+  Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+  n_v <- nrow(Y_given_1_extreme)
+  res <- c(1:d)[-j]
+  init_par <- c()
+  for (i in 2:d) {
+    # optimise using the initial parameters
+    init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
+    opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    a_hat <- opt$par[1]
+    # a_hat <- 1
+    b_hat <- opt$par[2]
+    # b_hat <- 0
+    res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
+    Y1 <- Y_given_1_extreme[,j]
+    Y2 <- Y_given_1_extreme[,res[i-1]]
+    tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
+  }
+  Z <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
+    mutate(row = row_number()) %>%
+    tidyr::pivot_wider(names_from = res_var, values_from = tmp_z) %>% 
+    dplyr::select(-row)
+  if (sum(names(df_orig)!=paste0("Y",1:ncol(df_orig)))==ncol(df_orig)) {
+    names(Z) <- names(df_orig)[-j]
+  }
+  return(Z)
 }
 
 
