@@ -321,7 +321,7 @@ ggplot() +
 
 ```{r}
 u <- 32
-x <- sort(tmp[tmp>u])
+x <- sort(shift_tmp[shift_tmp>u])
 mle <- gpd.fit(x,threshold=u)$mle
 # CI for xi
 # f <- gpd.fit(x,threshold=u)
@@ -355,7 +355,7 @@ model <- GPD_inv(mle=model_par,threshold=u,p=q) #z generated from the model
 # calculate upper and lower bounds for 95% CI to add to the plots
 Ulow<-sapply(seq_along(x), function(i){qbeta(0.025, i, length(x)+1-i)})
 Uup<-sapply(seq_along(x), function(i){qbeta(0.975, i, length(x)+1-i)})
-Model <- temp %>% select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle)) %>% 
+Model <- temp %>% dplyr::select(Temperature) %>% mutate(Model=GEV(z=Temperature,mle=mle)) %>% 
   mutate(Ulow=Ulow) %>% mutate(Uup=Uup) 
 #est <- GEV_inv(U=q,mle=est_par) #z generated from GEV empirical estimates
 dat <- x %>% sort()
@@ -366,9 +366,9 @@ return(data.frame(q=q,Model=model,Data=dat,Ulow=Ulow,Uup=Uup))
 # calculate upper and lower bounds for 95% CI to add to the plots
 Ulow<-sapply(seq_along(x), function(i){qbeta(0.025, i, length(x)+1-i)})
 Uup<-sapply(seq_along(x), function(i){qbeta(0.975, i, length(x)+1-i)})
-Model <- temp %>%  select(Temperature) %>% mutate(Model=GPD(z=Temperature,mle=mle,threshold=u)) %>% 
+Model <- temp %>%  dplyr::select(Temperature) %>% mutate(Model=GPD(z=Temperature,mle=mle,threshold=u)) %>% 
   mutate(Ulow=Ulow) %>% mutate(Uup=Uup) 
-Empirical <- temp %>% select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
+Empirical <- temp %>% dplyr::select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
 df <- temp %>% left_join(Empirical,by="Temperature") %>% left_join(Model,by="Temperature")
 df %>% head()
 p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) +
