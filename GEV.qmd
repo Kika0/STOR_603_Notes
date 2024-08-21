@@ -293,22 +293,17 @@ v <- apply(d, 1, q.form, m = fit$cov)
 CI <- data.frame(u= q + 1.96 * sqrt(v),l=q - 1.96 * sqrt(v))
 # add also 95% bootstrap interval
  fit_boot <- data.frame(mu=numeric(),sig=numeric(),xi=numeric())
+ bf <- data.frame(f=f)
   for (i in 1:100) {
     # sample data
     xs <- sample(x=x,size=length(x),replace=TRUE)
     # fit GEV
     fit <- gev.fit(x=xs,show=FALSE)
     fit_boot[nrow(fit_boot) +1,] <- fit$mle
+    bf <- cbind(bf,GEV_inv(U=f,mle=fit$mle))
   }
-
-fb <-  fit_boot %>% arrange(mu) %>% slice(3:98)
-top_bottom <- fb %>% slice(c(1,n()))
-# probboot <- pgev(q=x,loc=fit$mle[1],scale=fit$mle[2],shape=fit$mle[3])
-# boot <- boot[probboot> 0.025 & probboot <0.975]
-# probboot <- probboot[probboot> 0.025 & probboot <0.975]
-# bootstrap <- data.frame(boot,probboot)
-zu <- GEV_inv(U=f,mle=as.numeric(top_bottom[2,]))
-zl <- GEV_inv(U=f,mle=as.numeric(top_bottom[1,]))
+zu <- as.numeric(bf[,2:101] %>% apply(c(1),FUN=function(x) {quantile(x=x,p=0.975)}))
+zl <- as.numeric(bf[,2:101] %>% apply(c(1),FUN=function(x) {quantile(x=x,p=0.025)}))
 df <- df %>% mutate(zu=zu,zl=zl)
 ggplot() +
   geom_line(aes(x=-1/log(df$p),y=df$z)) +
