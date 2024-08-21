@@ -23,7 +23,7 @@ theme_replace(
 
 # simulate from the model ----
 set.seed(11)
-N <- 5000
+N <- 50000
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
@@ -31,25 +31,26 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 # explore residuals transformed to uniform margins
 # ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
 # transform to Uniform margins and fit a vine
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+j <- 1
+fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                         trunclevel = 3, indeptest = TRUE)
 fit3
-fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
-                             trunclevel = 2, indeptest = FALSE)
-fit2
-fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
-                             trunclevel = 1, indeptest = FALSE)
-fit1
-RVineClarkeTest(data=(observed_residuals(df = sims,given = 2,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
-                RVM1 = fit1,RVM2 = fit2)
-
-plot(fit3,edge.labels = "family")
+# fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+#                              trunclevel = 2, indeptest = FALSE)
+# fit2
+# fit1 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+#                              trunclevel = 1, indeptest = FALSE)
+# fit1
+# RVineClarkeTest(data=(observed_residuals(df = sims,given = 2,v = 0.99) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+#                 RVM1 = fit1,RVM2 = fit2)
+# 
+# plot(fit3,edge.labels = "family")
 # simulate from the copula
-N_sim <- 50
+N_sim <- N*(1-v)
 Zsim <- RVineSim(N=N_sim,RVM=fit3)
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
-obs_res <- observed_residuals(df = sims,given = 1,v = 0.99) 
+obs_res <- observed_residuals(df = sims,given = 1,v = v) 
 to_opt <- function(z) {
   return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
 }
@@ -65,8 +66,8 @@ pairs(obs_res)
 obsr <- (obs_res %>% 
     apply(c(2),FUN=row_number)) 
 for (i in 1:nrow(obsr)) {
-  for (j in 1:ncol(obsr)) {
-    obsr[i,j] <- obsr[i,j]/(nrow(sims)*(1-v)+1)
+  for (k in 1:ncol(obsr)) {
+    obsr[i,k] <- obsr[i,k]/(nrow(sims)*(1-v)+1)
   }
 }
 
@@ -80,26 +81,26 @@ rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",N*(1-v))),
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
 
 # simulate
+v_sim <- v
 Z_star <- as.data.frame(Z)
-U <- runif(500)
-Y_1_gen <- -log(2*(1-0.999)) + rexp(500)
-Gen_Y_1 <- data.frame(Y1=Y_1_gen)
+U <- runif(N_sim)
+Y1_gen <- -log(2*(1-v_sim)) + rexp(N_sim)
+Gen_Y1 <- data.frame(Y1=Y1_gen)
 
 # for each Y, generate a residual and calculate Y_2
-Y1 <- Gen_Y_1$Y1
+Y1 <- Gen_Y1$Y1
 Y2 <- a_hat*Y1 + Y1^b_hat *Z_star[,1]
 Y3 <-  a_hat*Y1 + Y1^b_hat *Z_star[,2]
 Y4 <- a_hat*Y1 + Y1^b_hat *Z_star[,3]
 Y5 <-  a_hat*Y1 + Y1^b_hat *Z_star[,4]
 res <- c(1:d)[-j]
-Gen_Y_1 <- Gen_Y_1 %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim=rep("model",nrow(Z_star)))
-names(Gen_Y_1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim="model")
+names(Gen_Y1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
 # generate Y_1 (extrapolate so above largest observed value)
 
 #plot
-d <- ncol(df)
+d <- ncol(sims)
 Y_given_1_extreme <- sims %>% filter(sims[,j]>quantile(sims[,j],v))
-
 tmp <- data.frame(Y_given_1_extreme[,j],
                 Y_given_1_extreme[,res[1]],
                 Y_given_1_extreme[,res[2]],
@@ -107,15 +108,14 @@ tmp <- data.frame(Y_given_1_extreme[,j],
                 Y_given_1_extreme[,res[4]]) %>%
   mutate(sim=rep("data",nrow(Y_given_1_extreme)))
 names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
-Gen_orig <- rbind(Gen_Y_1,tmp)
+Gen_orig <- rbind(Gen_Y1,tmp)
 ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
 
 # for loop to condition on each variable ----
 v <- 0.99 # threshold for conditioning
-v_sim <- 0.999 # threshold for simulation
+v_sim <- 0.99 # threshold for simulation
 N_sim <- 100 # number of observations to simulate
-d <- 5
 p_est <- c() # numeric of estimated probabilities of all extreme
 for (l in 1:5) {
 fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
