@@ -370,10 +370,28 @@ Model <- temp %>%  dplyr::select(Temperature) %>% mutate(Model=GPD(z=Temperature
   mutate(Ulow=Ulow) %>% mutate(Uup=Uup) 
 Empirical <- temp %>% dplyr::select(Temperature) %>% arrange(Temperature) %>% mutate(Empirical=row_number()/(nrow(temp)+1)) 
 df <- temp %>% left_join(Empirical,by="Temperature") %>% left_join(Model,by="Temperature")
+
+# add also 95% bootstrap interval
+ fit_boot <- data.frame(sig=numeric(),xi=numeric())
+ bf <- data.frame(x=x)
+  for (i in 1:100) {
+    # sample data
+    xs <- sort(sample(x=x,size=length(x),replace=TRUE))
+    # fit GEV
+    fit <- gpd.fit(x=xs,threshold=u,show = FALSE)
+    fit_boot[nrow(fit_boot) +1,] <- fit$mle
+    bf <- cbind(bf,GPD(z=xs,mle=fit$mle,threshold=u))
+  }
+zu <- as.numeric(bf[,2:101] %>% apply(MARGIN = c(1),FUN=function(x) {quantile(x=x,p=0.975,na.rm=TRUE)}))
+zl <- as.numeric(bf[,2:101] %>% apply(c(1),FUN=function(x) {quantile(x=x,p=0.025,na.rm=TRUE)}))
+df <- df %>% mutate("zu"=zu) %>% mutate("zl"=zl)
 df %>% head()
 p1 <- df %>% ggplot()  + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.5)+ geom_point(aes(x=Empirical,y=Model)) +
   geom_line(aes(x=Empirical,y=Uup),linetype="dashed", color="#C11432")  + geom_line(aes(x=Empirical,y=Ulow), linetype="dashed", color="#C11432")  + 
+  geom_line(aes(x=Empirical,y=zl), linetype="dashed", color="#009ADA") +
+  geom_line(aes(x=Empirical,y=zu), linetype="dashed", color="#009ADA") +
   geom_ribbon(aes(x=Empirical,ymin=Uup,ymax=Ulow), fill="#C11432", alpha=0.2)+
+    geom_ribbon(aes(x=Empirical,ymin=zu,ymax=zl), fill="#C11432", alpha=0.2)+
   ggtitle("Probability Plot") + xlab("Empirical") + ylab("Model")
 df <- GPD_QQ(x=temp[,1],mle=mle,threshold=u) %>% mutate(GPD_Ulow=qgpd(p=Ulow,loc=u,scale=mle[1],shape=mle[2])) %>%  mutate(Ulow=Ulow) %>% mutate(Uup=Uup)%>% mutate(GPD_Uup=qgpd(p=Uup,loc=u,scale=mle[1],shape=mle[2]))
 x <- temp[,1]
