@@ -207,18 +207,18 @@ uk_autumn <- readRDS("data/uk_1999_2079_autumn.RDS")
 ```{r}
 # combine to 1 and take only London
 tmp <- c()
-for (i in 1:81) {
-  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_spring[uk_spring$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-                                      (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
-}
 # for (i in 1:81) {
-#   tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-#                                       (uk_spring[uk_spring$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-#                                       (uk_summer[uk_summer$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
-#                                       (uk_autumn[uk_autumn$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
+#   tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+#                                       (uk_spring[uk_spring$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+#                                       (uk_summer[uk_summer$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+#                                       (uk_autumn[uk_autumn$is_location=="london",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
 # }
+for (i in 1:81) {
+  tmp[((i-1)*360+1):(i*360)] <- c((uk_winter[uk_winter$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_spring[uk_spring$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_summer[uk_summer$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector),
+                                      (uk_autumn[uk_autumn$is_location=="birmingham",((90*(i-1))+7):((90*i)+6)] %>% as_vector))
+}
 # calculate yearly maxima
 x <- c()
 for (i in 1:81) {
@@ -282,11 +282,9 @@ The next plot is return level plot.
 
 ```{r}
 df1 <- df
-x <- temp[,1]
-#fit <- gev_fit(x)
-fit <- as.vector(top_bottom[1,])
+fit <- gev_fit(x)
 f <- seq(0.999,0.01,-0.001)
-z <- GEV_inv(U=p,mle=fit$mle)
+z <- GEV_inv(U=f,mle=fit$mle)
 df <- data.frame(p=f,z)
 #f <- p
 q <- gevq(fit$mle, 1 - f)
@@ -294,25 +292,28 @@ d <- t(gev.rl.gradient(a = fit$mle, p = 1 - f))
 v <- apply(d, 1, q.form, m = fit$cov)
 CI <- data.frame(u= q + 1.96 * sqrt(v),l=q - 1.96 * sqrt(v))
 # add also 95% bootstrap interval
- boot <-   rgev(length(x),loc=fit$mle[1],scale=fit$mle[2],shape=fit$mle[3])
- fit_boot <- gev_fit(boot)$mle
- 
-#  fit_boot <- data.frame(mu=numeric(),sig=numeric(),xi=numeric())
-#   for (i in 1:1000) {
-#      boot <-   rgev(length(x),loc=fit$mle[1],scale=fit$mle[2],shape=fit$mle[3])
-#  fit_boot[nrow(fit_boot) +1,] <- gev_fit(boot)$mle
-#  
-#   }
-#  
-# fb <-  fit_boot %>% arrange(mu) %>% slice(26:975) 
-# top_bottom <- fb %>% slice(c(1,n()))
-# probboot <- pgev(q=boot,loc=fit$mle[1],scale=fit$mle[2],shape=fit$mle[3])  
+ fit_boot <- data.frame(mu=numeric(),sig=numeric(),xi=numeric())
+  for (i in 1:100) {
+    # sample data
+    xs <- sample(x=x,size=length(x),replace=TRUE)
+    # fit GEV
+    fit <- gev.fit(x=xs,show=FALSE)
+    fit_boot[nrow(fit_boot) +1,] <- fit$mle
+  }
+
+fb <-  fit_boot %>% arrange(mu) %>% slice(3:98)
+top_bottom <- fb %>% slice(c(1,n()))
+# probboot <- pgev(q=x,loc=fit$mle[1],scale=fit$mle[2],shape=fit$mle[3])
 # boot <- boot[probboot> 0.025 & probboot <0.975]
 # probboot <- probboot[probboot> 0.025 & probboot <0.975]
 # bootstrap <- data.frame(boot,probboot)
-ggplot() + 
+zu <- GEV_inv(U=f,mle=as.numeric(top_bottom[2,]))
+zl <- GEV_inv(U=f,mle=as.numeric(top_bottom[1,]))
+df <- df %>% mutate(zu=zu,zl=zl)
+ggplot() +
   geom_line(aes(x=-1/log(df$p),y=df$z)) +
- # geom_point(aes(x=-1/log(bootstrap$probboot),y=bootstrap$boot))+
+    geom_line(aes(x=-1/log(df$p),y=df$zu),col="#009ADA") +
+  geom_line(aes(x=-1/log(df$p),y=df$zl),col="#009ADA") +
   geom_line(aes(x=-1/log(df$p),y=CI$u),col="#C11432",linetype="dashed") +
   geom_line(aes(x=-1/log(df$p),y=CI$l),col="#C11432", linetype="dashed") +
   geom_ribbon(aes(x=-1/log(df$p),ymin=CI$u,ymax=CI$l), fill="#C11432", alpha=0.2)+
