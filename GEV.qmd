@@ -456,55 +456,6 @@ ggplot() +
   ylab(TeX("$z_p$"))   
 ```
 
-### Time dependence study
-
-
-```{r}
-plot_frechet <- function(N) {
-  set.seed(1)
- U_1 <- runif(N)
-X_1 <- -1/(log(U_1))
-U_2 <- runif(N)
-X_2 <- -1/(log(U_2))
-ggplot(data.frame(X_1=X_1/N,X_2=X_2/N)) + geom_point(aes(x=X_1,y=X_2),alpha=0.3,size=2) +
-  xlab(TeX(paste0("$X_1/",N,"$"))) +
-  ylab(TeX(paste0("$X_2/",N,"$"))) 
-}
-
-# plot radial and angular components
-plot_r_w_frechet <- function(N) {
-  set.seed(1)
- U_1 <- runif(N)
-X_1 <- -1/(log(U_1))
-U_2 <- runif(N)
-X_2 <- -1/(log(U_2))
-R <- (X_1+X_2)/N
-W <- (X_1/N)/(R)
-ggplot(data.frame(R=R,W=W)) + geom_point(aes(x=W,y=R),alpha=0.3,size=2) +
-  ylab(TeX(paste0("$(X_1+X_2)/",N,"$"))) +
-  xlab(TeX(paste0("$X_1/(X_1+X_2)$"))) 
-}
-
-
-#p1 <- plot_frechet(N=50)
-p1 <- plot_frechet(N=50000)
-p2 <- plot_r_w_frechet(N=50000)
-grid.arrange(p1,p2,ncol=2)
-
-# plot radial and angular components
-U_1 <- runif(N)
-X_1 <- -1/(log(U_1))
-U_2 <- runif(N)
-X_2 <- -1/(log(U_2))
-R <- X_1/N+X_2/N
-W <- (X_1/N)/(R)
-plot(R,W)
-X_3 <- X_1[R>0.1]
-W_1 <- W[R>0.01]
-R_1 <- R[R>0.01]
-plot(log(R_1),W_1)
-```
-
 ### 5.2 Maxima of stationary sequences
 
 Simulate series $X_i=\max (Y_{i-1}, Y_i)$ where $Y$ has cdf $F_Y(y)= \exp \left\{ -\frac{1}{(a+1)y} \right\}$ for different values of $a$.
@@ -693,16 +644,16 @@ grid.arrange(p1,p2,ncol=2)
  
 ### Transformation to Gumbel margins
 
-Use PIT to transform Port Pirie data to have Gumbel margins (as motivated by Heffernan and Tawn (2004)).
+Use PIT to transform Port Pirie data to have Gumbel margins (as motivated by Heffernan and Tawn (2004)) and Uniform margins to explore different marginal transformations of the data.
 
 ```{r}
 # create x and y quantile variables
 data(portpirie)
 portpirie <- data.frame(SeaLevel=portpirie,Year=seq(1,length(portpirie),1))
-U <- portpirie %>% select(SeaLevel,Year) %>% arrange(SeaLevel) %>% mutate(u=row_number()/(nrow(portpirie)+1))
+U <- portpirie %>% dplyr::select(SeaLevel,Year) %>% arrange(SeaLevel) %>% mutate(u=row_number()/(nrow(portpirie)+1))
 # generate Gumbel margins
 
-df <- portpirie %>% left_join((U %>% select(Year,u)),by="Year") 
+df <- portpirie %>% left_join((U %>% dplyr::select(Year,u)),by="Year") 
 df <- df %>% mutate(Gumbel=-log(-log(u)))
 df %>% head()
 
