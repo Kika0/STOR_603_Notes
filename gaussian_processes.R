@@ -376,10 +376,10 @@ uk_tmp3 <- data.frame("lik" = numeric(),"lika" = numeric() ,"likb" = numeric(),"
                       "delta" = numeric(),"deltal" = numeric(),"deltau" = numeric(),
                       "given" = numeric(), "res" = numeric(),
                       "margin" = character(), "method" =character(), "cond_site" = character() )
-
+v <- 0.98
 for (cond_site in 1:3) {
 cond_var <- cond_site
-tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="two_step")
+tmp_est <- par_est(sims,v=v,given=c(cond_var),margin = "AGG", method="two_step")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4+cond_var) %>% pull()
 tmp_est$coast_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4) %>% pull()
 tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
@@ -389,7 +389,7 @@ uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>%
    arrange(is_location) 
 uk_tmp1 <- cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("two_step",nrow(uk_tmp)))
 
-tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="one_step")
+tmp_est <- par_est(sims,v=v,given=c(cond_var),margin = "AGG", method="one_step")
 tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4+cond_var) %>% pull()
 tmp_est$coast_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4) %>% pull()
 tmp <- tmp_est %>% mutate(given=factor(given,levels = cond_var))
@@ -399,7 +399,7 @@ uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>%
   arrange(is_location) 
 uk_tmp2 <- rbind(cbind(uk_tmp,tmp1) %>% mutate(margin=rep("AGG",nrow(uk_tmp)),method=rep("one_step",nrow(uk_tmp))),uk_tmp1)
 
-tmp_est <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")
+tmp_est <- par_est(sims,v=v,given=c(cond_var),margin = "AGG", method="sequential")
 tmp_est$pair_dist <- NA
 # tmp_est$pair_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4+cond_var) %>% pull()
 tmp_est$coast_dist <- ukcp18 %>% arrange(is_location) %>% filter(is_location != tolower(sites[cond_var])) %>%  dplyr::select(4) %>% pull()
