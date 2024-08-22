@@ -23,7 +23,7 @@ theme_replace(
 
 # simulate from the model ----
 set.seed(11)
-N <- 50000
+N <- 5000
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
@@ -112,6 +112,14 @@ Gen_orig <- rbind(Gen_Y1,tmp)
 ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
 
+# model diagnostics:PP plot ----
+# start with observed residuals
+tmpz <- rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",N*(1-v))),
+      Z %>% as.data.frame() %>%
+        mutate(res=rep("model",N*(1-v))))
+observed <- tmpz %>% filter(res=="data") %>% dplyr::select(1) %>% pull()
+simulated <- tmpz %>% filter(res=="model") %>% dplyr::select(1) %>% pull()
+PP_plot(observed = observed,simulated = simulated)
 # for loop to condition on each variable ----
 v <- 0.99 # threshold for conditioning
 v_sim <- 0.99 # threshold for simulation
