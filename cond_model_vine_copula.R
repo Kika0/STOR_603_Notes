@@ -120,6 +120,7 @@ tmpz <- rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",N*(1-v))),
 observed <- tmpz %>% filter(res=="data") %>% dplyr::select(1) %>% pull()
 simulated <- tmpz %>% filter(res=="model") %>% dplyr::select(1) %>% pull()
 PP_plot(observed = observed,simulated = simulated)
+PP_plot(observed=rnorm(50),simulated=rnorm(50))
 # for loop to condition on each variable ----
 v <- 0.99 # threshold for conditioning
 v_sim <- 0.99 # threshold for simulation
