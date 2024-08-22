@@ -23,7 +23,7 @@ theme_replace(
 
 # simulate from the model ----
 set.seed(11)
-N <- 5000
+N <- 50000
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
@@ -120,7 +120,13 @@ tmpz <- rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",N*(1-v))),
 observed <- tmpz %>% filter(res=="data") %>% dplyr::select(1) %>% pull()
 simulated <- tmpz %>% filter(res=="model") %>% dplyr::select(1) %>% pull()
 PP_plot(observed = observed,simulated = simulated)
-PP_plot(observed=rnorm(50),simulated=rnorm(50))
+PP_plot(observed=rnorm(500),simulated=rnorm(500))
+
+# compare all observed and simulated residuals
+observed <- as.data.frame(obs_res %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated <- Zsim %>% apply(MARGIN=1,FUN=max) 
+PP_plot(observed = observed,simulated = simulated)
+
 # for loop to condition on each variable ----
 v <- 0.99 # threshold for conditioning
 v_sim <- 0.99 # threshold for simulation
