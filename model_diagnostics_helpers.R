@@ -8,16 +8,6 @@ if (length(X1)!=length(X2)) {
 }
 X <- c(X1,X2)
 x <- sort(X) # sequence to evaluate emp distribution estimates
-# p1 <- p2 <- c()
-# p11 <- p22 <- c()
-# Y1 <- sample(size=length(X1),x=X,replace = FALSE)
-# Y2 <- lubridate::setdiff(X,Y1)
-# for (i in 1:length(x)) {
-#   p11[i] <- sum(Y1<x[i])/length(Y1)
-#   p22[i] <- sum(Y2<x[i])/length(Y2)
-# }
-# p1 <- append(p1,p11)
-# p2 <- append(p2,p22)
 a1 <- a2 <- c()
 for (i in 1:length(x)) {
   a1[i] <- sum(X1<x[i])/length(X1)
