@@ -138,10 +138,10 @@ simulated3 <- as.data.frame(Zsim) %>% dplyr::select(1:3) %>% apply(MARGIN=1,FUN=
 observed4 <- as.data.frame(obs_res %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
 simulated4 <- as.data.frame(Zsim) %>% dplyr::select(1:4) %>% apply(MARGIN=1,FUN=max) 
 
-grid.arrange(PP_plot(observed = observed1,simulated = simulated1),
-             PP_plot(observed = observed2,simulated = simulated2),
-             PP_plot(observed = observed3,simulated = simulated3),
-             PP_plot(observed = observed4,simulated = simulated4),ncol=2)
+grid.arrange(PP_plot(observed = observed1,simulated = simulated1, title = TeX("$K=\\{1\\}$")),
+             PP_plot(observed = observed2,simulated = simulated2, title = TeX("$K=\\{1,2\\}$")),
+             PP_plot(observed = observed3,simulated = simulated3, title = TeX("$K=\\{1,2,3\\}$")),
+             PP_plot(observed = observed4,simulated = simulated4, title = TeX("$K=\\{1,2,3,4\\}$")),ncol=2)
 
 # for loop to condition on each variable ----
 v <- 0.99 # threshold for conditioning
