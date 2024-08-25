@@ -1,4 +1,4 @@
-PP_plot <- function(observed,simulated) {
+PP_plot <- function(observed,simulated,title=NULL) {
 # first do for one dimension
 X1 <- observed
 X2 <- simulated
@@ -48,7 +48,7 @@ dfCI <- data.frame(u1=u1,u2=u2,l1=l1,l2=l2)
     geom_line(data=dfCI,aes(x=u1,y=u2),linetype="dashed", col="#C11432") +
     geom_line(aes(x=x,y=y), col="black")  +
     geom_ribbon(data=dfCI,aes(x=u1,ymin=l2,ymax=u2), fill="#C11432", alpha=0.2) +
-    # ggtitle("Probability Plot") + 
+    ggtitle(title) + 
     xlab("Empirical") + ylab("Model")
   return(pp)
 }
