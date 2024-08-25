@@ -22,7 +22,7 @@ theme_replace(
   panel.border = element_rect(colour = "black", fill = NA) )
 
 # simulate from the model ----
-set.seed(167)
+set.seed(11)
 N <- 50000
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
@@ -128,7 +128,9 @@ observed <- as.data.frame(Gen_orig %>% filter(sim=="data") %>% apply(c(2),FUN=ro
 simulated <- as.data.frame(Gen_orig %>% filter(sim=="model") %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN=max)
 PP_plot(observed = observed,simulated = simulated)
 # compare all observed and simulated residuals for different subsets K
-
+# K={1},{1,2},{1,2,3},{1,2,3,4}
+observed1 <- as.data.frame(obs_res %>% dplyr::select(1) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated1 <- as.data.frame(Zsim) %>% dplyr::select(1) %>% apply(MARGIN=1,FUN=max) 
 observed2 <- as.data.frame(obs_res %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
 simulated2 <- as.data.frame(Zsim) %>% dplyr::select(1:2) %>% apply(MARGIN=1,FUN=max) 
 observed3 <- as.data.frame(obs_res %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
@@ -136,7 +138,8 @@ simulated3 <- as.data.frame(Zsim) %>% dplyr::select(1:3) %>% apply(MARGIN=1,FUN=
 observed4 <- as.data.frame(obs_res %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
 simulated4 <- as.data.frame(Zsim) %>% dplyr::select(1:4) %>% apply(MARGIN=1,FUN=max) 
 
-grid.arrange(PP_plot(observed = observed2,simulated = simulated2),
+grid.arrange(PP_plot(observed = observed1,simulated = simulated1),
+             PP_plot(observed = observed2,simulated = simulated2),
              PP_plot(observed = observed3,simulated = simulated3),
              PP_plot(observed = observed4,simulated = simulated4),ncol=2)
 
