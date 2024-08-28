@@ -23,7 +23,7 @@ theme_replace(
 
 # simulate from the model ----
 set.seed(11)
-N <- 50000
+N <- 5000
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
@@ -113,13 +113,23 @@ ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(c
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
 
 # model diagnostics:PP plot ----
-# start with observed residuals
+# start with observed and simulated residuals
 tmpz <- rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",N*(1-v))),
       Z %>% as.data.frame() %>%
         mutate(res=rep("model",N*(1-v))))
-observed <- tmpz %>% filter(res=="data") %>% dplyr::select(1) %>% pull()
-simulated <- tmpz %>% filter(res=="model") %>% dplyr::select(1) %>% pull()
-PP_plot(observed = observed,simulated = simulated)
+observed1 <- tmpz %>% filter(res=="data") %>% dplyr::select(1) %>% pull()
+simulated1 <- tmpz %>% filter(res=="model") %>% dplyr::select(1) %>% pull()
+observed2 <- tmpz %>% filter(res=="data") %>% dplyr::select(2) %>% pull()
+simulated2 <- tmpz %>% filter(res=="model") %>% dplyr::select(2) %>% pull()
+observed3 <- tmpz %>% filter(res=="data") %>% dplyr::select(3) %>% pull()
+simulated3 <- tmpz %>% filter(res=="model") %>% dplyr::select(3) %>% pull()
+observed4 <- tmpz %>% filter(res=="data") %>% dplyr::select(4) %>% pull()
+simulated4 <- tmpz %>% filter(res=="model") %>% dplyr::select(4) %>% pull()
+
+grid.arrange(PP_plot(observed = observed1,simulated = simulated1, title = TeX("$Z_2$")),
+             PP_plot(observed = observed2,simulated = simulated2, title = TeX("$Z_3$")),
+             PP_plot(observed = observed3,simulated = simulated3, title = TeX("$Z_4$")),
+             PP_plot(observed = observed4,simulated = simulated4, title = TeX("$Z_5$")),ncol=2)
 # PP_plot(observed=rnorm(500),simulated=rnorm(500))
 observed <- Gen_orig %>% filter(sim=="data") %>% dplyr::select(1) %>% pull()
 simulated <- Gen_orig %>% filter(sim=="model") %>% dplyr::select(1) %>% pull()
@@ -146,7 +156,7 @@ grid.arrange(PP_plot(observed = observed1,simulated = simulated1, title = TeX("$
 # for loop to condition on each variable ----
 v <- 0.99 # threshold for conditioning
 v_sim <- 0.99 # threshold for simulation
-N_sim <- 100 # number of observations to simulate
+N_sim <- 50 # number of observations to simulate
 p_est <- c() # numeric of estimated probabilities of all extreme
 for (l in 1:5) {
 fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
