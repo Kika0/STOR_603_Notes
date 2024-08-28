@@ -10,8 +10,8 @@ X <- c(X1,X2)
 x <- sort(X) # sequence to evaluate emp distribution estimates
 a1 <- a2 <- c()
 for (i in 1:length(x)) {
-  a1[i] <- sum(X1<x[i])/length(X1)
-  a2[i] <- sum(X2<x[i])/length(X2)
+  a1[i] <- sum(X1<x[i]+10^(-8))/length(X1)
+  a2[i] <- sum(X2<x[i]+10^(-8))/length(X2)
 }
 # add also 95% bootstrap interval
 bf1 <- data.frame(x=x)
@@ -23,8 +23,8 @@ for (i in 1:1000) {
   Y2 <- lubridate::setdiff(X,Y1)
   # calculate empirical probabilities
   for (i in 1:length(x)) {
-    p1[i] <- sum(Y1<x[i])/length(Y1)
-    p2[i] <- sum(Y2<x[i])/length(Y2)
+    p1[i] <- sum(Y1<x[i]+10^(-8))/length(Y1)
+    p2[i] <- sum(Y2<x[i]+10^(-8))/length(Y2)
   }
   bf1 <- cbind(bf1,p1)
   bf2 <- cbind(bf2,p2)
