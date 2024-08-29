@@ -34,19 +34,19 @@ bf2num <- as.numeric(unlist(bf2[,2:1001]))
 u1 <- l1 <-  seq(0,1,length.out=length(X1)+1)
 u2 <- l2 <- c()
 for (i in 1:length(u1)) {
-  u2[i] <- quantile(bf2num[bf1num==round(u1[i],2)],p=0.975)
-  l2[i] <- quantile(bf2num[bf1num==round(u1[i],2)],p=0.025)
+  u2[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.975)
+  l2[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.025)
 }
 
 df <- data.frame(x=a1,y=a2)
 dfCI <- data.frame(u1=u1,u2=u2,l1=l1,l2=l2)
-  pp <- df %>% ggplot()  + 
+  pp <- ggplot()  + 
     # geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.2) +
     # geom_point(aes(x=Empirical,y=Model)) + 
     # # geom_point(data=dftmp,mapping=aes(x=x,y=y),col="#C11432") +
     geom_line(data=dfCI,aes(x=l1,y=l2),linetype="dashed", col="#C11432") +
     geom_line(data=dfCI,aes(x=u1,y=u2),linetype="dashed", col="#C11432") +
-    geom_line(aes(x=x,y=y), col="black")  +
+    geom_line(data=df,aes(x=x,y=y), col="black")  +
     geom_ribbon(data=dfCI,aes(x=u1,ymin=l2,ymax=u2), fill="#C11432", alpha=0.2) +
     ggtitle(title) + 
     xlab("Empirical") + ylab("Model") + coord_fixed()
