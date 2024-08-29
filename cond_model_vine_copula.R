@@ -407,6 +407,13 @@ fitw <- RVineStructureSelect(as.data.frame(winter %>% apply(c(2),FUN=row_number)
                      trunclevel = 3, indeptest = FALSE)
 # plot simulated and observed data on unifrom margins
 winter_sim <- RVineSim(N=nrow(winter),RVM=fitw)
+sims <- as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1))
+sl <- winter_sim
+grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]),title = names(sims)[1]),
+             PP_plot(observed=as.numeric(sims[,2]),simulated = as.numeric(sl[,2]),title = names(sims)[2]),
+             PP_plot(observed=as.numeric(sims[,3]),simulated = as.numeric(sl[,3]),title = names(sims)[3]),
+             PP_plot(observed=as.numeric(sims[,4]),simulated = as.numeric(sl[,4]),title = names(sims)[4]),
+             PP_plot(observed=as.numeric(sims[,5]),simulated = as.numeric(sl[,5]),title = names(sims)[5]),ncol=2)
 
 rbind(as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)) %>% mutate(res=rep("data",nrow(winter))),
       winter_sim %>% as.data.frame() %>%
@@ -424,17 +431,45 @@ rbind(as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)) %>% 
   ggpairs(columns = 1:5,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
 
+sims <- as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1))
+sl <- summer_sim
+grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]),title = names(sims)[1]),
+             PP_plot(observed=as.numeric(sims[,2]),simulated = as.numeric(sl[,2]),title = names(sims)[2]),
+             PP_plot(observed=as.numeric(sims[,3]),simulated = as.numeric(sl[,3]),title = names(sims)[3]),
+             PP_plot(observed=as.numeric(sims[,4]),simulated = as.numeric(sl[,4]),title = names(sims)[4]),
+             PP_plot(observed=as.numeric(sims[,5]),simulated = as.numeric(sl[,5]),title = names(sims)[5]),ncol=2)
+
 
 # transform to Laplace margins
 winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 
+# transform back residuals to original margins
+# can use kernel smoothed distribution as initial step
+obs_res <- observed_residuals(df = sims,given = 1,v = v) 
+
 # fit vine copula to the observed residuals
 colnames(winter_lap) <- paste0("Y",1:5)
 obsz <- observed_residuals(df = winter_lap,v=0.7,given = 1)
 v <- 0.7
-RVineStructureSelect((observed_residuals(df = winter_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
+fit <- RVineStructureSelect((observed_residuals(df = winter_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
                      trunclevel = 3, indeptest = FALSE)
+
+N_sim <- nrow(winter)*(1-v)
+Zsim <- RVineSim(N=N_sim,RVM=fit)
+observed2 <- as.data.frame(obsz %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated2 <- as.data.frame(Zsim) %>% dplyr::select(1:2) %>% apply(MARGIN=1,FUN=max) 
+observed3 <- as.data.frame(obsz %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated3 <- as.data.frame(Zsim) %>% dplyr::select(1:3) %>% apply(MARGIN=1,FUN=max) 
+observed4 <- as.data.frame(obsz %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated4 <- as.data.frame(Zsim) %>% dplyr::select(1:4) %>% apply(MARGIN=1,FUN=max) 
+
+resmax <- grid.arrange(PP_plot(observed = observed2,simulated = simulated2, title = TeX("$K=\\{1,2\\}$")),
+                       PP_plot(observed = observed3,simulated = simulated3, title = TeX("$K=\\{1,2,3\\}$")),
+                       PP_plot(observed = observed4,simulated = simulated4, title = TeX("$K=\\{1,2,3,4\\}$")),ncol=3)
+
+
+
 for (j in 1:5) {
   obsz <- observed_residuals(df = winter_lap,v=0.7,given = j)
   ggsave(ggpairs(obsz),filename = paste0("plots/pollution_winter_obs_z",j,".png"))
