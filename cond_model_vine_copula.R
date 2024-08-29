@@ -23,11 +23,47 @@ theme_replace(
 
 # simulate from the model ----
 set.seed(11)
-N <- 5000
+N <- 500
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+# fit a vine to all the data
+fit <- RVineStructureSelect(sims %>% apply(c(2),FUN=row_number)/(nrow(sims)+1),
+                             trunclevel = 3, indeptest = TRUE)
+sim <- RVineSim(N=N,RVM=fit)
+# transform back to laplace margins
+# sl <- as.data.frame(sim %>% apply(c(1,2),FUN=unif_laplace_pit)) %>% as.data.frame()
+sl <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]),title = TeX("$Y_1$")),
+             PP_plot(observed=as.numeric(sims[,2]),simulated = as.numeric(sl[,2]),title = TeX("$Y_2$")),
+             PP_plot(observed=as.numeric(sims[,3]),simulated = as.numeric(sl[,3]),title = TeX("$Y_3$")),
+             PP_plot(observed=as.numeric(sims[,4]),simulated = as.numeric(sl[,4]),title = TeX("$Y_4$")),
+             PP_plot(observed=as.numeric(sims[,5]),simulated = as.numeric(sl[,5]),title = TeX("$Y_5$")),ncol=2)
+
+# compare all observed and simulated data for different subsets K
+# K={1},{1,2},{1,2,3},{1,2,3,4},{1,2,3,4,5}
+observed2 <- as.data.frame(sims %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
+# simulated2 <- as.data.frame(sim) %>% dplyr::select(1:2)  %>% apply(MARGIN=1,FUN = max)
+simulated2 <- as.data.frame(sl %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
+observed3 <- as.data.frame(sims %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
+# simulated3 <-  as.data.frame(sim) %>% dplyr::select(1:3)  %>% apply(MARGIN=1,FUN = max)
+simulated3 <- as.data.frame(sl %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
+
+observed4 <- as.data.frame(sims %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
+# simulated4 <-  as.data.frame(sim) %>% dplyr::select(1:4)  %>% apply(MARGIN=1,FUN = max)
+simulated4 <-  as.data.frame(sl %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
+observed5 <- as.data.frame(sims %>% dplyr::select(1:5) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
+# simulated5 <-  as.data.frame(sim) %>% dplyr::select(1:5)  %>% apply(MARGIN=1,FUN = max)
+simulated5 <-  as.data.frame(sl %>% dplyr::select(1:5) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
+
+datmax <- grid.arrange(PP_plot(observed = observed2,simulated = simulated2, title = TeX("$K=\\{1,2\\}$")),
+                       PP_plot(observed = observed3,simulated = simulated3, title = TeX("$K=\\{1,2,3\\}$")),
+                       PP_plot(observed = observed4,simulated = simulated4, title = TeX("$K=\\{1,2,3,4\\}$")),
+                       PP_plot(observed = observed5,simulated = simulated5, title = TeX("$K=\\{1,2,3,4,5\\}$")),ncol=2)
+
 # explore residuals transformed to uniform margins
 # ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
 # transform to Uniform margins and fit a vine
@@ -187,7 +223,7 @@ ggsave(filename = "plots/datmax.png",resmax,width=10,height=10)
 # for loop to condition on each variable ----
 v <- 0.99 # threshold for conditioning
 v_sim <- 0.99 # threshold for simulation
-N_sim <- 50 # number of observations to simulate
+N_sim <- 500 # number of observations to simulate
 p_est <- c() # numeric of estimated probabilities of all extreme
 for (l in 1:5) {
 fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
@@ -237,7 +273,7 @@ Y2 <- Y_given_1_extreme[,res[1]]
 Y3 <- Y_given_1_extreme[,res[2]]
 Y4 <- Y_given_1_extreme[,res[3]]
 Y5 <- Y_given_1_extreme[,res[4]]
-tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim=rep("data",nrow(sims)*(1-v)))
+tmp <- data.frame(Y1,Y2,Y3,Y4,Y5) %>% mutate(sim="data")
 names(tmp) <- c(paste0("Y",l),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
 # l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
 # u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3,Y4,Y5)
@@ -249,7 +285,78 @@ p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = l
 vL_sim <- frechet_laplace_pit(qfrechet(v_sim))
 p_est[l] <- Gen_Y_1 %>% filter(Y1>vL_sim,Y2>vL_sim,Y3>vL_sim,Y4>vL_sim,Y5>vL_sim) %>% 
   nrow()/N_sim*(1-v_sim)
+tmpz <- rbind(obs_res %>% as.data.frame() %>% mutate(res=rep("data",N*(1-v))),
+              Z %>% as.data.frame() %>%
+                mutate(res=rep("model",N*(1-v))))
+observed1 <- tmpz %>% filter(res=="data") %>% dplyr::select(1) %>% pull()
+simulated1 <- tmpz %>% filter(res=="model") %>% dplyr::select(1) %>% pull()
+observed2 <- tmpz %>% filter(res=="data") %>% dplyr::select(2) %>% pull()
+simulated2 <- tmpz %>% filter(res=="model") %>% dplyr::select(2) %>% pull()
+observed3 <- tmpz %>% filter(res=="data") %>% dplyr::select(3) %>% pull()
+simulated3 <- tmpz %>% filter(res=="model") %>% dplyr::select(3) %>% pull()
+observed4 <- tmpz %>% filter(res=="data") %>% dplyr::select(4) %>% pull()
+simulated4 <- tmpz %>% filter(res=="model") %>% dplyr::select(4) %>% pull()
+
+reseach <- grid.arrange(PP_plot(observed = observed1,simulated = simulated1, title = TeX("$Z_2$")),
+                        PP_plot(observed = observed2,simulated = simulated2, title = TeX("$Z_3$")),
+                        PP_plot(observed = observed3,simulated = simulated3, title = TeX("$Z_4$")),
+                        PP_plot(observed = observed4,simulated = simulated4, title = TeX("$Z_5$")),ncol=2)
+ggsave(filename=paste0("plots/reseachcond",l,"Nsim",N_sim,".png"),reseach,width=10,height=10)
+# PP_plot(observed=rnorm(500),simulated=rnorm(500))
+observed <- Gen_orig %>% filter(sim=="data") %>% dplyr::select(1) %>% pull()
+simulated <- Gen_orig %>% filter(sim=="model") %>% dplyr::select(1) %>% pull()
+PP_plot(observed = observed,simulated = simulated)
+# compare all observed and simulated residuals for different subsets K
+# K={1},{1,2},{1,2,3},{1,2,3,4}
+observed2 <- as.data.frame(obs_res %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated2 <- as.data.frame(Zsim) %>% dplyr::select(1:2) %>% apply(MARGIN=1,FUN=max) 
+observed3 <- as.data.frame(obs_res %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated3 <- as.data.frame(Zsim) %>% dplyr::select(1:3) %>% apply(MARGIN=1,FUN=max) 
+observed4 <- as.data.frame(obs_res %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated4 <- as.data.frame(Zsim) %>% dplyr::select(1:4) %>% apply(MARGIN=1,FUN=max) 
+
+resmax <- grid.arrange(PP_plot(observed = observed2,simulated = simulated2, title = TeX("$K=\\{1,2\\}$")),
+                       PP_plot(observed = observed3,simulated = simulated3, title = TeX("$K=\\{1,2,3\\}$")),
+                       PP_plot(observed = observed4,simulated = simulated4, title = TeX("$K=\\{1,2,3,4\\}$")),ncol=3)
+
+ggsave(filename = paste0("plots/resmaxcond",l,"Nsim",N_sim,".png"),resmax,width=10,height=3)
+
+# compare observed and simulated data for each variable
+observed1 <- Gen_orig %>% filter(sim=="data") %>% dplyr::select(1) %>% pull()
+simulated1 <- Gen_orig %>% filter(sim=="model") %>% dplyr::select(1) %>% pull()
+observed2 <- Gen_orig %>% filter(sim=="data") %>% dplyr::select(2) %>% pull()
+simulated2 <- Gen_orig %>% filter(sim=="model") %>% dplyr::select(2) %>% pull()
+observed3 <- Gen_orig %>% filter(sim=="data") %>% dplyr::select(3) %>% pull()
+simulated3 <- Gen_orig %>% filter(sim=="model") %>% dplyr::select(3) %>% pull()
+observed4 <- Gen_orig %>% filter(sim=="data") %>% dplyr::select(4) %>% pull()
+simulated4 <- Gen_orig %>% filter(sim=="model") %>% dplyr::select(4) %>% pull()
+observed5 <- Gen_orig %>% filter(sim=="data") %>% dplyr::select(5) %>% pull()
+simulated5 <- Gen_orig %>% filter(sim=="model") %>% dplyr::select(5) %>% pull()
+dateach <- grid.arrange(PP_plot(observed = observed1,simulated = simulated1, title = TeX("$Y_1$")),
+                        PP_plot(observed = observed2,simulated = simulated2, title = TeX("$Y_2$")),
+                        PP_plot(observed = observed3,simulated = simulated3, title = TeX("$Y_3$")),
+                        PP_plot(observed = observed4,simulated = simulated4, title = TeX("$Y_4$")),
+                        PP_plot(observed = observed5,simulated = simulated5, title = TeX("$Y_5$")),ncol=3)
+ggsave(filename = paste0("plots/dateachcond",l,"Nsim",N_sim,".png"),dateach,width=10,height=7)
+# compare all observed and simulated data for different subsets K
+# K={1},{1,2},{1,2,3},{1,2,3,4},{1,2,3,4,5}
+observed2 <- as.data.frame(Gen_orig %>% filter(sim=="data") %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated2 <- as.data.frame(Gen_orig %>% filter(sim=="model") %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+observed3 <- as.data.frame(Gen_orig %>% filter(sim=="data") %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated3 <- as.data.frame(Gen_orig %>% filter(sim=="model") %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+observed4 <- as.data.frame(Gen_orig %>% filter(sim=="data") %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated4 <- as.data.frame(Gen_orig %>% filter(sim=="model") %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+observed5 <- as.data.frame(Gen_orig %>% filter(sim=="data") %>% dplyr::select(1:5) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated5 <- as.data.frame(Gen_orig %>% filter(sim=="model") %>% dplyr::select(1:5) %>% apply(c(2),FUN=row_number)/(nrow(sims)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+
+datmax <- grid.arrange(PP_plot(observed = observed2,simulated = simulated2, title = TeX("$K=\\{1,2\\}$")),
+                       PP_plot(observed = observed3,simulated = simulated3, title = TeX("$K=\\{1,2,3\\}$")),
+                       PP_plot(observed = observed4,simulated = simulated4, title = TeX("$K=\\{1,2,3,4\\}$")),
+                       PP_plot(observed = observed5,simulated = simulated5, title = TeX("$K=\\{1,2,3,4,5\\}$")),ncol=2)
+
+ggsave(filename = paste0("plots/datmaxcond",l,"Nsim",N_sim,".png"),datmax,width=10,height=10)
 }
+
 p_lowest <- (p_est*1000 - 1.96 *(p_est*1000*(1-p_est*1000)/N_sim)^(1/2))
 p_uppest <- (p_est*1000 + 1.96 *(p_est*1000*(1-p_est*1000)/N_sim)^(1/2))
 p_est*1000
