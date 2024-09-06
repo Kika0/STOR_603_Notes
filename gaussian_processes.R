@@ -515,3 +515,9 @@ pa <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==50 & method=="two_step")) 
                    tm_shape(uk_tmp3 %>% filter(given==200 & method=="sequential")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 200"),             
                    tm_shape(uk_tmp3 %>% filter(given==350 & method=="one_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 350"),ncol=3)
 pa
+
+# use parameteric form for a ----
+# calculate distance from the conditioning site
+# transform dataframe to include a vector of x (temperature) and d (distance from the conditioning site)
+# plot a function of alpha against distance
+# simulate from the parametric form of alphato comapre with marginal fits
