@@ -519,5 +519,7 @@ pa
 # use parameteric form for a ----
 # calculate distance from the conditioning site
 # transform dataframe to include a vector of x (temperature) and d (distance from the conditioning site)
+as.vector(unlist(sims %>% filter())) %>% head()
+
 # plot a function of alpha against distance
 # simulate from the parametric form of alphato comapre with marginal fits
