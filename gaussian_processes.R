@@ -516,6 +516,6 @@ pa
 as.vector(unlist( ukcp18 %>% arrange(is_location)%>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame())) %>% head()
 x <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
 d <- (ukcp18 %>% arrange(is_location))[-cond_var,] %>% select(3+cond_var) %>% pull()
-optim(fn=NLL_exp_norm_noise,x=x,d=d)
+optim(par=c(1,1),fn=NLL_exp_norm_noise,x=x,d=d)
 # plot a function of alpha against distance
 # simulate from the parametric form of alphato compare with marginal fits
