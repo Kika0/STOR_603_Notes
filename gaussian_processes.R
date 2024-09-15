@@ -523,7 +523,7 @@ opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x,d=d)
 a <- exp(-opt$par[1]*d)
 p[[i]] <- ggplot() + geom_line(data=data.frame(x=d,y=a),aes(x=x,y=y)) +
   geom_point(data=data.frame(x=d,y=x),aes(x=x,y=y)) +
-  xlab(TeX("$\\alpha$")) + ylab("Distance")
+  ylab(TeX("$\\alpha$")) + xlab("Distance")
 }
 grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3)
 # simulate from the parametric form of alpha to compare with marginal fits
