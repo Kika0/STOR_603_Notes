@@ -516,9 +516,12 @@ pa
 as.vector(unlist( ukcp18 %>% arrange(is_location)%>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame())) %>% head()
 x <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
 d <- (ukcp18 %>% arrange(is_location))[-cond_var,] %>% select(4+cond_var) %>% pull() %>% units::drop_units()
-opt <- optim(par=c(1,1/2),fn=NLL_exp_norm_noise,x=x,d=d/1000)
+opt <- optim(par=c(1.3,0.1),fn=NLL_exp_norm_noise,x=x,d=d)
+for (i in seq(0.01,10,length.out=20)) {
+  print(optim(par=c(i,0.2),fn=NLL_exp_norm_noise,x=x,d=d))
+}
 # plot a function of alpha against distance
-a <- exp(-opt$par[1]*d/1000)
+a <- exp(-opt$par[1]*d)
 ggplot() + geom_line(data=data.frame(x=d,y=a),aes(x=x,y=y)) +
   geom_point(data=data.frame(x=d,y=x),aes(x=x,y=y))
-# simulate from the parametric form of alphato compare with marginal fits
+# simulate from the parametric form of alpha to compare with marginal fits
