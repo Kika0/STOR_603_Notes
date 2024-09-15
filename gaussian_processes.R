@@ -511,17 +511,19 @@ pa <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==50 & method=="two_step")) 
 pa
 
 # use parameteric form for a ----
-# calculate distance from the conditioning site
+# calculate distance from the 3 conditioning sites
 # transform dataframe to include a vector of x (temperature) and d (distance from the conditioning site)
-as.vector(unlist( ukcp18 %>% arrange(is_location)%>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame())) %>% head()
+p <- list()
+for (i in 1:3) {
+  cond_var <- i
 x <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
 d <- (ukcp18 %>% arrange(is_location))[-cond_var,] %>% select(4+cond_var) %>% pull() %>% units::drop_units()
-opt <- optim(par=c(1.3,0.1),fn=NLL_exp_norm_noise,x=x,d=d)
-for (i in seq(0.01,10,length.out=20)) {
-  print(optim(par=c(i,0.2),fn=NLL_exp_norm_noise,x=x,d=d))
-}
+opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x,d=d)
 # plot a function of alpha against distance
 a <- exp(-opt$par[1]*d)
-ggplot() + geom_line(data=data.frame(x=d,y=a),aes(x=x,y=y)) +
-  geom_point(data=data.frame(x=d,y=x),aes(x=x,y=y))
+p[[i]] <- ggplot() + geom_line(data=data.frame(x=d,y=a),aes(x=x,y=y)) +
+  geom_point(data=data.frame(x=d,y=x),aes(x=x,y=y)) +
+  xlab(TeX("$\\alpha$")) + ylab("Distance")
+}
+grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3)
 # simulate from the parametric form of alpha to compare with marginal fits
