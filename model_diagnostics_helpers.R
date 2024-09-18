@@ -1,4 +1,4 @@
-PP_plot <- function(observed,simulated,title=NULL) {
+PP_plot <- function(observed,simulated,title=NULL,CIcol=NULL) {
 # first do for one dimension
 X1 <- observed
 X2 <- simulated
@@ -40,14 +40,17 @@ for (i in 1:length(u1)) {
 
 df <- data.frame(x=a1,y=a2)
 dfCI <- data.frame(u1=u1,u2=u2,l1=l1,l2=l2)
+if (is.null(CIcol)) {
+  fillcol <- "#C11432"
+} else { fillcol <- CIcol}
   pp <- ggplot()  + 
-    # geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = "#C11432",size=1.2) +
+    # geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = fillcol,size=1.2) +
     # geom_point(aes(x=Empirical,y=Model)) + 
-    # # geom_point(data=dftmp,mapping=aes(x=x,y=y),col="#C11432") +
-    geom_line(data=dfCI,aes(x=l1,y=l2),linetype="dashed", col="#C11432") +
-    geom_line(data=dfCI,aes(x=u1,y=u2),linetype="dashed", col="#C11432") +
+    # # geom_point(data=dftmp,mapping=aes(x=x,y=y),col=fillcol) +
+    geom_line(data=dfCI,aes(x=l1,y=l2),linetype="dashed", col=fillcol) +
+    geom_line(data=dfCI,aes(x=u1,y=u2),linetype="dashed", col=fillcol) +
     geom_line(data=df,aes(x=x,y=y), col="black")  +
-    geom_ribbon(data=dfCI,aes(x=u1,ymin=l2,ymax=u2), fill="#C11432", alpha=0.2) +
+    geom_ribbon(data=dfCI,aes(x=u1,ymin=l2,ymax=u2), fill=fillcol, alpha=0.2) +
     ggtitle(title) + 
     xlab("Empirical") + ylab("Model") + coord_fixed()
   return(pp)
