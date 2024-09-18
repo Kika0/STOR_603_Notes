@@ -446,6 +446,7 @@ grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]
 winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 
+# PP plots for winter residuals ----
 # fit vine copula to the observed residuals
 colnames(winter_lap) <- paste0("Y",1:5)
 wintercol <- "#009ADA"
@@ -462,7 +463,8 @@ for (i in sequence(ncol(obsz))) {
  simulated <- as.data.frame(Zsim) %>% dplyr::select(all_of(i)) %>% pull()
  p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = TeX(paste0("Z_",i+1)), CIcol = wintercol)
  } 
-grid.arrange(p[[1]],p[[2]],p[[3]],p[[4]],ncol=2)  
+p1 <- grid.arrange(p[[1]],p[[2]],p[[3]],p[[4]],ncol=2)  
+ggsave(p1,filename = "plots/PPwinterres.pdf", width = 10, height = 10)
 # for loop to make PP plot for maxima over different subsets K
 p <- list()
 for (i in sequence(ncol(obsz)-1)) {
@@ -471,7 +473,38 @@ for (i in sequence(ncol(obsz)-1)) {
   Ktitle <- TeX(paste0("$K=\\{",mapply(function(x) paste(1:(x+1), collapse = ","),i),"\\}$"))
   p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = Ktitle, CIcol = wintercol)
 } 
-grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3) 
+p1 <- grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3) 
+ggsave(p1,filename = "plots/PPwinterresmax.pdf", width = 10, height = 4)
+
+# PP plots for summer residuals ----
+# fit vine copula to the observed residuals
+colnames(summer_lap) <- paste0("Y",1:5)
+summercol <- "#C11432"
+obsz <- observed_residuals(df = summer_lap,v=0.7,given = 1)
+v <- 0.7
+fit <- RVineStructureSelect((observed_residuals(df = summer_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1),
+                            trunclevel = 3, indeptest = FALSE)
+N_sim <- nrow(summer)*(1-v)
+Zsim <- RVineSim(N=N_sim,RVM=fit)
+# for loop to make PP plot for each variable
+p <- list()
+for (i in sequence(ncol(obsz))) {
+  observed <- as.data.frame(obsz %>% dplyr::select(all_of(i)) %>% apply(c(2),FUN=row_number)/(nrow(summer)*(1-v)+1)) %>% pull()
+  simulated <- as.data.frame(Zsim) %>% dplyr::select(all_of(i)) %>% pull()
+  p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = TeX(paste0("$Z_",i+1,"$")), CIcol = summercol)
+} 
+p1 <- grid.arrange(p[[1]],p[[2]],p[[3]],p[[4]],ncol=2) 
+ggsave(p1,filename = "plots/PPsummerres.pdf", width = 10, height = 10)
+# for loop to make PP plot for maxima over different subsets K
+p <- list()
+for (i in sequence(ncol(obsz)-1)) {
+  observed <- as.data.frame(obsz %>% dplyr::select(all_of(1:(i+1))) %>% apply(c(2),FUN=row_number)/(nrow(summer)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+  simulated <- as.data.frame(Zsim) %>% dplyr::select(all_of(1:(i+1))) %>% apply(MARGIN=1,FUN=max)
+  Ktitle <- TeX(paste0("$K=\\{",mapply(function(x) paste(1:(x+1), collapse = ","),i),"\\}$"))
+  p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = Ktitle, CIcol = summercol)
+} 
+p1 <- grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3) 
+ggsave(p1,filename = "plots/PPsummerresmax.pdf", width = 10, height = 4)
 
 # observed residuals conditioning on each variable
 for (j in 1:5) {
