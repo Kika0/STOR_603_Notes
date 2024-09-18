@@ -460,15 +460,23 @@ fit <- RVineStructureSelect((observed_residuals(df = winter_lap,given = 1,v = v)
 N_sim <- nrow(winter)*(1-v)
 Zsim <- RVineSim(N=N_sim,RVM=fit)
 
-observed1 <- as.data.frame(obsz %>% dplyr::select(1) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
-simulated1 <- as.data.frame(Zsim) %>% dplyr::select(1) %>% apply(MARGIN=1,FUN=max) 
-observed2 <- as.data.frame(obsz %>% dplyr::select(2) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+observed1 <- as.data.frame(obsz %>% dplyr::select(1) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) 
+simulated1 <- as.data.frame(Zsim) %>% dplyr::select(1) 
+observed2 <- as.data.frame(obsz %>% dplyr::select(2) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1))
 simulated2 <- as.data.frame(Zsim) %>% dplyr::select(2) %>% apply(MARGIN=1,FUN=max) 
-observed3 <- as.data.frame(obsz %>% dplyr::select(3) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+observed3 <- as.data.frame(obsz %>% dplyr::select(3) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1))
 simulated3 <- as.data.frame(Zsim) %>% dplyr::select(3) %>% apply(MARGIN=1,FUN=max) 
-observed4 <- as.data.frame(obsz %>% dplyr::select(4) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+observed4 <- as.data.frame(obsz %>% dplyr::select(4) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1))
 simulated4 <- as.data.frame(Zsim) %>% dplyr::select(4) %>% apply(MARGIN=1,FUN=max) 
 
+# for loop to make PP plot for each variable
+p <- list()
+for (i in sequence(ncol(obsz))) {
+ observed <- as.data.frame(obsz %>% dplyr::select(all_of(i)) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% pull()
+ simulated <- as.data.frame(Zsim) %>% dplyr::select(all_of(i)) %>% pull()
+ p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = TeX(paste0("Z_",i+1)), CIcol = "#009ADA")
+ } 
+grid.arrange(p[[1]],p[[2]],p[[3]],p[[4]],ncol=2)  
 grid.arrange(PP_plot(observed = observed1,simulated = simulated1, title = TeX("$Z_2$"), CIcol = "#009ADA"),
                         PP_plot(observed = observed2,simulated = simulated2, title = TeX("$Z_3$"), CIcol = "#009ADA"),
                         PP_plot(observed = observed3,simulated = simulated3, title = TeX("$Z_4$"), CIcol = "#009ADA"),
