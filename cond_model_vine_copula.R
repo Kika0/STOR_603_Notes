@@ -446,62 +446,41 @@ grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]
 winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 
-# transform back residuals to original margins
-# can use kernel smoothed distribution as initial step
-obs_res <- observed_residuals(df = sims,given = 1,v = v) 
-
 # fit vine copula to the observed residuals
 colnames(winter_lap) <- paste0("Y",1:5)
+wintercol <- "#009ADA"
 obsz <- observed_residuals(df = winter_lap,v=0.7,given = 1)
 v <- 0.7
 fit <- RVineStructureSelect((observed_residuals(df = winter_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
                      trunclevel = 3, indeptest = FALSE)
-
 N_sim <- nrow(winter)*(1-v)
 Zsim <- RVineSim(N=N_sim,RVM=fit)
-
-observed1 <- as.data.frame(obsz %>% dplyr::select(1) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) 
-simulated1 <- as.data.frame(Zsim) %>% dplyr::select(1) 
-observed2 <- as.data.frame(obsz %>% dplyr::select(2) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1))
-simulated2 <- as.data.frame(Zsim) %>% dplyr::select(2) %>% apply(MARGIN=1,FUN=max) 
-observed3 <- as.data.frame(obsz %>% dplyr::select(3) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1))
-simulated3 <- as.data.frame(Zsim) %>% dplyr::select(3) %>% apply(MARGIN=1,FUN=max) 
-observed4 <- as.data.frame(obsz %>% dplyr::select(4) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1))
-simulated4 <- as.data.frame(Zsim) %>% dplyr::select(4) %>% apply(MARGIN=1,FUN=max) 
-
 # for loop to make PP plot for each variable
 p <- list()
 for (i in sequence(ncol(obsz))) {
  observed <- as.data.frame(obsz %>% dplyr::select(all_of(i)) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% pull()
  simulated <- as.data.frame(Zsim) %>% dplyr::select(all_of(i)) %>% pull()
- p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = TeX(paste0("Z_",i+1)), CIcol = "#009ADA")
+ p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = TeX(paste0("Z_",i+1)), CIcol = wintercol)
  } 
 grid.arrange(p[[1]],p[[2]],p[[3]],p[[4]],ncol=2)  
-grid.arrange(PP_plot(observed = observed1,simulated = simulated1, title = TeX("$Z_2$"), CIcol = "#009ADA"),
-                        PP_plot(observed = observed2,simulated = simulated2, title = TeX("$Z_3$"), CIcol = "#009ADA"),
-                        PP_plot(observed = observed3,simulated = simulated3, title = TeX("$Z_4$"), CIcol = "#009ADA"),
-                        PP_plot(observed = observed4,simulated = simulated4, title = TeX("$Z_5$"), CIcol = "#009ADA"),ncol=2)
+# for loop to make PP plot for maxima over different subsets K
+p <- list()
+for (i in sequence(ncol(obsz)-1)) {
+  observed <- as.data.frame(obsz %>% dplyr::select(all_of(1:(i+1))) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+  simulated <- as.data.frame(Zsim) %>% dplyr::select(all_of(1:(i+1))) %>% apply(MARGIN=1,FUN=max)
+  Ktitle <- TeX(paste0("$K=\\{",mapply(function(x) paste(1:(x+1), collapse = ","),i),"\\}$"))
+  p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = Ktitle, CIcol = wintercol)
+} 
+grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3) 
 
-observed2 <- as.data.frame(obsz %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
-simulated2 <- as.data.frame(Zsim) %>% dplyr::select(1:2) %>% apply(MARGIN=1,FUN=max) 
-observed3 <- as.data.frame(obsz %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
-simulated3 <- as.data.frame(Zsim) %>% dplyr::select(1:3) %>% apply(MARGIN=1,FUN=max) 
-observed4 <- as.data.frame(obsz %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
-simulated4 <- as.data.frame(Zsim) %>% dplyr::select(1:4) %>% apply(MARGIN=1,FUN=max) 
-
-resmax <- grid.arrange(PP_plot(observed = observed2,simulated = simulated2, title = TeX("$K=\\{1,2\\}$")),
-                       PP_plot(observed = observed3,simulated = simulated3, title = TeX("$K=\\{1,2,3\\}$")),
-                       PP_plot(observed = observed4,simulated = simulated4, title = TeX("$K=\\{1,2,3,4\\}$")),ncol=3)
-
-
-
+# observed residuals conditioning on each variable
 for (j in 1:5) {
   obsz <- observed_residuals(df = winter_lap,v=0.7,given = j)
   ggsave(ggpairs(obsz),filename = paste0("plots/pollution_winter_obs_z",j,".png"))
   print(RVineStructureSelect((observed_residuals(df = winter_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
                        trunclevel = 3, indeptest = FALSE))
 }
-
+# plot observed and simulated residuals for each variable
 for (j in 1:5) {
   obs_res <- observed_residuals(df = summer_lap,v=0.7,given = j)
   fit3 <- RVineStructureSelect((observed_residuals(df = summer_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1),
@@ -528,7 +507,7 @@ for (j in 1:5) {
  ggsave(ggpairs(obs_res),filename = paste0("plots/pollution_summer_obs_z",j,".png"))
   ggsave(p,filename = paste0("plots/pollution_summer_obs_sim_z",j,".png"))
 }
-
+# plot observed and simulated data on Laplace margins cond. on each variable
 for (l in 1:5) {
 fit3 <- RVineStructureSelect((observed_residuals(df = winter_lap,given = l,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
                              trunclevel = 3, indeptest = FALSE)
