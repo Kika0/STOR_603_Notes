@@ -28,6 +28,8 @@ v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+# repeat PP plots for summer and winter dataset
+
 # fit a vine to all the data
 fit <- RVineStructureSelect(sims %>% apply(c(2),FUN=row_number)/(nrow(sims)+1),
                              trunclevel = 3, indeptest = TRUE)
@@ -409,11 +411,11 @@ fitw <- RVineStructureSelect(as.data.frame(winter %>% apply(c(2),FUN=row_number)
 winter_sim <- RVineSim(N=nrow(winter),RVM=fitw)
 sims <- as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1))
 sl <- winter_sim
-grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]),title = names(sims)[1]),
-             PP_plot(observed=as.numeric(sims[,2]),simulated = as.numeric(sl[,2]),title = names(sims)[2]),
-             PP_plot(observed=as.numeric(sims[,3]),simulated = as.numeric(sl[,3]),title = names(sims)[3]),
-             PP_plot(observed=as.numeric(sims[,4]),simulated = as.numeric(sl[,4]),title = names(sims)[4]),
-             PP_plot(observed=as.numeric(sims[,5]),simulated = as.numeric(sl[,5]),title = names(sims)[5]),ncol=2)
+grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]),title = names(sims)[1],CIcol = "#009ADA"),
+             PP_plot(observed=as.numeric(sims[,2]),simulated = as.numeric(sl[,2]),title = names(sims)[2],CIcol = "#009ADA"),
+             PP_plot(observed=as.numeric(sims[,3]),simulated = as.numeric(sl[,3]),title = names(sims)[3],CIcol = "#009ADA"),
+             PP_plot(observed=as.numeric(sims[,4]),simulated = as.numeric(sl[,4]),title = names(sims)[4],CIcol = "#009ADA"),
+             PP_plot(observed=as.numeric(sims[,5]),simulated = as.numeric(sl[,5]),title = names(sims)[5],CIcol = "#009ADA"),ncol=2)
 
 rbind(as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)) %>% mutate(res=rep("data",nrow(winter))),
       winter_sim %>% as.data.frame() %>%
@@ -457,6 +459,21 @@ fit <- RVineStructureSelect((observed_residuals(df = winter_lap,given = 1,v = v)
 
 N_sim <- nrow(winter)*(1-v)
 Zsim <- RVineSim(N=N_sim,RVM=fit)
+
+observed1 <- as.data.frame(obsz %>% dplyr::select(1) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated1 <- as.data.frame(Zsim) %>% dplyr::select(1) %>% apply(MARGIN=1,FUN=max) 
+observed2 <- as.data.frame(obsz %>% dplyr::select(2) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated2 <- as.data.frame(Zsim) %>% dplyr::select(2) %>% apply(MARGIN=1,FUN=max) 
+observed3 <- as.data.frame(obsz %>% dplyr::select(3) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated3 <- as.data.frame(Zsim) %>% dplyr::select(3) %>% apply(MARGIN=1,FUN=max) 
+observed4 <- as.data.frame(obsz %>% dplyr::select(4) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
+simulated4 <- as.data.frame(Zsim) %>% dplyr::select(4) %>% apply(MARGIN=1,FUN=max) 
+
+grid.arrange(PP_plot(observed = observed1,simulated = simulated1, title = TeX("$Z_2$"), CIcol = "#009ADA"),
+                        PP_plot(observed = observed2,simulated = simulated2, title = TeX("$Z_3$"), CIcol = "#009ADA"),
+                        PP_plot(observed = observed3,simulated = simulated3, title = TeX("$Z_4$"), CIcol = "#009ADA"),
+                        PP_plot(observed = observed4,simulated = simulated4, title = TeX("$Z_5$"), CIcol = "#009ADA"),ncol=2)
+
 observed2 <- as.data.frame(obsz %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
 simulated2 <- as.data.frame(Zsim) %>% dplyr::select(1:2) %>% apply(MARGIN=1,FUN=max) 
 observed3 <- as.data.frame(obsz %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% apply(MARGIN=1,FUN = max)
