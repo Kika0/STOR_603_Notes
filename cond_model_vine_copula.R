@@ -461,7 +461,7 @@ p <- list()
 for (i in sequence(ncol(obsz))) {
  observed <- as.data.frame(obsz %>% dplyr::select(all_of(i)) %>% apply(c(2),FUN=row_number)/(nrow(winter)*(1-v)+1)) %>% pull()
  simulated <- as.data.frame(Zsim) %>% dplyr::select(all_of(i)) %>% pull()
- p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = TeX(paste0("Z_",i+1)), CIcol = wintercol)
+ p[[i]] <- PP_plot(observed = observed,simulated = simulated, title = TeX(paste0("$Z_",i+1,"$")), CIcol = wintercol)
  } 
 p1 <- grid.arrange(p[[1]],p[[2]],p[[3]],p[[4]],ncol=2)  
 ggsave(p1,filename = "plots/PPwinterres.pdf", width = 10, height = 10)
