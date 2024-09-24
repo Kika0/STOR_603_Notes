@@ -316,30 +316,29 @@ a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
 b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
 
 # generate residual Z ----
-Y1 <- Y_given_1_extreme[,4]
-Y2 <- Y_given_1_extreme[,5]
-Y3 <- Y_given_1_extreme[,6]
+Y1 <- Y_given_1_extreme[,1]
+Y2 <- Y_given_1_extreme[,2]
+Y3 <- Y_given_1_extreme[,3]
 
-Z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
-Z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
+Z2 <- (Y2-a_hat[1]*Y1)/(Y1^b_hat[1])
+Z3 <- (Y3-a_hat[2]*Y1)/(Y1^b_hat[2])
 plot(Y1,Z2)
 plot(Y1,Z3)
 
 # calculate the normal using the PIT
-Z_N_2 <- qnorm(F_smooth_Z(Z_2))
-Z_N_3 <- qnorm(F_smooth_Z(Z_3))
-
-rho_hat <- cor(Z_N_2,Z_N_3)
+Z_N2 <- qnorm(F_smooth_Z(Z2))
+Z_N3 <- qnorm(F_smooth_Z(Z3))
+rho_hat <- cor(Z_N2,Z_N3)
 
 Z_N <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
-Z <- data.frame(Z_2,Z_3)
+Z <- data.frame(Z2,Z3)
 
 # transform back to original margins
-Z_star <- norm_to_orig(Z_N=Z_N,emp_res = Z)
+Z_star <- norm_to_orig(ZN=Z_N,emp_res = Z)
 
 U <- runif(1000)
 Y_1_gen <- -log(2*(1-0.9999)) + rexp(1000)
-Gen_Y_1 <- data.frame(Y_1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
+Gen_Y_1 <- data.frame(Y1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
 
 # for each Y, generate a residual and calculate Y_2
 Y_1 <- Gen_Y_1$Y_1
