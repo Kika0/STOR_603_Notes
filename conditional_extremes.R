@@ -53,8 +53,8 @@ grid.arrange(ggplot(tmp) + geom_point(aes(x=Y1,y=Y2,col=above_thres),size=0.5,al
 v <- 0.99
 Y_given_1_extreme <- sims %>% filter(Y1>quantile(Y1,v))
 # assume a_hat and b_hat are AD case
-a_hat <- 1
-b_hat <- 0
+a_hat <- c(1,1)
+b_hat <- c(0,0)
 # extrapolate using kernel smoothed residuals ----
 Y1 <- Y_given_1_extreme$Y1
 Y2 <- Y_given_1_extreme$Y2
@@ -66,18 +66,18 @@ cond_quantile <- function(x,Z,q,a_hat=a_hat,b_hat=b_hat) {
 
 Z2 <- Z3 <- c()
 for (i in 1:length(Y1)) {
-Z2[i] <-   (Y2[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y2[i]-a_hat*Y1[i])
-Z3[i] <-   (Y3[i]-a_hat*Y1[i])/(Y1[i]^b_hat) %>% replace_na(Y3[i]-a_hat*Y1[i])
+Z2[i] <-   (Y2[i]-a_hat[1]*Y1[i])/(Y1[i]^b_hat[1]) %>% replace_na(Y2[i]-a_hat[1]*Y1[i])
+Z3[i] <-   (Y3[i]-a_hat[2]*Y1[i])/(Y1[i]^b_hat[2]) %>% replace_na(Y3[i]-a_hat[2]*Y1[i])
 }
 
 x <- seq(min(sims)-1,max(sims)+1,length.out=10000)
-yl <- cond_quantile(x,Z=Z2,q=0.025,a_hat=a_hat,b_hat=b_hat)
-ym <- cond_quantile(x,Z=Z2,q=0.5,a_hat=a_hat,b_hat=b_hat)
-yp <- cond_quantile(x,Z=Z2,q=0.975,a_hat=a_hat,b_hat=b_hat)
+yl <- cond_quantile(x,Z=Z2,q=0.025,a_hat=a_hat[1],b_hat=b_hat[1])
+ym <- cond_quantile(x,Z=Z2,q=0.5,a_hat=a_hat[1],b_hat=b_hat[1])
+yp <- cond_quantile(x,Z=Z2,q=0.975,a_hat=a_hat[1],b_hat=b_hat[1])
 
-yl3 <- cond_quantile(x,Z3,q=0.025,a_hat=a_hat,b_hat=b_hat)
-ym3 <- cond_quantile(x,Z3,q=0.5,a_hat=a_hat,b_hat=b_hat)
-yp3 <- cond_quantile(x,Z3,q=0.975,a_hat=a_hat,b_hat=b_hat)
+yl3 <- cond_quantile(x,Z3,q=0.025,a_hat=a_hat[2],b_hat=b_hat[2])
+ym3 <- cond_quantile(x,Z3,q=0.5,a_hat=a_hat[2],b_hat=b_hat[2])
+yp3 <- cond_quantile(x,Z3,q=0.975,a_hat=a_hat[2],b_hat=b_hat[2])
 
 # plot again with data
 grid.arrange(ggplot(tmp %>% filter(above_thres=="TRUE")) + geom_point(aes(x=Y1,y=Y2,col=above_thres),size=0.8,alpha=0.5) +
@@ -307,8 +307,8 @@ v <- 0.99
 Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
 Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
 
-
 d <- 3
+opt <- list()
 for (i in c(2,3)) {
 opt[[i-1]] <- optim(par=c(1,0,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=1,sim=i,control = list(fnscale=-1))
 }
