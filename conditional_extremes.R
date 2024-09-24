@@ -405,12 +405,11 @@ print(xtable(par_summary(sims=sims),digits=3,include.rownames=FALSE))
 
 # do 1000 simulations to get CI for the estimates
 sumar <- list()
-for (i in 1:5) {
+for (i in 1:100) {
   set.seed(12*i)
   sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
     link_log(dep=1/2) %>%
     apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-  # PIT to Laplace
   sumar[[i]] <- par_summary(sims=sims)
 }
 
@@ -420,7 +419,7 @@ sigboot <- c()
 aboot <- c()
 bboot <- c()
 rhoboot <- c()
-Ys <- rep(c("Y_1","Y_2","Y_3"),length(sumar))
+Ys <- rep(c("Y1","Y2","Y3"),length(sumar))
 res <- rep(c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23"),length(sumar))
 for (i in 1:length(sumar)) {
   aboot <- append(aboot,unname(unlist(sumar[[i]][7,])))
@@ -429,8 +428,6 @@ for (i in 1:length(sumar)) {
   sigboot <- append(sigboot,unname(unlist(sumar[[i]][10,])))
   rhoboot <- append(rhoboot,unname(unlist(sumar[[i]][11,c(2,4,6)])))
 }
-
-
 
 p1 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=muboot),aes(x=x,y=y))+
   geom_boxplot(fill= c(rep("#C11432",2),rep("#66A64F",2),rep("#009ADA",2))) + xlab("Observed residuals") + ylab(TeX("$\\hat{\\mu}$")) 
