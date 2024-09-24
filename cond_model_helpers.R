@@ -111,7 +111,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
                         "delta"=nas,"deltal"=nas,"deltau"=nas,
                         "given" = rep(given,each=(d-1)), "res" = res_var)}
     if (method=="sequential") {
-  par_sum <- data.frame("lik"=nas, "lika" = lik1a,"likb"=lik1b,"lik2"=nas,
+  par_sum <- data.frame("lik"=nas, "lika" = lika,"likb"=likb,"lik2"=nas,
                         "a" = a_hat, "b" = b_hat,
                         "mu" = mu_hat,"mu_agg"=nas,
                         "sig" = sig_hat,"sig_agg"=nas,"sigl"=nas,"sigu"=nas,
@@ -131,6 +131,14 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
                           "a" = a_hat, "b" = b_hat,
                           "mu" = mu_hat,"mu_agg"=mu_agg_hat,
                           "sig" = sig_hat,"sig_agg"=sig_agg_hat,"sigl"=nas,"sigu"=nas,
+                          "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
+                          "given" = rep(given,each=(d-1)), "res" = res_var)
+  }
+  if (margin=="AGGmusig" & method=="two_step") {
+    par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=-lik2,
+                          "a" = a_hat, "b" = b_hat,
+                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
+                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
                           "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
