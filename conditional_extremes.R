@@ -329,38 +329,36 @@ plot(Y1,Z3)
 Z_N2 <- qnorm(F_smooth_Z(Z2))
 Z_N3 <- qnorm(F_smooth_Z(Z3))
 rho_hat <- cor(Z_N2,Z_N3)
-
-Z_N <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
+Nsim <- 1000
+Z_N <- mvrnorm(n=Nsim,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
 Z <- data.frame(Z2,Z3)
 
 # transform back to original margins
 Z_star <- norm_to_orig(ZN=Z_N,emp_res = Z)
 
-U <- runif(1000)
-Y_1_gen <- -log(2*(1-0.9999)) + rexp(1000)
-Gen_Y_1 <- data.frame(Y1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
+U <- runif(Nsim)
+Y1_gen <- -log(2*(1-0.9999)) + rexp(Nsim)
+Gen_Y1 <- data.frame(Y1=Y1_gen)
 
 # for each Y, generate a residual and calculate Y_2
-Y_1 <- Gen_Y_1$Y_1
-# Y_2 <- a_hat*Y_1 + Y_1^b_hat *x
-# Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
-Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,1]
-Y_3 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,2]
-Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2,Y_3=Y_3) %>% mutate(sim=rep("model",1000))
+Y1 <- Gen_Y1$Y1
+Y2 <- a_hat[1]*Y1 + Y1^b_hat[1] *Z_star[,1]
+Y3 <-  a_hat[2]*Y1 + Y1^b_hat[2] *Z_star[,2]
+Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2,Y3=Y3) %>% mutate(sim=rep("model",Nsim))
 # generate Y_1 (extrapolate so above largest observed value)
 
 #plot
-Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% dplyr::select(X_1,Y_1,Y_2,Y_3) %>% mutate(sim=rep("original_laplace",500)))
-p1 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + 
+Gen_orig <- rbind(Gen_Y1,Y_given_1_extreme %>% dplyr::select(Y1,Y2,Y3) %>% mutate(sim=rep("original_laplace",500)))
+p1 <- ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) + 
   scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
-p2 <- ggplot(Gen_orig) + geom_point(aes(x=Y_2,y=Y_3,col=sim),alpha=0.5) + 
+p2 <- ggplot(Gen_orig) + geom_point(aes(x=Y2,y=Y3,col=sim),alpha=0.5) + 
   scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
-p3 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_3,col=sim),alpha=0.5) + 
+p3 <- ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y3,col=sim),alpha=0.5) + 
   scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
 grid.arrange(p1,p2,p3,ncol=3)
 
-Z_comp <- Z_star %>% mutate(Compare=rep("Optimise_all",100))
-Z_comp <- rbind(Z_comp,Z_star%>% mutate(Compare=rep("Linear_segments",100)))
+Z_comp <- Z_star %>% mutate(Compare=rep("Optimise_all",Nsim))
+Z_comp <- rbind(Z_comp,Z_star%>% mutate(Compare=rep("Linear_segments",Nsim)))
 ggplot() +
   geom_point(Z_comp,mapping = aes(x=X1,y=X2)) +
   facet_wrap(~Compare) +
@@ -383,13 +381,13 @@ u1 <- seq(0.0001,0.9999,length.out=998)
 Zu <- c()
 Zu1 <- c()
 to_opt <- function(z) {
-  return( (mean(pnorm((z-Z_2)/density(Z_2)$bw)) - u[j])^2)
+  return( (mean(pnorm((z-Z2)/density(Z2)$bw)) - u[j])^2)
 }
 for (j in 1:length(u)) {
   Zu[j] <- optim(fn=to_opt,par=1)$par
 }
 to_opt <- function(z) {
-  return( (mean(pnorm((z-Z_2)/density(Z_2)$bw)) - u1[j])^2)
+  return( (mean(pnorm((z-Z2)/density(Z2)$bw)) - u1[j])^2)
 }
 for (j in 1:length(u1)) {
   Zu1[j] <- optim(fn=to_opt,par=1)$par
@@ -400,29 +398,19 @@ ggplot() +
   geom_point(data.frame(x=Zu,u=u),mapping = aes(x=x,y=u),col="#C11432") +
   geom_line(data.frame(x=Zu,u=u),mapping=aes(x=x,y=u),alpha=0.5,col="#C11432") +
   ylab(TeX("$s$")) +
-  xlab(TeX("$\\tilde{F}^{-1}_{2|1}\\left(s\\right)$"))
+  xlab(TeX("$\\tilde{G}^{-1}_{2}\\left(s\\right)$"))
 
 # print summary of the parameters ----
-N <- 50000
-set.seed(1312)
-sims <- generate_dep_X_Y_Y_Z(N=N)
-
-# PIT to Laplace
-sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
-  mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
-  mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
-# print summary
 print(xtable(par_summary(sims=sims),digits=3,include.rownames=FALSE))
 
 # do 1000 simulations to get CI for the estimates
 sumar <- list()
 for (i in 1:5) {
   set.seed(12*i)
-  sims <- generate_dep_X_Y_Y_Z(N=N)
+  sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+    link_log(dep=1/2) %>%
+    apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
   # PIT to Laplace
-  sims <- sims %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit))) %>% 
-    mutate(Y_2=as.numeric(map(.x=X_2,.f=frechet_laplace_pit))) %>%
-    mutate(Y_3=as.numeric(map(.x=X_3,.f=frechet_laplace_pit)))
   sumar[[i]] <- par_summary(sims=sims)
 }
 
