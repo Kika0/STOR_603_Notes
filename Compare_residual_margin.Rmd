@@ -46,7 +46,9 @@ Simulate a large sample from a logistic distribution.
 
 
 ```{r}
-par_est(df=sims,v=v,given=1,margin = "Normal", method = "two_step")
+par_est(df=sims,v=v,given=1,margin = "AGG", method = "sequential")$lik2
+par_est(df=sims,v=v,given=1,margin = "AGG", method = "two_step")$lik2
+
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
