@@ -105,7 +105,7 @@ names(Zs) <- c("Z2","Z3")
 for (i in 1:1000) {
 Zs[i,] <- Z[sample(1:nrow(Z),1,replace=TRUE),]
 }
-# probably a mistake in the function, rather optimize directly than linear segments
+# plot simulated residuals
 ggplot(Zs)+geom_point(aes(x=Z2,y=Z3),size=0.9,alpha=0.5,col="#C11432") + xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) +
    xlim(min(Zs),max(Zs)) + ylim(min(Zs),max(Zs)) + coord_fixed()
 
