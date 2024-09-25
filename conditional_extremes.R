@@ -879,14 +879,15 @@ for (i in 1:1000) {
 plot(density(x)) 
   plot(x)
 
-rAGG <- function(n,theta) {
+rAGG <- function(theta) {
+  s <- seq(0.0001,0.9999,length.out=10000)
   sigl <- theta[1]
   sigu <- theta[2]
   deltal <- theta[3]
   deltau <- theta[4]
   C <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
   AGG_sample <- c()
-  for (i in 1:n) {
+  for (i in 1:length(s)) {
   U <- runif(1)
   to_opt <- function(x) {
   if (x<0) {
@@ -899,24 +900,42 @@ rAGG <- function(n,theta) {
   AGG_sample[i] <- optim(par=0,fn=to_opt)$par
   }
   return(AGG_sample)
-}  
+} 
+
+AGG_density <- function(x,theta) {
+  sigl <- theta[1]
+  sigu <- theta[2]
+  deltal <- theta[3]
+  deltau <- theta[4]
+  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  y <- c()
+  for (i in seq(x)) {
+  if (x[i]<0) {
+  y[i] <- C_AGG*exp(-abs(x[i]/sigl)^deltal)
+  }
+  else {y[i] <- C_AGG*exp(-(x[i]/sigu)^deltau)}
+  }
+  return(y)
+}
 
 df <- data.frame(matrix(nrow=0,ncol=3))
 names(df) <- c("AGG_sample", "param","sim")
 thetas <- data.frame("sigl"=c(1/2,1,1/2,1),"sigu"=c(1,1,1,1),
            "deltal"=c(2,2,1,1),"deltau"=c(2,2,2,2))
-N <- 200000
+x <- seq(-5,5,0.0005)
+N <- length(x)
 for (i in 1:nrow(thetas)) {
-df <-   rbind(df,data.frame("AGG_sample"=rAGG(n=N,theta=as.numeric(thetas[i,])),
-              "param"=rep(paste0(thetas[i,1],",",thetas[i,2],",",thetas[i,3],",",thetas[i,4]),N),
-              "sim"=rep(i,N)))
+  df <-   rbind(df,data.frame("AGG_sample"=AGG_density(x=x,theta=as.numeric(thetas[i,])),
+                              "param"=rep(paste0(thetas[i,1],",",thetas[i,2],",",thetas[i,3],",",thetas[i,4]),N),
+                              "sim"=rep(i,N)))
 }
 df <- df %>% mutate(sim=as.factor(sim))
-ggplot(df,aes(x=AGG_sample,color=sim)) + geom_density(linewidth=1,alpha=0.7) + xlim(c(-5,5)) +
+ggplot(df,aes(x=rep(seq(-5,5,0.0005),4),y=AGG_sample,color=sim)) + geom_line(linewidth=1,alpha=0.7) + xlim(c(-5,5)) +
   scale_color_manual(name="Left tail\nparameters",
                      labels=c(TeX(paste0("$\\sigma_l=",thetas[1,1],", \\delta_l=$",thetas[1,3])),
                               TeX(paste0("$\\sigma_l=",thetas[2,1],", \\delta_l=$",thetas[2,3])),
                               TeX(paste0("$\\sigma_l=",thetas[3,1],", \\delta_l=$",thetas[3,3])),
                               TeX(paste0("$\\sigma_l=",thetas[4,1],", \\delta_l=$",thetas[4,3]))),
                      breaks=c(1,2,3,4),
-                     values=c("#C11432","#66A64F","#FDD10A","#009ADA"))
+                     values=c("#C11432","#66A64F","#FDD10A","#009ADA")) +
+  xlab(TeX("$x$")) + ylab(TeX("$f_{AGG} (x)$"))
