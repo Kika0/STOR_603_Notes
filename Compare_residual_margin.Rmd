@@ -38,7 +38,15 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 Simulate a large sample from a logistic distribution.
 
 ```{r}
-
+set.seed(11)
+N <- 50000
+v <- 0.99 # threshold for conditioning variable
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+obsr <- observed_residuals(df=sims,given=1,v=v)
+df <- data.frame(y=g_laplace(z=seq(-7.5,5,0.01),a=1/2),x=seq(-7.5,5,0.01))
+ggplot(obsr) + geom_density(mapping = aes(x=Z2)) + geom_line(data=df,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX("$Z_2$")) + ylab("Residual density function")
 ```
 
 ## Calculate MLE for different methods
