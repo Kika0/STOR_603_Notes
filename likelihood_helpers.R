@@ -136,6 +136,18 @@ dgnormsk <- function(x,mu,sig,deltal,deltau) {
   return(z)
 }
 
+dgnormsksig <- function(x,mu,sigl,sigu,delta) {
+  z <- c()
+  C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )^(-1)
+  for (i in 1:length(x)) {
+    if (x[i]<0) {
+      z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltal)
+    }
+    z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltau)
+  }
+  return(z)
+}
+
 DLLLsk <- function(x,theta,a_hat=NULL,b_hat=NULL) {
   if (is.null(a_hat)==FALSE) {
     a <- a_hat
