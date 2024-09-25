@@ -137,7 +137,11 @@ dgnormsk <- function(x,mu,sig,deltal,deltau) {
 }
 
 # density function for AGG with different scale for lower and upper tail
-dgnormsksig <- function(x,mu,sigl,sigu,delta) {
+dgnormsksig <- function(x,theta) {
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  delta <- theta[4]
   z <- c()
   C_AGG <-  (sigl/delta*gamma(1/delta) + sigu/delta*gamma(1/delta)  )^(-1)
   for (i in 1:length(x)) {
@@ -150,16 +154,24 @@ dgnormsksig <- function(x,mu,sigl,sigu,delta) {
 }
 
 # density with different both scale and shape for lower and upper tail
-dAGG <- function(x,mu,sigl,sigu,deltal,deltau) {
+NLL_AGG <- function(x,theta) {
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  deltal <- theta[4]
+  deltau <- theta[5]
   z <- c()
+  if(sigl<=0 | sigu<=0 | deltal<=0 |deltau<=0 ){return(10e10)}
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
   for (i in 1:length(x)) {
     if (x[i]<0) {
-      z[i] <- C/sigl*exp(-abs((x[i]-mu)/sigl)^deltal)
+   #   z[i] <- C_AGG/sigl*exp(-abs((x[i]-mu)/sigl)^deltal)
+   z[i] <- log(C_AGG)-log(sigl)-abs((x[i]-mu)/sigl)^deltal 
     }
-    z[i] <- C/sigu*exp(-abs((x[i]-mu)/sigu)^deltau)
+ #   z[i] <- C_AGG/sigu*exp(-abs((x[i]-mu)/sigu)^deltau)
+    z[i] <- log(C_AGG)-log(sigu)-abs((x[i]-mu)/sigu)^deltau 
   }
-  return(z)
+  return(-sum(z))
 }
 
 DLLLsk <- function(x,theta,a_hat=NULL,b_hat=NULL) {
