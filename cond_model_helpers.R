@@ -46,7 +46,7 @@ for (i in 1:ncol(ZN)) {
 
 # generate a table of parameter estimates conditional on (given) each of the specified vector of variables
 par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
-  lik <- lika <- likb <- lik2 <- a_hat <- b_hat <- mu_hat <- mu_agg_hat <- sig_hat <- sig_agg_hat <- deltal_hat <- deltau_hat <- res_var <- c()
+  lik <- lika <- likb <- lik2 <- a_hat <- b_hat <- mu_hat <- mu_agg_hat <- sig_hat <- sig_agg_hat <- sigl_hat <- sigu_hat <- delta_hat <- deltal_hat <- deltau_hat <- res_var <- c()
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   for (j in given) {
@@ -98,6 +98,24 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
         deltau_hat <- append(deltau_hat,opt$par[4])
         lik2 <- append(lik2,-opt$value)
       }
+      
+      if (margin=="AGGsig" & method!="one_step") {
+        opt <- optim(fn=DLLLsk,x=(Y2-a_hat[-1]*Y1)/(Y1^b_hat[-1]),par=c(0,1,1,1.5),control=list(maxit=2000),method = "BFGS")
+        mu_agg_hat <- append(mu_agg_hat,opt$par[1])
+        sigl_hat <- append(sig_agg_hat,opt$par[2])
+        sigu_hat <- append(sig_agg_hat,opt$par[3])
+        delta_hat <- append(delta_hat,opt$par[4])
+        lik2 <- append(lik2,-opt$value)
+      }
+      if (margin=="AGGsigdelta" & method!="one_step") {
+        opt <- optim(fn=NLL_AGG,x=(Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)]),par=c(0,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
+        mu_agg_hat <- append(mu_agg_hat,opt$par[1])
+        sigl_hat <- append(sigl_hat,opt$par[2])
+        sigu_hat <- append(sigu_hat,opt$par[3])
+        deltal_hat <- append(deltal_hat,opt$par[4])
+        deltau_hat <- append(deltau_hat,opt$par[5])
+        lik2 <- append(lik2,-opt$value)
+      }
       res_var <- append(res_var,res[i-1])
     }
   }
@@ -134,14 +152,23 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
                           "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
-  if (margin=="AGGmusig" & method=="two_step") {
+  if (margin=="AGGsig" & method=="two_step") {
     par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=-lik2,
+                          "a" = a_hat, "b" = b_hat,
+                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
+                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
+                          "delta"= delta_hat,"deltal" = nas, "deltau" = nas,
+                          "given" = rep(given,each=(d-1)), "res" = res_var)
+  }
+  if (margin=="AGGsigdelta" & method=="two_step") {
+    par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=lik2,
                           "a" = a_hat, "b" = b_hat,
                           "mu" = mu_hat,"mu_agg"=mu_agg_hat,
                           "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
                           "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
+  
   if (margin=="AGG" & method=="sequential") {
     par_sum <- data.frame("lik" = nas, "lika"=lika,"likb"=likb,"lik2"=lik2,
                           "a" = a_hat, "b" = b_hat,
