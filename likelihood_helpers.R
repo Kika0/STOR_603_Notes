@@ -145,7 +145,7 @@ dgnormsksig <- function(x,theta) {
   z <- c()
   C_AGG <-  (sigl/delta*gamma(1/delta) + sigu/delta*gamma(1/delta)  )^(-1)
   for (i in 1:length(x)) {
-    if (x[i]<0) {
+    if (x[i]<mu) {
       z[i] <- C/sigl*exp(-abs((x[i]-mu)/sigl)^delta)
     }
     z[i] <- C/sigu*exp(-abs((x[i]-mu)/sigu)^delta)
@@ -164,12 +164,34 @@ NLL_AGG <- function(x,theta) {
   if(sigl<=0 | sigu<=0 | deltal<=0 |deltau<=0 ){return(10e10)}
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
   for (i in 1:length(x)) {
-    if (x[i]<0) {
-   #   z[i] <- C_AGG/sigl*exp(-abs((x[i]-mu)/sigl)^deltal)
-   z[i] <- log(C_AGG)-log(sigl)-abs((x[i]-mu)/sigl)^deltal 
+    if (x[i]<mu) {
+   #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigl)^deltal)
+   z[i] <- log(C_AGG)-((mu-x[i])/sigl)^deltal 
     }
- #   z[i] <- C_AGG/sigu*exp(-abs((x[i]-mu)/sigu)^deltau)
-    z[i] <- log(C_AGG)-log(sigu)-abs((x[i]-mu)/sigu)^deltau 
+    else 
+ #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigu)^deltau)
+    z[i] <- log(C_AGG)-((x[i]-mu)/sigu)^deltau 
+  }
+  return(-sum(z))
+}
+
+# density with different both scale for lower and upper tail
+NLL_AGGsig <- function(x,theta) {
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  delta <- theta[4]
+  z <- c()
+  if(sigl<=0 | sigu<=0 | delta<=0 ){return(10e10)}
+  C_AGG <-  ((sigl + sigu)/delta*gamma(1/delta)  )^(-1)
+  for (i in 1:length(x)) {
+    if (x[i]<mu) {
+      #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigl)^deltal)
+      z[i] <- log(C_AGG)-((mu-x[i])/sigl)^delta 
+    }
+    else 
+      #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigu)^deltau)
+      z[i] <- log(C_AGG)-((x[i]-mu)/sigu)^delta
   }
   return(-sum(z))
 }
@@ -192,7 +214,7 @@ DLLLsk <- function(x,theta,a_hat=NULL,b_hat=NULL) {
   z <- c()
   C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )
   for (i in 1:length(obs_res)) {
-    if (obs_res[i]<0) {
+    if (obs_res[i]<mu) {
       z[i] <- -log(C)-log(sig)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sig)^deltal
     }
     else {
