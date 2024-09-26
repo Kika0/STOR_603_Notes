@@ -54,9 +54,17 @@ ggplot(obsr) + geom_density(mapping = aes(x=Z2)) + geom_line(data=df,mapping = a
 
 
 ```{r}
-par_est(df=sims,v=v,given=1,margin = "AGG", method = "sequential")$lik2
-par_est(df=sims,v=v,given=1,margin = "AGG", method = "two_step")$lik2
+L1 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "two_step")
+L2 <- par_est(df=sims,v=v,given=1,margin = "AGGsig", method = "two_step")
+L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsigdelta", method = "two_step")
+# L3 <- par_est(df=sims,v=v,given=1,margin = "AGG", method = "two_step")$lik2
+#par_est(df=sims,v=v,given=1,margin = "AGGsig", method = "two_step")$lik2
+
+sum(2*((L2$lik2)-(L1$lik2))>pchisq(0.95,1))/nrow(L1)
+sum(2*((L3$lik2)-(L2$lik2))>pchisq(0.99,1))/nrow(L1)
+sum(2*((L3$lik2)-(L1$lik2))>pchisq(0.99,1))/nrow(L1)
+
 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
