@@ -67,5 +67,44 @@ sum(2*((L3$lik2)-(L1$lik2))>pchisq(0.99,1))/nrow(L1)
 
 ```
 
-Specifically compare considering different scale or shape parameter.
+Specifically compare considering different scale or shape parameter or both.
+```{r}
+N <- 50000
+v <- 0.99
+M <- 100
+L1 <- list()
+L2 <- list()
+L3 <- list()
+for (i in 1:M) {
+  # simulate a sample
+  set.seed(12*i)
+  sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+    link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+    apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+# calculate log-likelihoods cond on 1 and save in a list
+L1[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGG", method = "two_step")$lik2
+L2[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGGsig", method = "two_step")$lik2
+L3[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGGsigdelta", method = "two_step")$lik2
+}
+
+# plot boxplots for a,b,mu,sig estimated values
+AGGdelta <- c()
+AGGsig <- c()
+AGGsigdelta <- c()
+res <- rep(c("Z2","Z3","Z4","Z5"),length(L1))
+for (i in 1:length(L1)) {
+  AGGdelta <- append(AGGdelta,as.numeric(unlist(L1[[i]])))
+  AGGsig <- append(AGGsig,as.numeric(unlist(L2[[i]])))
+  AGGsigdelta <- append(AGGsigdelta,as.numeric(unlist(L3[[i]])))
+}
+
+p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsigdelta),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$"))
+p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGdelta),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma,\\delta_l,\\delta_u)$"))
+p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsig),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta)$"))
+grid.arrange(p1,p2,p3,ncol=3)
+
+```
 
