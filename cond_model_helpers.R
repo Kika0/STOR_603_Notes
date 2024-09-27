@@ -91,7 +91,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
       }
       
       if (margin=="AGG" & method!="one_step") {
-        opt <- optim(fn=DLLLsk,x=data.frame(Y1,Y2),par=c(0,1,1.5,1.5,0.8,0.3),a_hat=a_hat[length(a_hat)],b_hat=b_hat[length(b_hat)],control=list(maxit=2000),method = "BFGS")
+        opt <- optim(fn=NLL_AGG,x=(Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)]),par=c(0,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
         sig_agg_hat <- append(sig_agg_hat,opt$par[2])
         deltal_hat <- append(deltal_hat,opt$par[3])
@@ -108,7 +108,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
         lik2 <- append(lik2,opt$value)
       }
       if (margin=="AGGsigdelta" & method!="one_step") {
-        opt <- optim(fn=NLL_AGG,x=(Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)]),par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
+        opt <- optim(fn=NLL_AGGsigdelta,x=(Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)]),par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
         sigl_hat <- append(sigl_hat,opt$par[2])
         sigu_hat <- append(sigu_hat,opt$par[3])
