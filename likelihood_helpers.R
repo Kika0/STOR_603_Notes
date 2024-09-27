@@ -153,8 +153,28 @@ dgnormsksig <- function(x,theta) {
   return(z)
 }
 
-# density with different both scale and shape for lower and upper tail
+# density with different shape for lower and upper tail
 NLL_AGG <- function(x,theta) {
+  mu <- theta[1]
+  sig <- theta[2]
+  deltal <- theta[3]
+  deltau <- theta[4]
+  z <- c()
+  if(sig<=0  | deltal<=0 |deltau<=0 ){return(10e10)}
+  C_AGG <-  (sig/deltal*gamma(1/deltal) + sig/deltau*gamma(1/deltau)  )^(-1)
+  for (i in 1:length(x)) {
+    if (x[i]<mu) {
+      #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sig)^deltal)
+      z[i] <- log(C_AGG)-((mu-x[i])/sig)^deltal 
+    }
+    else 
+      #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sig)^deltau)
+      z[i] <- log(C_AGG)-((x[i]-mu)/sig)^deltau 
+  }
+  return(-sum(z))
+}
+# density with different both scale and shape for lower and upper tail
+NLL_AGGsigdelta <- function(x,theta) {
   mu <- theta[1]
   sigl <- theta[2]
   sigu <- theta[3]
