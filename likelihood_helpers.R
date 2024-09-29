@@ -115,13 +115,8 @@ DLLL <- function(x,theta) {
   mu <- theta[1]
   sig <- theta[2]
   delta <- theta[3]
-  a <- theta[4]
-  b <- theta[5]
-  Y1 <- x[,1]
-  Y2 <- x[,2]
-  obs_res <- (Y2-a*Y1)/(Y1^b)
-  if(sig<=0 | delta<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
-  -sum((dgnorm(obs_res,mu=mu,alpha=sig,beta=delta,log=TRUE)-log(Y1^b)))
+  if(sig<=0 | delta<=0){return(10e10)}
+  -sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=TRUE))
 }
 
 dgnormsk <- function(x,mu,sig,deltal,deltau) {
