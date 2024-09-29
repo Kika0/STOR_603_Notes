@@ -7,6 +7,7 @@ date: "2024-09-24"
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(latex2exp)
+library(gridExtra)
 knitr::opts_chunk$set(echo = TRUE)
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
@@ -35,7 +36,7 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 
 ## Motivate the problem
 
-Simulate a large sample from a logistic distribution.
+Simulate a $n=50000$ sample from a logistic distribution.
 
 ```{r}
 set.seed(11)
@@ -97,14 +98,24 @@ for (i in 1:length(L1)) {
   AGGsig <- append(AGGsig,as.numeric(unlist(L2[[i]])))
   AGGsigdelta <- append(AGGsigdelta,as.numeric(unlist(L3[[i]])))
 }
-
+lims <- c(min(AGGdelta,AGGsig,AGGsigdelta),max(AGGdelta,AGGsig,AGGsigdelta))
 p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsigdelta),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$"))
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$")) + ylim(lims)
 p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGdelta),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma,\\delta_l,\\delta_u)$"))
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma,\\delta_l,\\delta_u)$"))+ ylim(lims)
 p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsig),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta)$"))
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta)$")) + ylim(lims)
 grid.arrange(p1,p2,p3,ncol=3)
 
+```
+
+Now, plot likelihood ration test values instead with $\chi$
+
+```{r}
+p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsig-AGGdelta),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") +
+  ylab("Different scale vs shape")
+  #ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$")) + ylim(lims)
+p1
 ```
 
