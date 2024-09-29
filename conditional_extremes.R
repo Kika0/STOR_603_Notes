@@ -938,4 +938,4 @@ ggplot(df,aes(x=rep(seq(-5,5,0.0005),4),y=AGG_sample,color=sim)) + geom_line(lin
                               TeX(paste0("$\\sigma_l=",thetas[4,1],", \\delta_l=$",thetas[4,3]))),
                      breaks=c(1,2,3,4),
                      values=c("#C11432","#66A64F","#FDD10A","#009ADA")) +
-  xlab(TeX("$x$")) + ylab(TeX("$f_{AGG} (x)$"))
+  xlab(TeX("$z$")) + ylab(TeX("$f_{AGG} (z)$"))
