@@ -111,7 +111,7 @@ Y_likelihood_constrained <- function(theta,df=Y_given_1_extreme,given=1,sim=2,v=
   return(log_lik)
 }
 
-DLLL <- function(x,theta) {
+NLL_GenGaus <- function(x,theta) {
   mu <- theta[1]
   sig <- theta[2]
   delta <- theta[3]
