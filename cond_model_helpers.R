@@ -90,6 +90,14 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
         lik <- append(lik,-opt$value)
       }
       
+      if (margin=="GenGaus" & method!="one_step") {
+        opt <- optim(fn=NLL_GenGaus,x=(Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)]),par=c(0,1,1.5),control=list(maxit=2000),method = "BFGS")
+        mu_agg_hat <- append(mu_agg_hat,opt$par[1])
+        sig_agg_hat <- append(sig_agg_hat,opt$par[2])
+        delta_hat <- append(delta_hat,opt$par[3])
+        lik2 <- append(lik2,-opt$value)
+      }
+      
       if (margin=="AGG" & method!="one_step") {
         opt <- optim(fn=NLL_AGG,x=(Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)]),par=c(0,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
@@ -102,10 +110,10 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
       if (margin=="AGGsig" & method!="one_step") {
         opt <- optim(fn=NLL_AGGsig,x=(Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)]),par=c(0,1,1,1.5),control=list(maxit=2000),method = "BFGS")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
-        sigl_hat <- append(sig_agg_hat,opt$par[2])
-        sigu_hat <- append(sig_agg_hat,opt$par[3])
+        sigl_hat <- append(sigl_hat,opt$par[2])
+        sigu_hat <- append(sigu_hat,opt$par[3])
         delta_hat <- append(delta_hat,opt$par[4])
-        lik2 <- append(lik2,opt$value)
+        lik2 <- append(lik2,-opt$value)
       }
       if (margin=="AGGsigdelta" & method!="one_step") {
         opt <- optim(fn=NLL_AGGsigdelta,x=(Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)]),par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
@@ -152,14 +160,25 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
                           "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
+  
+  if (margin=="GenGaus" & method=="two_step") {
+    par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=lik2,
+                          "a" = a_hat, "b" = b_hat,
+                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
+                          "sig" = sig_hat,"sig_agg" = sig_agg_hat,"sigl" = nas,"sigu" = nas,
+                          "delta"= delta_hat,"deltal" = nas, "deltau" = nas,
+                          "given" = rep(given,each=(d-1)), "res" = res_var)
+  }
+  
   if (margin=="AGGsig" & method=="two_step") {
-    par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=-lik2,
+    par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=lik2,
                           "a" = a_hat, "b" = b_hat,
                           "mu" = mu_hat,"mu_agg"=mu_agg_hat,
                           "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
                           "delta"= delta_hat,"deltal" = nas, "deltau" = nas,
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
+  
   if (margin=="AGGsigdelta" & method=="two_step") {
     par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=lik2,
                           "a" = a_hat, "b" = b_hat,
