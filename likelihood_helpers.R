@@ -254,7 +254,7 @@ DLLL2step <- function(x,theta) {
   sig <- theta[2]
   delta <- theta[3]
   if(sig<=0 | delta<=0 ){return(10e10)}
-  return(-sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T)))
+  return(-sum(gnorm::dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T)))
 }
 
 NLL_exp_norm_noise <- function(d,x,theta) {
