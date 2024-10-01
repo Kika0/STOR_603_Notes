@@ -91,16 +91,17 @@ load("paramest.rda")
 # L3[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGG", method = "two_step")
 # L4[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGGsigdelta", method = "two_step")
 # }
-
-
+load("paramest.rda")
 
 # plot boxplots for likelihood
+ablik <- c()
 GenGaus <- c()
 AGGsig <- c()
 AGGdelta <- c()
 AGGsigdelta <- c()
 res <- rep(c("Z2","Z3","Z4","Z5"),length(L1))
 for (i in 1:length(L1)) {
+  ablik <- append(ablik,-as.numeric(unlist(L1[[i]]$lik)))
   GenGaus <- append(GenGaus,as.numeric(unlist(L1[[i]]$lik2)))
   AGGsig <- append(AGGsig,as.numeric(unlist(L2[[i]]$lik2)))  
   AGGdelta <- append(AGGdelta,as.numeric(unlist(L3[[i]]$lik2)))
@@ -115,8 +116,10 @@ p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGdelta),
   geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma,\\delta_l,\\delta_u)$"))+ ylim(lims)
 p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsigdelta),aes(x=x,y=y))+
   geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$")) + ylim(lims)
-grid.arrange(p1,p2,p3,p4,ncol=2)
+p5 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=ablik),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\alpha,\\beta,\\mu,\\sigma)$"))+ ylim(c(min(ablik,lims[1]),max(ablik,lims[2])))
 
+grid.arrange(p1,p2,p3,p4,ncol=2)
 ```
 
 Now, plot likelihood ratio test values instead with $\chi$
@@ -138,11 +141,12 @@ p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGdelt
   # ylab("Different scale vs shape") +
   ylab(TeX("$2(l(\\mu,\\sigma,\\delta_l,\\delta_u)-l(\\mu,\\sigma,\\delta))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
   geom_hline(yintercept = qchisq(0.95,1),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,1),linetype="dashed", col= "#FDD10A")
-# p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-AGGdelta)),aes(x=x,y=y))+
-  # geom_boxplot() + xlab("Observed residuals") +
-  # ylab("Different scale vs shape")
-  # ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$")) + ylim(lims)
-grid.arrange(p1,p2,p3,ncol=3)
+p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-AGGdelta)),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") +
+  # ylab("Different scale vs shape") +
+  ylab(TeX("$2(l(\\mu,\\sigma_l,\\sigma_u,\\delta)-l(\\mu,\\sigma,\\delta_l,\\delta_u))$")) 
+
+grid.arrange(p1,p2,p3,p4,ncol=2)
 ```
 
 Compare $\hat{\alpha}$ and $\hat{\beta}$.
