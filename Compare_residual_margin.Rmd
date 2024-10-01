@@ -8,6 +8,7 @@ date: "2024-09-24"
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
+library(gnorm)
 knitr::opts_chunk$set(echo = TRUE)
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
@@ -53,16 +54,16 @@ ggplot(obsr) + geom_density(mapping = aes(x=Z2)) + geom_line(data=df,mapping = a
 ## Calculate MLE for different methods
 
 ```{r}
-L1 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "two_step")
+L1 <- par_est(df=sims,v=v,given=c(1:5),margin = "GenGaus", method = "two_step")
 L2 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsig", method = "two_step")
-L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsigdelta", method = "two_step")
-# L3 <- par_est(df=sims,v=v,given=1,margin = "AGG", method = "two_step")$lik2
-#par_est(df=sims,v=v,given=1,margin = "AGGsig", method = "two_step")$lik2
+L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "two_step")
+L4 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsigdelta", method = "two_step")
 
 sum(2*((L2$lik2)-(L1$lik2))>pchisq(0.95,1))/nrow(L1)
-sum(2*((L3$lik2)-(L2$lik2))>pchisq(0.99,1))/nrow(L1)
 sum(2*((L3$lik2)-(L1$lik2))>pchisq(0.99,1))/nrow(L1)
-2*((L2$lik2)-(L1$lik2))
+sum(2*((L4$lik2)-(L1$lik2))>pchisq(0.99,2))/nrow(L1)
+
+2*((L4$lik2)-(L1$lik2))>pchisq(0.95,2)
 2*((L3$lik2)-(L2$lik2))
 2*((L3$lik2)-(L1$lik2))
 
@@ -73,49 +74,90 @@ Specifically compare considering different scale or shape parameter or both.
 N <- 50000
 v <- 0.99
 M <- 100
-L1 <- list()
-L2 <- list()
-L3 <- list()
-for (i in 1:M) {
-  # simulate a sample
-  set.seed(12*i)
-  sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
-    link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
-    apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-# calculate log-likelihoods cond on 1 and save in a list
-L1[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGG", method = "two_step")$lik2
-L2[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGGsig", method = "two_step")$lik2
-L3[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGGsigdelta", method = "two_step")$lik2
-}
+load("paramest.rda")
+# L1 <- list()
+# L2 <- list()
+# L3 <- list()
+# L4 <- list()
+# for (i in 1:M) {
+#   # simulate a sample
+#   set.seed(12*i)
+#   sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+#     link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+#     apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+# # calculate log-likelihoods cond on 1 and save in a list
+# L1[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "GenGaus", method = "two_step")
+# L2[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGGsig", method = "two_step")
+# L3[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGG", method = "two_step")
+# L4[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGGsigdelta", method = "two_step")
+# }
 
-# plot boxplots for a,b,mu,sig estimated values
-AGGdelta <- c()
+
+
+# plot boxplots for likelihood
+GenGaus <- c()
 AGGsig <- c()
+AGGdelta <- c()
 AGGsigdelta <- c()
 res <- rep(c("Z2","Z3","Z4","Z5"),length(L1))
 for (i in 1:length(L1)) {
-  AGGdelta <- append(AGGdelta,as.numeric(unlist(L1[[i]])))
-  AGGsig <- append(AGGsig,as.numeric(unlist(L2[[i]])))
-  AGGsigdelta <- append(AGGsigdelta,as.numeric(unlist(L3[[i]])))
+  GenGaus <- append(GenGaus,as.numeric(unlist(L1[[i]]$lik2)))
+  AGGsig <- append(AGGsig,as.numeric(unlist(L2[[i]]$lik2)))  
+  AGGdelta <- append(AGGdelta,as.numeric(unlist(L3[[i]]$lik2)))
+  AGGsigdelta <- append(AGGsigdelta,as.numeric(unlist(L4[[i]]$lik2)))
 }
-lims <- c(min(AGGdelta,AGGsig,AGGsigdelta),max(AGGdelta,AGGsig,AGGsigdelta))
-p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsigdelta),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$")) + ylim(lims)
-p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGdelta),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma,\\delta_l,\\delta_u)$"))+ ylim(lims)
-p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsig),aes(x=x,y=y))+
+lims <- c(min(AGGdelta,AGGsig,AGGsigdelta,GenGaus),max(AGGdelta,AGGsig,AGGsigdelta,GenGaus))
+p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=GenGaus),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma,\\delta)$"))+ ylim(lims)
+p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsig),aes(x=x,y=y))+
   geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta)$")) + ylim(lims)
-grid.arrange(p1,p2,p3,ncol=3)
+p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGdelta),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma,\\delta_l,\\delta_u)$"))+ ylim(lims)
+p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsigdelta),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$")) + ylim(lims)
+grid.arrange(p1,p2,p3,p4,ncol=2)
 
 ```
 
-Now, plot likelihood ration test values instead with $\chi$
+Now, plot likelihood ratio test values instead with $\chi$
 
 ```{r}
-p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsig-AGGdelta),aes(x=x,y=y))+
+p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsigdelta-GenGaus)),aes(x=x,y=y))+
   geom_boxplot() + xlab("Observed residuals") +
-  ylab("Different scale vs shape")
-  #ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$")) + ylim(lims)
-p1
+  # ylab("Different scale vs shape")
+  ylab(TeX("$2(l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)-l(\\mu,\\sigma,\\delta))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+   geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A")
+p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-GenGaus)),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") +
+  # ylab("No difference in shape")
+  ylab(TeX("$2(l(\\mu,\\sigma_l,\\sigma_u,\\delta)-l(\\mu,\\sigma,\\delta))$")) +
+ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+  geom_hline(yintercept = qchisq(0.95,1),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,1),linetype="dashed", col= "#FDD10A")
+p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGdelta-GenGaus)),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") +
+  # ylab("Different scale vs shape") +
+  ylab(TeX("$2(l(\\mu,\\sigma,\\delta_l,\\delta_u)-l(\\mu,\\sigma,\\delta))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+  geom_hline(yintercept = qchisq(0.95,1),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,1),linetype="dashed", col= "#FDD10A")
+# p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-AGGdelta)),aes(x=x,y=y))+
+  # geom_boxplot() + xlab("Observed residuals") +
+  # ylab("Different scale vs shape")
+  # ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$")) + ylim(lims)
+grid.arrange(p1,p2,p3,ncol=3)
+```
+
+Compare $\hat{\alpha}$ and $\hat{\beta}$.
+
+```{r}
+a <- b <- c()
+for (i in 1:length(L1)) {
+ a <- append(a,as.numeric(unlist(L1[[i]]$a)))
+ b <- append(b,as.numeric(unlist(L2[[i]]$b)))  
+}
+
+p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=a),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$\\hat{\\alpha}$"))
+p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=b),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$\\hat{\\beta}$")) 
+grid.arrange(p1,p2,ncol=2)
 ```
 
