@@ -109,15 +109,13 @@ for (i in 1:length(L1)) {
 }
 lims <- c(min(AGGdelta,AGGsig,AGGsigdelta,GenGaus),max(AGGdelta,AGGsig,AGGsigdelta,GenGaus))
 p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=GenGaus),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma,\\delta)$"))+ ylim(lims)
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta})$"))+ ylim(lims)
 p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsig),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta)$")) + ylim(lims)
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta})$")) + ylim(lims)
 p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGdelta),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma,\\delta_l,\\delta_u)$"))+ ylim(lims)
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}_l,\\hat{\\delta}_u)$"))+ ylim(lims)
 p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsigdelta),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)$")) + ylim(lims)
-p5 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=ablik),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$l(\\alpha,\\beta,\\mu,\\sigma)$"))+ ylim(c(min(ablik,lims[1]),max(ablik,lims[2])))
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_l,\\hat{\\delta}_u)$")) + ylim(lims)
 
 grid.arrange(p1,p2,p3,p4,ncol=2)
 ```
@@ -126,42 +124,44 @@ Now, plot likelihood ratio test values instead with $\chi$
 
 ```{r}
 p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsigdelta-GenGaus)),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") +
+  geom_boxplot() + xlab("Residuals") +
   # ylab("Different scale vs shape")
-  ylab(TeX("$2(l(\\mu,\\sigma_l,\\sigma_u,\\delta_l,\\delta_u)-l(\\mu,\\sigma,\\delta))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+  ylab(TeX("$2(l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_l,\\hat{\\delta}_u)-l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
    geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A")
 p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-GenGaus)),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") +
+  geom_boxplot() + xlab("Residuals") +
   # ylab("No difference in shape")
-  ylab(TeX("$2(l(\\mu,\\sigma_l,\\sigma_u,\\delta)-l(\\mu,\\sigma,\\delta))$")) +
+  ylab(TeX("$2(l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta})-l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) +
 ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
   geom_hline(yintercept = qchisq(0.95,1),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,1),linetype="dashed", col= "#FDD10A")
 p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGdelta-GenGaus)),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") +
+  geom_boxplot() + xlab("Residuals") +
   # ylab("Different scale vs shape") +
-  ylab(TeX("$2(l(\\mu,\\sigma,\\delta_l,\\delta_u)-l(\\mu,\\sigma,\\delta))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+  ylab(TeX("$2(l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}_l,\\hat{\\delta}_u)-l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
   geom_hline(yintercept = qchisq(0.95,1),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,1),linetype="dashed", col= "#FDD10A")
 p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-AGGdelta)),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") +
+  geom_boxplot() + xlab("Residuals") +
   # ylab("Different scale vs shape") +
-  ylab(TeX("$2(l(\\mu,\\sigma_l,\\sigma_u,\\delta)-l(\\mu,\\sigma,\\delta_l,\\delta_u))$")) 
+  ylab(TeX("$2(l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta})-l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}_l,\\hat{\\delta}_u))$")) 
 
-grid.arrange(p1,p2,p3,p4,ncol=2)
+grid.arrange(p1,p2,p3,ncol=3)
 ```
 
 Compare $\hat{\alpha}$ and $\hat{\beta}$.
 
 ```{r}
 a <- b <- c()
+p5 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=ablik),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\alpha},\\hat{\\beta},\\hat{\\mu},\\hat{\\sigma})$"))+ ylim(c(min(ablik,lims[1]),max(ablik,lims[2])))
 for (i in 1:length(L1)) {
  a <- append(a,as.numeric(unlist(L1[[i]]$a)))
  b <- append(b,as.numeric(unlist(L2[[i]]$b)))  
 }
 
 p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=a),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$\\hat{\\alpha}$"))
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$\\hat{\\alpha}$"))
 p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=b),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Observed residuals") + ylab(TeX("$\\hat{\\beta}$")) 
-grid.arrange(p1,p2,ncol=2)
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$\\hat{\\beta}$")) 
+grid.arrange(p5,p1,p2,ncol=3)
 ```
 
