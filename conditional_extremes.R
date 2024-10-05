@@ -299,26 +299,26 @@ ggplot(d, aes(x = x, y = 0, fill = stat(quantile))) +
 
 # start from the beginning ----
 # generate trivariate sample
-N <- 50000
-sims <- generate_Y(N = 100) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% 
+N <- 5000000
+sims <- generate_Y(N = N) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>% 
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 # filter for Y_1 being extreme -----
 v <- 0.99
-Y_given_1_extreme <- sims %>% filter(Y_1>quantile(Y_1,v))
-Y_not_1_extreme <- sims %>% filter(Y_1<quantile(Y_1,v))
+Y_given1extreme <- sims %>% filter(Y1>quantile(Y1,v))
+Y_not1extreme <- sims %>% filter(Y1<quantile(Y1,v))
 
 d <- 3
 opt <- list()
 for (i in c(2,3)) {
-opt[[i-1]] <- optim(par=c(1,0,0,1),fn = Y_likelihood,df=Y_given_1_extreme,given=1,sim=i,control = list(fnscale=-1))
+opt[[i-1]] <- optim(par=c(0.6,0.2,0,1),fn = Y_likelihood,df=Y_given1extreme,given=1,sim=i,control = list(fnscale=-1))
 }
 a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
 b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
 
 # generate residual Z ----
-Y1 <- Y_given_1_extreme[,1]
-Y2 <- Y_given_1_extreme[,2]
-Y3 <- Y_given_1_extreme[,3]
+Y1 <- Y_given1extreme[,1]
+Y2 <- Y_given1extreme[,2]
+Y3 <- Y_given1extreme[,3]
 
 Z2 <- (Y2-a_hat[1]*Y1)/(Y1^b_hat[1])
 Z3 <- (Y3-a_hat[2]*Y1)/(Y1^b_hat[2])
@@ -339,6 +339,10 @@ Z_star <- norm_to_orig(ZN=Z_N,emp_res = Z)
 U <- runif(Nsim)
 Y1_gen <- -log(2*(1-0.9999)) + rexp(Nsim)
 Gen_Y1 <- data.frame(Y1=Y1_gen)
+
+# calculate empirical probability
+vL <- frechet_laplace_pit(qfrechet(0.9999))
+(sims %>% filter(Y1>vL,Y2>vL,Y3>vL) %>% nrow())/N
 
 # for each Y, generate a residual and calculate Y_2
 Y1 <- Gen_Y1$Y1
