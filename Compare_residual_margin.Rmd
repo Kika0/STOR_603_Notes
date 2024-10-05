@@ -146,16 +146,53 @@ p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-
 
 grid.arrange(p1,p2,p3,ncol=3)
 ```
+Now plot shape parameter estimates to see improvement over no difference in the shape parameter for the lower and upper tail.
+```{r}
+d <- dl <- du <- c()
+for (i in 1:length(L1)) {
+ d <- append(d,as.numeric(unlist(L1[[i]]$delta)))
+ dl <- append(dl,as.numeric(unlist(L4[[i]]$deltal)))
+ du <- append(du,as.numeric(unlist(L4[[i]]$deltau)))  
+}
+p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=d),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$\\hat{\\delta}$")) + ylim(c(1,4))
+p1 <- ggplot(rbind(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=dl,z="dl"),data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=du,z="du")),aes(x=x,y=y))+
+  geom_boxplot(aes(fill=factor(z))) + xlab("Residuals")  + ylim(c(1,4)) +
+  scale_fill_manual(values = c(dl="#66A64F",du="#009ADA"),labels = c(TeX("$\\hat{\\delta}_l$"),TeX("$\\hat{\\delta}_u$"))) + labs(fill = NULL,y = NULL) +
+  theme(legend.key.size = unit(1.2, 'cm'), #change legend key size
+       legend.text = element_text(size=15)) #change legend text font size
 
+p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=du),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$\\hat{\\delta}_u$")) + ylim(c(1,4))
+grid.arrange(p3,p1,ncol=2,widths=c(1.4,2))
+```
+And do the same for the scale parameter.
+```{r}
+s <- sl <- su <- c()
+for (i in 1:length(L1)) {
+ s <- append(s,as.numeric(unlist(L1[[i]]$sig_agg)))
+ sl <- append(sl,as.numeric(unlist(L4[[i]]$sigl)))
+ su <- append(su,as.numeric(unlist(L4[[i]]$sigu)))  
+}
+p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=s),aes(x=x,y=y))+
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$\\hat{\\sigma}$")) + ylim(c(1,4))
+p1 <- ggplot(rbind(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=sl,z="sl"),data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=su,z="su")),aes(x=x,y=y))+
+  geom_boxplot(aes(fill=factor(z))) + xlab("Residuals")  + ylim(c(1,4)) +
+  scale_fill_manual(values = c(sl="#66A64F",su="#009ADA"),labels = c(TeX("$\\hat{\\sigma}_l$"),TeX("$\\hat{\\sigma}_u$"))) + labs(fill = NULL,y = NULL) +
+  theme(legend.key.size = unit(1.2, 'cm'), #change legend key size
+       legend.text = element_text(size=15)) #change legend text font size
+grid.arrange(p3,p1,ncol=2,widths=c(1.4,2))
+```
 Compare $\hat{\alpha}$ and $\hat{\beta}$.
 
 ```{r}
-a <- b <- c()
 p5 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=ablik),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\alpha},\\hat{\\beta},\\hat{\\mu},\\hat{\\sigma})$"))+ ylim(c(min(ablik,lims[1]),max(ablik,lims[2])))
+  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\alpha},\\hat{\\beta},\\hat{\\mu},\\hat{\\sigma})$"))
+
+a <- b <- c()
 for (i in 1:length(L1)) {
  a <- append(a,as.numeric(unlist(L1[[i]]$a)))
- b <- append(b,as.numeric(unlist(L2[[i]]$b)))  
+ b <- append(b,as.numeric(unlist(L1[[i]]$b)))  
 }
 
 p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=a),aes(x=x,y=y))+
