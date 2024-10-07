@@ -4,11 +4,12 @@ library(evd)
 library(ismev)
 library(tidyverse)
 library(latex2exp)
-library(gridExtra)
-library(xtable) # for latex tables
-library(GGally) # for ggpairs function
+library(gridExtra) # grid.arrange function
+library(xtable) # latex tables
+library(GGally) # ggpairs function
 library(MASS) # use dplyr::select to avoid function conflict
-library(texmex)
+library(pracma) # incomplete gamma function
+library(texmex) # air pollution data
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
 
