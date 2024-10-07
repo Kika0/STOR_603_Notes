@@ -220,6 +220,7 @@ observed_residuals <- function(df=sims,given=1,v=0.99,a=NULL,b=NULL) {
       Y2 <- Y_given_1_extreme[,res[i-1]]
       tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
     }
+    else {
     # optimise using the initial parameters
     init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
     init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
@@ -231,7 +232,7 @@ observed_residuals <- function(df=sims,given=1,v=0.99,a=NULL,b=NULL) {
     res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
     Y1 <- Y_given_1_extreme[,j]
     Y2 <- Y_given_1_extreme[,res[i-1]]
-    tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
+    tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat))) }
   }
   Z <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
     mutate(row = row_number()) %>%
