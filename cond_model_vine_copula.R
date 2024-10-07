@@ -86,10 +86,16 @@ fit3
 # simulate from the copula
 N_sim <- N*(1-v)
 Zsim <- RVineSim(N=N_sim,RVM=fit3)
+# calculate parameter estimates
+pe <- par_est(df=sims,v=v,given=j,margin = "AGGsigdelta", method = "two_step")
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
+
 obs_res <- observed_residuals(df = sims,given = 1,v = v) 
-to_opt <- function(z) {
+# to_opt <- function(z) {
+#   
+# }
+#to_opt <- function(z) {
   return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
 }
 Z <- Zsim
@@ -402,6 +408,20 @@ p_true <- df %>% filter(Y1>vF_sim,Y2>vF_sim,Y3>vF_sim,Y4>vF_sim,Y5>vF_sim) %>%
   nrow()/500000*(1-v_sim)
 
 # explore summer and winter air pollution data ----
+vL <- quantile(winter$O3,0.7)
+tmp <- winter %>% mutate(above_thres= as.character(winter$O3>vL))
+vL1 <- quantile(summer$O3,0.7)
+tmp1 <- summer %>% mutate(above_thres= as.character(summer$O3>vL1))
+grid.arrange(ggplot(tmp) + geom_point(aes(x=O3,y=NO2,col=above_thres),size=0.5,alpha=0.5) +
+               scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
+               geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
+               xlab(TeX("$O_3$")) + ylab(TeX("$NO_2$"))+
+               theme(legend.position = "none") ,
+             ggplot(tmp1) + geom_point(aes(x=O3,y=NO2,col=above_thres),size=0.5,alpha=0.5) +
+               scale_color_manual(values = c("FALSE"="black","TRUE" = "#C11432")) +
+               geom_vline(xintercept=vL1,color="#C11432",linetype="dashed") +
+               xlab(TeX("$O_3$")) + ylab(TeX("$NO_2$")) +
+               theme(legend.position="none") ,ncol=2)
 as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)) %>% ggpairs()
 as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)) %>% ggpairs()
 # fit vine copula to all the data
