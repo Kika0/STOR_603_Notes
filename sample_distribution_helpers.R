@@ -112,8 +112,17 @@ norm_laplace_pit <-  function(x) {
   return(y)
 }
 
+#' Transform from Uniform to Laplace margins
+#'
+#' @param x A number sampled from U(0,1) distribution.
+#'
+#' @return x transformed to Laplace margin.
+#' @export
+#'
+#' @examples unif_laplace_pit(x=runif(1))
 unif_laplace_pit <-  function(x) {
   if (x<0.5) { y <-log(2*x) }
   else { y <- -log(2*(1-x)) }
   return(y)
 }
+
