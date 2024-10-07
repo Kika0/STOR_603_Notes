@@ -116,13 +116,28 @@ norm_laplace_pit <-  function(x) {
 #'
 #' @param x A number sampled from U(0,1) distribution.
 #'
-#' @return x transformed to Laplace margin.
+#' @return x transformed to Laplace margin
 #' @export
 #'
 #' @examples unif_laplace_pit(x=runif(1))
 unif_laplace_pit <-  function(x) {
   if (x<0.5) { y <-log(2*x) }
   else { y <- -log(2*(1-x)) }
+  return(y)
+}
+
+#' Transform from Uniform to AGG margins for residuals
+#'
+#' @param x A number sampled from U(0,1) distribution.
+#'
+#' @return x transformed to AGG margins
+#' @export
+#'
+#' @examples unif_AGG_pit(x=runif(1))
+unif_AGG_pit <- function(x) {
+  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  if (x<0.5) { y <- C_AGG*sigl/deltal*pracma::gammainc(x=((mu-x)/deltal)^deltal, a=1/deltal)$uppinc }
+  else { y <- C_AGG*sigl/deltal *pracma::gamma(1/deltal)$uppinc + C_AGG*sigu/deltau*pracma::gammainc(x=((x-mu)/deltau)^deltau, a=1/deltau)$lowinc }
   return(y)
 }
 
