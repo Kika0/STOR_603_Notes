@@ -200,7 +200,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
 }
 
 # calculate the observed residuals
-observed_residuals <- function(df=sims,given=1,v=0.99) {
+observed_residuals <- function(df=sims,given=1,v=0.99,a=NULL,b=NULL) {
   j <- given
   a_hat <- b_hat <- res_var <- c()
   tmp_z <- tmp_z1 <- c()
@@ -212,6 +212,14 @@ observed_residuals <- function(df=sims,given=1,v=0.99) {
   res <- c(1:d)[-j]
   init_par <- c()
   for (i in 2:d) {
+    if (is.numeric(a) & is.numeric(b)) {
+      a_hat <- a[i-1]
+      b_hat <- b[i-1]
+      res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
+      Y1 <- Y_given_1_extreme[,j]
+      Y2 <- Y_given_1_extreme[,res[i-1]]
+      tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
+    }
     # optimise using the initial parameters
     init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
     init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
