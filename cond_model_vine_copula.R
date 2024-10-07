@@ -92,16 +92,25 @@ pe <- par_est(df=sims,v=v,given=j,margin = "AGGsigdelta", method = "two_step")
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
 
-obs_res <- observed_residuals(df = sims,given = 1,v = v) 
+obs_res <- observed_residuals(df = sims,given = j,v = v) 
 # to_opt <- function(z) {
 #   
 # }
-#to_opt <- function(z) {
-  return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
+# to_opt <- function(z) {
+#   return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
+# }
+# try new AGG method
+to_opt <- function(x) {
+  return( (F_AGG(x)-Zsim[i,k])^2  )  
 }
 Z <- Zsim
-for (i in 1:nrow(Zsim)) {
-  for (k in 1:ncol(Zsim)) {
+for (k in 1:ncol(Zsim)) {
+  mu <- pe$mu_agg[k]
+  sigl <- pe$sigl[k]
+  sigu <- pe$sigu[k]
+  deltal <- pe$deltal[k]
+  deltau <- pe$deltau[k]
+  for (i in 1:nrow(Zsim)) {
     Z[i,k] <- optim(fn=to_opt,par=1)$par
   }
 }
@@ -241,17 +250,24 @@ Zsim <- RVineSim(N=N_sim,RVM=fit3)
 res <- c(1:d)[-l]
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
-obs_res <- observed_residuals(df = sims,given = l,v = v) 
-to_opt <- function(z) {
-  return( (mean(pnorm((z-obs_res[,k] %>% pull())/density(obs_res[,k] %>% pull())$bw)) - Zsim[i,k])^2)
+pe <- par_est(df = sims,v = v,given = l,margin = "AGGsigdelta", method = "two_step")
+obs_res <- observed_residuals(df = sims,given = l,v = v,a = pe$a,b = pe$b) 
+# transform back residuals to original margins
+# try new AGG method
+to_opt <- function(x) {
+  return( (F_AGG(x)-Zsim[i,k])^2  )  
 }
 Z <- Zsim
-for (i in 1:nrow(Zsim)) {
-  for (k in 1:ncol(Zsim)) {
+for (k in 1:ncol(Zsim)) {
+  mu <- pe$mu_agg[k]
+  sigl <- pe$sigl[k]
+  sigu <- pe$sigu[k]
+  deltal <- pe$deltal[k]
+  deltau <- pe$deltau[k]
+  for (i in 1:nrow(Zsim)) {
     Z[i,k] <- optim(fn=to_opt,par=1)$par
   }
-}
-# plot observed residuals
+}# plot observed residuals
 p <- rbind(
       Z %>% as.data.frame() %>%
         mutate(res=rep("model",N_sim)),
@@ -259,7 +275,8 @@ p <- rbind(
         mutate(res=rep("data",nrow(sims)*(1-v)))) %>% 
 ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-#ggsave(p,filename=(paste0("plots/giv",l,"obsmodelres.pdf")),device="pdf")
+ggsave(p,filename=(paste0("plots/giv",l,"obsmodelres.pdf")),device="pdf")
+
 # simulate
 Z_star <- as.data.frame(Z)
 Y_1_gen <- -log(2*(1-v_sim)) + rexp(N_sim)
@@ -289,7 +306,7 @@ names(tmp) <- c(paste0("Y",l),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",r
 Gen_orig <- rbind(Gen_Y_1,tmp)
 p <- ggpairs(Gen_orig,columns = 1:5,ggplot2::aes(color=sim,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-#ggsave(p,filename=(paste0("plots/cond",l,".pdf")),device="pdf")
+ggsave(p,filename=(paste0("plots/cond",l,".pdf")),device="pdf")
 # calculate probability of all extreme
 vL_sim <- frechet_laplace_pit(qfrechet(v_sim))
 p_est[l] <- Gen_Y_1 %>% filter(Y1>vL_sim,Y2>vL_sim,Y3>vL_sim,Y4>vL_sim,Y5>vL_sim) %>% 
