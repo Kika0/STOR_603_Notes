@@ -244,38 +244,36 @@ v_sim <- 0.99 # threshold for simulation
 N_sim <- 500 # number of observations to simulate
 p_est <- c() # numeric of estimated probabilities of all extreme
 for (l in 1:5) {
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+  pe <- par_est(df = sims,v = v,given = l,margin = "AGGsigdelta", method = "two_step")
+  obs_res <- observed_residuals(df = sims,given = l,v = v,a = pe$a,b = pe$b) 
+  fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = v, a = pe$a,b = pe$b) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 3, indeptest = FALSE)
-Zsim <- RVineSim(N=N_sim,RVM=fit3)
-res <- c(1:d)[-l]
-# transform back residuals to original margins
-# can use kernel smoothed distribution as initial step
-pe <- par_est(df = sims,v = v,given = l,margin = "AGGsigdelta", method = "two_step")
-obs_res <- observed_residuals(df = sims,given = l,v = v,a = pe$a,b = pe$b) 
-# transform back residuals to original margins
-# try new AGG method
-to_opt <- function(x) {
-  return( (F_AGG(x)-Zsim[i,k])^2  )  
-}
-Z <- Zsim
-for (k in 1:ncol(Zsim)) {
-  mu <- pe$mu_agg[k]
-  sigl <- pe$sigl[k]
-  sigu <- pe$sigu[k]
-  deltal <- pe$deltal[k]
-  deltau <- pe$deltau[k]
-  for (i in 1:nrow(Zsim)) {
-    Z[i,k] <- optim(fn=to_opt,par=1)$par
+  Zsim <- RVineSim(N=N_sim,RVM=fit3)
+  res <- c(1:d)[-l]
+  # transform back residuals to original margins
+  # try new AGG method
+  to_opt <- function(x,theta) {
+    return( (F_AGG(x,theta)-Zsim[i,k])^2  )  
   }
-}# plot observed residuals
-p <- rbind(
-      Z %>% as.data.frame() %>%
-        mutate(res=rep("model",N_sim)),
-      obs_res %>% as.data.frame() %>%
-        mutate(res=rep("data",nrow(sims)*(1-v)))) %>% 
-ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
-  scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
-ggsave(p,filename=(paste0("plots/giv",l,"obsmodelres.pdf")),device="pdf")
+  Z <- Zsim
+  for (k in 1:ncol(Zsim)) {
+    mu <- pe$mu_agg[k]
+    sigl <- pe$sigl[k]
+    sigu <- pe$sigu[k]
+    deltal <- pe$deltal[k]
+    deltau <- pe$deltau[k]
+    for (i in 1:nrow(Zsim)) {
+      Z[i,k] <- optim(fn=to_opt,par=1,theta=c(mu,sigl,sigu,deltal,deltau))$par
+    }
+  }# plot observed residuals
+  p <- rbind(
+        Z %>% as.data.frame() %>%
+          mutate(res=rep("model",N_sim)),
+        obs_res %>% as.data.frame() %>%
+          mutate(res=rep("data",nrow(sims)*(1-v)))) %>% 
+  ggpairs(columns = 1:4,ggplot2::aes(color=res,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+    scale_color_manual(values = c("data"="black","model" = "#C11432")) + scale_fill_manual(values = c("data"="black","model" = "#C11432"))
+  ggsave(p,filename=(paste0("plots/giv",l,"obsmodelres.pdf")),device="pdf")
 
 # simulate
 Z_star <- as.data.frame(Z)
@@ -283,10 +281,10 @@ Y_1_gen <- -log(2*(1-v_sim)) + rexp(N_sim)
 Gen_Y_1 <- data.frame(Y1=Y_1_gen)
 # for each Y, generate a residual and calculate Y_2
 Y1 <- Gen_Y_1$Y1
-Y2 <- a_hat*Y1 + Y1^b_hat *Z_star[,1]
-Y3 <-  a_hat*Y1 + Y1^b_hat *Z_star[,2]
-Y4 <- a_hat*Y1 + Y1^b_hat *Z_star[,3]
-Y5 <-  a_hat*Y1 + Y1^b_hat *Z_star[,4]
+Y2 <- pe$a[1]*Y1 + Y1^pe$b[1] *Z_star[,1]
+Y3 <-  pe$a[2]*Y1 + Y1^pe$b[2] *Z_star[,2]
+Y4 <-pe$a[3]*Y1 + Y1^pe$b[3] *Z_star[,3]
+Y5 <-  pe$a[4]*Y1 + Y1^pe$b[4] *Z_star[,4]
 
 Gen_Y_1 <- Gen_Y_1 %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim=rep("model",nrow(Z_star)))
 names(Gen_Y_1) <- c(paste0("Y",l),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
