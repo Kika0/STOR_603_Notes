@@ -134,7 +134,12 @@ unif_laplace_pit <-  function(x) {
 #' @export
 #'
 #' @examples F_AGG(x=runif(1))
-F_AGG <- function(x) {
+F_AGG <- function(x,theta) {
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  deltal <- theta[4]
+  deltau <- theta[5]
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
   if (x<mu) { y <- C_AGG*sigl/deltal*as.numeric(pracma::gammainc(x=((mu-x)/deltal)^deltal, a=1/deltal))[2] }
   else { y <- C_AGG*sigl/deltal *gamma(1/deltal) + C_AGG*sigu/deltau*as.numeric(pracma::gammainc(x=((x-mu)/deltau)^deltau, a=1/deltau)[1]) }
