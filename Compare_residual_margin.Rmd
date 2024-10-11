@@ -126,23 +126,23 @@ Now, plot likelihood ratio test values instead with $\chi$
 p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsigdelta-GenGaus)),aes(x=x,y=y))+
   geom_boxplot() + xlab("Residuals") +
   # ylab("Different scale vs shape")
-  ylab(TeX("$2(l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_l,\\hat{\\delta}_u)-l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_l,\\hat{\\delta}_u)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
    geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A")
 p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-GenGaus)),aes(x=x,y=y))+
   geom_boxplot() + xlab("Residuals") +
   # ylab("No difference in shape")
-  ylab(TeX("$2(l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta})-l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) +
+  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_c,\\hat{\\delta}_c)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) +
 ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
   geom_hline(yintercept = qchisq(0.95,1),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,1),linetype="dashed", col= "#FDD10A")
 p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGdelta-GenGaus)),aes(x=x,y=y))+
   geom_boxplot() + xlab("Residuals") +
   # ylab("Different scale vs shape") +
-  ylab(TeX("$2(l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}_l,\\hat{\\delta}_u)-l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_c,\\hat{\\sigma}_c,\\hat{\\delta}_l,\\hat{\\delta}_u)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
   geom_hline(yintercept = qchisq(0.95,1),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,1),linetype="dashed", col= "#FDD10A")
 p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-AGGdelta)),aes(x=x,y=y))+
   geom_boxplot() + xlab("Residuals") +
   # ylab("Different scale vs shape") +
-  ylab(TeX("$2(l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta})-l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}_l,\\hat{\\delta}_u))$")) 
+  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_c,\\hat{\\delta}_c)-l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_c,\\hat{\\sigma}_c,\\hat{\\delta}_l,\\hat{\\delta}_u))$")) 
 
 grid.arrange(p1,p2,p3,ncol=3)
 ```
