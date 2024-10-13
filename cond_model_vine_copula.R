@@ -489,7 +489,7 @@ wintercol <- "#009ADA"
 obsz <- observed_residuals(df = winter_lap,v=0.7,given = 1)
 v <- 0.7
 fit <- RVineStructureSelect((observed_residuals(df = winter_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1),
-                     trunclevel = 3, indeptest = FALSE)
+                     trunclevel = 3, indeptest = TRUE)
 N_sim <- nrow(winter)*(1-v)
 Zsim <- RVineSim(N=N_sim,RVM=fit)
 # for loop to make PP plot for each variable
