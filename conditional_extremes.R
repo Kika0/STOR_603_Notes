@@ -49,27 +49,78 @@ grid.arrange(ggplot(tmp) + geom_point(aes(x=Y1,y=Y2,col=above_thres),size=0.5,al
              xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + xlim(c(lim_min,lim_max)) + ylim(c(lim_min,lim_max))+
                theme(legend.position="none") + coord_fixed(),ncol=2)
 
-# filter for Y1 being extreme -----
+# evaluate the Gaussian copula dependence model -----
+Gaus_cop_p_est <- function(df=sims,given=1,v=0.99,v_sim=0.999,Nsim=50000) {
+l <- given
+res <- c(1:3)[-l]
 v <- 0.99
-Y_given_1_extreme <- sims %>% filter(Y1>quantile(Y1,v))
+Y_given_1_extreme <- sims %>% filter(Y3>quantile(Y3,v))
 # assume a_hat and b_hat are AD case
-a_hat <- c(1,1)
-b_hat <- c(0,0)
+pe <- par_est(sims,given=l)
+a_hat <- pe$a
+b_hat <- pe$b
 # extrapolate using kernel smoothed residuals ----
-Y1 <- Y_given_1_extreme$Y1
-Y2 <- Y_given_1_extreme$Y2
-Y3 <- Y_given_1_extreme$Y3
-
-cond_quantile <- function(x,Z,q,a_hat=a_hat,b_hat=b_hat) {
-  a_hat*x + x^b_hat *quantile(Z,q)
-}
+Y1 <- Y_given_1_extreme[l]
+Y2 <- Y_given_1_extreme[res[1]]
+Y3 <- Y_given_1_extreme[res[2]]
 
 Z2 <- Z3 <- c()
 for (i in 1:length(Y1)) {
-Z2[i] <-   (Y2[i]-a_hat[1]*Y1[i])/(Y1[i]^b_hat[1]) %>% replace_na(Y2[i]-a_hat[1]*Y1[i])
-Z3[i] <-   (Y3[i]-a_hat[2]*Y1[i])/(Y1[i]^b_hat[2]) %>% replace_na(Y3[i]-a_hat[2]*Y1[i])
+Z2[i] <-   (Y2[i]-a_hat[1]*Y1[i])/(Y1[i]^b_hat[1]) 
+Z3[i] <-   (Y3[i]-a_hat[2]*Y1[i])/(Y1[i]^b_hat[2]) 
 }
 
+# simulate from observed residuals and Gaussian copula with kernel smoothed density
+# calculate the normal using the PIT
+Z2 <- as.numeric(unlist(Z2))
+Z3 <- as.numeric(unlist(Z3))
+ZN2 <- qnorm(F_smooth_Z(Z2))
+ZN3 <- qnorm(F_smooth_Z(Z3))
+rho_hat <- cor(ZN2,ZN3)
+Nsim <- 500
+ZN <- mvrnorm(n=Nsim,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
+# transform back to original margins
+Z_star <- norm_to_orig(ZN=ZN,emp_res = Z)
+# ggplot(data.frame(Z2=Z_star$X1,Z3=Z_star$X2))+geom_point(aes(x=Z2,y=Z3),size=0.9,alpha=0.5,col="#C11432")+ 
+  # xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) + xlim(min(Z_star),max(Z_star)) + ylim(min(Z_star),max(Z_star)) + coord_fixed()
+
+# generate X_1 from Laplace distribution above 0.9 quantile
+set.seed(12)
+Nsim <- 50000
+Y1_gen <- -log(2*(1-0.999)) + rexp(Nsim)
+Gen_Y1 <- data.frame(Y1=Y1_gen)
+
+# for each Y, generate a residual and calculate Y_2
+Y1 <- Gen_Y1$Y1
+#Z_gen <- sample(Z2,N,replace=TRUE) +rnorm(N,mean=0,sd=density(Z)$bw) # plus noise
+Y2 <- pe$a[1]*Y1 + Y1^pe$b[1] *Z_star[,1]
+Y3 <- pe$a[2]*Y1 + Y1^pe$b[2] *Z_star[,2]
+Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2, Y3=Y3) %>% mutate(sim=rep("model",Nsim))
+# generate Y_1 (extrapolate so above largest observed value)
+
+# #plot
+# Gen_orig <- rbind(Gen_Y1,Y_given_1_extreme %>% dplyr::select(Y1,Y2,Y3) %>% mutate(sim=rep("original_laplace",500)))
+# ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) + 
+#   scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
+
+# specify threshold for Laplace margin
+#v_l <- c(5,12,5,12)
+vL <- frechet_laplace_pit(qfrechet(0.999))
+
+# calculate empirical probability by simulating Y_2 from the model
+p <- ((Gen_Y1 %>% filter(Y1>vL,Y2>vL,Y3>vL) %>% dim())[1]/Nsim)*(1-0.999)
+# calculate CI
+CI <- c(p-(1.96*(p*(1-p)/Nsim)^(0.5)),p+(1.96*(p*(1-p)/Nsim)^(0.5)))
+}
+ran_bern <- rbinom(n=1000,size = 50000,p=p)/50000
+# density(ran_bern) %>% plot()
+ggplot(data.frame(x=ran_bern)) + geom_density(aes(x=x),stat="density") 
+
+# need to log Fréchet margins to get the logistic model margin
+p <- evd::pbvevd(c(v[2],v[4]),dep=dep[1],model="log") -
+  evd::pbvevd(c(v[1],v[4]),dep=dep[1],model="log") -
+  evd::pbvevd(c(v[2],v[3]),dep=dep[1],model="log") +
+  evd::pbvevd(c(v[1],v[3]),dep=dep[1],model="log")
 x <- seq(min(sims)-1,max(sims)+1,length.out=10000)
 yl <- cond_quantile(x,Z=Z2,q=0.025,a_hat=a_hat[1],b_hat=b_hat[1])
 ym <- cond_quantile(x,Z=Z2,q=0.5,a_hat=a_hat[1],b_hat=b_hat[1])
@@ -103,22 +154,11 @@ Z <- data.frame(Z2,Z3) # dataframe of observed residuals
 Zs <- as.data.frame(matrix(ncol=2,nrow=0))
 names(Zs) <- c("Z2","Z3")
 for (i in 1:1000) {
-Zs[i,] <- Z[sample(1:nrow(Z),1,replace=TRUE),]
+  Zs[i,] <- Z[sample(1:nrow(Z),1,replace=TRUE),]
 }
 # plot simulated residuals
 ggplot(Zs)+geom_point(aes(x=Z2,y=Z3),size=0.9,alpha=0.5,col="#C11432") + xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) +
-   xlim(min(Zs),max(Zs)) + ylim(min(Zs),max(Zs)) + coord_fixed()
-
-# simulate from observed residuals and Gaussian copula with kernel smoothed density
-# calculate the normal using the PIT
-ZN2 <- qnorm(F_smooth_Z(Z2))
-ZN3 <- qnorm(F_smooth_Z(Z3))
-rho_hat <- cor(ZN2,ZN3)
-ZN <- mvrnorm(n=5000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
-# transform back to original margins
-Z_star <- norm_to_orig(ZN=ZN,emp_res = Z)
-ggplot(data.frame(Z2=Z_star$X1,Z3=Z_star$X2))+geom_point(aes(x=Z2,y=Z3),size=0.9,alpha=0.5,col="#C11432")+ 
-  xlab(TeX("$Z_2$")) + ylab(TeX("$Z_3$")) + xlim(min(Z_star),max(Z_star)) + ylim(min(Z_star),max(Z_star)) + coord_fixed()
+  xlim(min(Zs),max(Zs)) + ylim(min(Zs),max(Zs)) + coord_fixed()
 
 # create a loop to count points in each region ----
 q <- seq(0.05,0.95,by=0.05)
@@ -140,8 +180,8 @@ for (i in 1:(length(q)-1)) {
   D <- c(min(x),y2[which.min(x)])
   C <- c(max(x),y2[which.max(x)])
   df_tmp <- data.frame(matrix(c(A,B,C,D),ncol=2,byrow=TRUE))
-no <-   cbind(no,pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp))
-tmp[pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp)] <- paste0(i+1)
+  no <-   cbind(no,pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp))
+  tmp[pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp)] <- paste0(i+1)
 }
 # top edge case
 y1 <- cond_quantile(x,Z,q=max(q),a_hat=a_hat,b_hat=b_hat)
@@ -165,7 +205,7 @@ v <- seq(0, 0.95, by = .05)
 M <- expand.grid(u,v)
 Lik <- c()
 for (i in 1:nrow(M)) {
-Lik[i] <- optim(par=c(0,1),fn = Y_likelihood_fix_ab,a=M$Var1[i],b=M$Var2[i],df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))$value
+  Lik[i] <- optim(par=c(0,1),fn = Y_likelihood_fix_ab,a=M$Var1[i],b=M$Var2[i],df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))$value
 }
 tmp_df <- cbind(M,Lik)
 
@@ -173,7 +213,7 @@ scatterplot3js(x=M$Var2, y=M$Var1, z=Lik, phi = 40, theta = 20,
                color=rainbow(length(z)),
                colkey = FALSE,
                cex = .3,xlab="beta",ylab="alpha"
-               )
+)
 
 tmp_df %>% filter(Lik>quantile(Lik,0)) %>% 
   ggplot(aes(x = Var1, y = Var2, z = Lik)) + 
@@ -214,60 +254,6 @@ grid.arrange(ggplot(X_2_simdf %>% filter(v=="above_threshold")) + geom_point(aes
              ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y2,y=Y_3),alpha=0.5),
              ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y1,y=Y_2_sim),alpha=0.5),
              ggplot(X_2_simdf%>% filter(v=="above_threshold")) + geom_point(aes(x=Y2_sim,y=Y_3),alpha=0.5),ncol=2)
-
-# generate residual Z ----
-Y1 <- Y_given_1_extreme[,4]
-Y2 <- Y_given_1_extreme[,5]
-Z <- (Y2-a_hat*Y1)/(Y1^b_hat)
-plot(Y1,Z)
-
-# generate X_1 from Frechet distribution above 0.9 quantile
- # U <- runif(50000)
- # X_1_gen <- sort( -1/log(0.99) + 1 - exp(-U) )
-set.seed(12)
-N <- 50000
-U <- runif(min=0.99,max=1,N)
-X_1_gen <- sort( -1/(log(U) ) )
-
-U <- runif(N)
-Y_1_gen <- -log(2*(1-0.99)) + rexp(N)
-Gen_Y_1 <- data.frame(Y1=Y_1_gen,X_1=as.numeric(map(.x=X_1,.f=laplace_frechet_pit)))
-
-# transform to Laplace margins
-Gen_Y_1 <- data.frame(X_1=X_1_gen) %>% mutate(Y_1=as.numeric(map(.x=X_1,.f=frechet_laplace_pit)))
-
-# for each Y, generate a residual and calculate Y_2
-Y1 <- Gen_Y_1$Y_1
-Z_gen <- sample(Z2,N,replace=TRUE) +rnorm(N,mean=0,sd=density(Z)$bw) # plus noise
-Y2 <- a_hat*Y1 + Y1^b_hat *Z_gen
-Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2) %>% mutate(sim=rep("model",N))
-# generate Y_1 (extrapolate so above largest observed value)
-
-#plot
-Gen_orig <- rbind(Gen_Y_1,Y_given_1_extreme %>% dplyr::select(X_1,Y_1,Y_2) %>% mutate(sim=rep("original_laplace",500)))
-ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + 
-  scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
-
-# specify threshold for Laplace margin
-v_l <- c(5,12,5,12)
-# transform to logistic margins
-v <- log(sapply(X = v_l,FUN = laplace_frechet_pit))
-
-# calculate empirical probability by simulating Y_2 from the model
-((Gen_Y_1 %>% filter(Y_1>v[1],Y_1<v[2],Y_2>v[3],Y_2<v[4]) %>% dim())[1]/50000)*(1-0.99)
-
-# need to log Fréchet margins to get the logistic model margin
-p <- evd::pbvevd(c(v[2],v[4]),dep=dep[1],model="log") -
-  evd::pbvevd(c(v[1],v[4]),dep=dep[1],model="log") -
-  evd::pbvevd(c(v[2],v[3]),dep=dep[1],model="log") +
-  evd::pbvevd(c(v[1],v[3]),dep=dep[1],model="log")
-
-# calculate CI
-CI <- c(p-(1.96*(p*(1-p)/50000)^(0.5)),p+(1.96*(p*(1-p)/50000)^(0.5)))
-
-ran_bern <- rbinom(n=1000,size = 50000,p=p)/50000
-# density(ran_bern) %>% plot()
-ggplot(data.frame(x=ran_bern)) + geom_density(aes(x=x),stat="density") 
 
 
 # suppose we wish to simulate 1/10000 year event probability
