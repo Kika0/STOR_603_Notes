@@ -356,7 +356,7 @@ coast_dist <- st_distance(uk_sf_rot,buffer_only)
 uk_sf_rot <- cbind(uk_sf_rot,data.frame("coast_dist" = coast_dist))
 tm_shape(uk_sf_rot) + tm_dots("coast_dist",size=1)
 ukcp18 <- ukcp18 %>% mutate("Longitude" = conv$lon, "Latitude" = conv$lat, "coast_dist" = uk_sf_rot$coast_dist) %>% relocate(coast_dist,.before = dist_birmingham)
-sims <- ukcp18 %>% arrange(is_location)%>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
+sims <- ukcp18 %>% dplyr::arrange(is_location)%>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
 # ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
 colnames(sims) <- paste0("Y",1:ncol(sims))
 # transform to Laplace margins
