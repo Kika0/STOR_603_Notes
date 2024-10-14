@@ -198,23 +198,6 @@ tmp[pointsInPolygon(Y_given_1_extreme[,4:5],df_tmp)] <- paste0(length(q)+1)
 ggplot() + geom_point(data=Y_given_1_extreme %>% mutate(check=tmp),aes(x=Y1,y=Y2,col=check),alpha=0.5)+
   geom_polygon(data=df_tmp,aes(x=X1,y=X2),fill="#009ada",alpha=0.2)
 
-# plot likelihood
-library(threejs)
-u <- seq(-0.95, 0.95, by = .05)
-v <- seq(0, 0.95, by = .05)
-M <- expand.grid(u,v)
-Lik <- c()
-for (i in 1:nrow(M)) {
-  Lik[i] <- optim(par=c(0,1),fn = Y_likelihood_fix_ab,a=M$Var1[i],b=M$Var2[i],df=Y_given_1_extreme,given=1,sim=2,control = list(fnscale=-1))$value
-}
-tmp_df <- cbind(M,Lik)
-
-scatterplot3js(x=M$Var2, y=M$Var1, z=Lik, phi = 40, theta = 20,
-               color=rainbow(length(z)),
-               colkey = FALSE,
-               cex = .3,xlab="beta",ylab="alpha"
-)
-
 tmp_df %>% filter(Lik>quantile(Lik,0)) %>% 
   ggplot(aes(x = Var1, y = Var2, z = Lik)) + 
   geom_tile( aes(fill = Lik)) + 
