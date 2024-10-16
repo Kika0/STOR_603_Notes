@@ -100,8 +100,8 @@ Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2, Y3=Y3) %>% mutate(sim=rep("model",Nsim))
 
 # #plot
 # Gen_orig <- rbind(Gen_Y1,Y_given_1_extreme %>% dplyr::select(Y1,Y2,Y3) %>% mutate(sim=rep("original_laplace",500)))
-# ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) + 
-#   scale_color_manual(values = c("original_laplace"="black","model" = "#C11432")) 
+# ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) +
+#   scale_color_manual(values = c("original_laplace"="black","model" = "#C11432"))
 
 # specify threshold for Laplace margin
 #v_l <- c(5,12,5,12)
@@ -471,29 +471,29 @@ v_l <- rep(frechet_laplace_pit( qfrechet(0.999)),2)
 annotate('rect', xmin=3, xmax=5, ymin=3, ymax=7, alpha=.2, fill='red')
 
 # calculate empirical probability by simulating Y_2 from the model
-set.seed(1)
+set.seed(12)
 sim_val <- plot_simulated(sims=sims,given=3)
-giv_1 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
-giv_1 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999),
+giv1 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
+giv1 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
 )
 sim_val <- plot_simulated(sims=sims,given=2)
-giv_2 <-  c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
+giv2 <-  c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
 
-giv_2 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+giv2 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
 )
 sim_val <- plot_simulated(sims=sims,given=3)
-giv_3 <-  c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
+giv3 <-  c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2],Y_3>v_l[1]) %>% dim())[1]/1000)*(1-0.999))
 
-giv_3 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
+giv3 <- c(((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_2>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="model") %>% filter(Y_2>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999),
            ((sim_val %>% filter(sim=="model") %>% filter(Y_1>v_l[1],Y_3>v_l[2]) %>% dim())[1]/1000)*(1-0.999)
 )
 
-tmp_df <- data.frame(giv_1,giv_2,giv_3)
+tmp_df <- data.frame(giv1,giv2,giv3)
 # need to log Fréchet margins to get the logistic model margin
 
 p <- 1 - 
@@ -554,7 +554,7 @@ ggplot(data.frame(x=qfrechet(s),cdf,cdf_emp)) + geom_line(aes(x=x,y=cdf),col="#C
   geom_point(aes(x=x,y=cdf_emp),col="#009ADA",alpha=0.6)
 
 generate_Y(N=N) %>% link_log(dep=1/2) %>% link_norm(dep=1/2) %>% plot_pairs()
-set.seed(1)
+set.seed(12)
 sims_tmp <- generate_Y(N=N) %>% link_log(dep=1/2) %>% link_log(dep=1/2) 
 sims <- sims_tmp %>% apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 names(sims) <- c("Y2","Y1","Y3")
@@ -699,7 +699,7 @@ integrate(integral,lower=0,upper=10^4)
 # plot several different densities
 tmp <- data.frame(z=as.numeric(),cdf=as.numeric())
 tmp1 <- data.frame(z=as.numeric(),cdf=as.numeric(),ite=as.character())
-set.seed(123)
+set.seed(12)
 for (j in 1:20) {
   # x2 <- max(X2)
   # x3 <- X3[X2==max(X2)]
@@ -751,7 +751,7 @@ p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab("")
 grid.arrange(p1,p2,ncol=2)
 
 # simulation study for different margin methods ----
-set.seed(88)
+set.seed(12)
 N <- 50000
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
@@ -760,7 +760,7 @@ tmp_est <- par_est(sims,v=v,given=c(1),method="Normal")
 tmp_est1 <- par_est(sims,v=v,given=c(1),method="AGG")
  
 for (i in 1:100) {
-  set.seed(89*i)
+  set.seed(12*i)
   N <- 50000
   sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
     apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
@@ -912,3 +912,33 @@ ggplot(df,aes(x=rep(seq(-5,5,0.0005),4),y=AGG_sample,color=sim)) + geom_line(lin
                      breaks=c(1,2,3,4),
                      values=c("#C11432","#66A64F","#FDD10A","#009ADA")) +
   xlab(TeX("$z$")) + ylab(TeX("$f_{AGG} (z)$"))
+
+# plot limited extrapolation
+set.seed(123)
+N <- 5000
+v <- 0.99
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+pe <- par_est(df = sims, given = 1, v = v)
+Y_given1extreme <- sims %>% filter(Y1>quantile(Y1,v))
+Y1 <- Y_given1extreme$Y1
+Y2 <- Y_given1extreme$Y2
+# calculate observed residuals
+Z2 <- (Y2-pe$a[1]*Y1)/(Y1^pe$b[1])
+# sample from the observed residuals
+Nsim <- 5000
+# Zstar <- data.frame(Z2 = sample(Z2, size = Nsim, replace = TRUE) # without noise
+Zstar <- data.frame(Z2 = sample(Z2, size = Nsim, replace = TRUE)+ rnorm(n=Nsim,mean=0,sd=density(Z2)$bw))
+# simulate Y1
+Y1_gen <- -log(2*(1-v)) + rexp(Nsim)
+Gen_Y1 <- data.frame(Y1=Y1_gen)
+Gen_Y1$Y2 <- pe$a[1]*Y1_gen + Y1_gen^pe$b[1] *Zstar[,1]
+Gen_Y1$sim <- "model"
+Gen_orig <- rbind(Gen_Y1,Y_given1extreme %>% dplyr::select(Y1,Y2) %>% mutate(sim=rep("original_laplace",N*(1-v))))
+ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) +
+  scale_color_manual(values = c("original_laplace"="black","model" = "#C11432"))+ 
+  xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$"))
+
+ggplot() +
+  geom_point(data=Gen_Y1,mapping = aes(x=Y1,y=Y2),alpha=0.5,col = "#C11432") + coord_fixed() + geom_point(data=Y_given1extreme,mapping=aes(x=Y1,Y2), alpha = 1) 
+
