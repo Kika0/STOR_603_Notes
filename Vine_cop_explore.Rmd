@@ -1,0 +1,82 @@
+---
+title: "Vine_copula_explore"
+output: html_document
+date: "2024-10-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# libraries and functions ----
+library(VineCopula)
+library(evd)
+library(ismev)
+library(tidyverse)
+library(MASS) # use dplyr::select to avoid function conflict
+library(pracma) # incomplete gamma function, will be used later in cond.ext.model for modelling the residual margins
+library(texmex) # air pollution data
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
+
+# set theme defaults to be black rectangle
+theme_set(theme_bw())
+theme_replace(
+  panel.spacing = unit(2, "lines"),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.background = element_blank(),
+  panel.border = element_rect(colour = "black", fill = NA) )
+```
+
+## Fit vine copula to winter data
+
+```{r}
+fitw <- RVineStructureSelect(as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)),
+                     trunclevel = 3, indeptest = FALSE)
+fitw
+```
+
+Now fit summer pollution data vine copula parameters but impose the tree structure from the winter pollution data.
+
+```{r}
+fits1 <- RVineStructureSelect(as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)),
+                     trunclevel = 3, indeptest = FALSE)
+# with imposed tree structure
+fits2 <- RVineCopSelect(data = as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)), Matrix = fitw$Matrix,
+                     trunclevel = 3, indeptest = FALSE)
+
+```
+First, the model as previously done.
+```{r}
+fits1
+```
+Second, our new model with imposed tree structure.
+
+```{r}
+fits2
+```
+
+Compare the two fits using the Vuong test.
+
+```{r}
+RVineVuongTest(data= as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)),RVM1 = fits1, RVM2 = fits2)
+```
+
+Do the same the other way around, i.e., start by fitting vine copula to summer pollution data.
+
+```{r}
+fits1
+```
+
+```{r}
+# with imposed tree structure
+fitw2 <- RVineCopSelect(data = as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)), Matrix = fits1$Matrix,
+                     trunclevel = 3, indeptest = FALSE)
+fitw
+fitw2
+```
+ Compare the two fits for winter pollution data.
+```{r}
+RVineVuongTest(data= as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)),RVM1 = fitw, RVM2 = fitw2)
+```
+ 
+ 
