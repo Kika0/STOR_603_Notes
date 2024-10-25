@@ -91,12 +91,6 @@ gaussprocessadd <- function(from = 0, to = 1,df, K = function(s1,s2 ) {exp(-(abs
   
   return(data.frame("t" = ts, "xt" = path))
 }
-set.seed(123)
-df <- gaussprocess(m=11)
-tmp <- gaussprocessadd(df=df,m=51)
-tmp1 <- gaussprocessadd(df=df,m=51)
-tmp2 <- gaussprocessadd(df=df,m=51)
-ggplot() + geom_line(data=tmp,aes(x=t,y=xt),col="#C11432") +geom_point(data=df,aes(x=t,y=xt),size=2) + geom_line(data=tmp1,aes(x=t,y=xt),col="#009ADA")+ geom_line(data=tmp2,aes(x=t,y=xt),col="#66A64F")
 
 # sample in two dimensions ----
 x <- seq(0,1)
