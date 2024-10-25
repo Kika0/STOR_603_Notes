@@ -52,47 +52,6 @@ gaussprocess <- function(from = 0, to = 1, K = function(s, t) {exp(-(abs(s-t)/la
   return(data.frame("t" = t, "xt" = path))
 }
 
-# run for different values of lambda ----
-m <- 50
-set.seed(1)
-l1 <- gaussprocess(lambda=0.1)
-set.seed(1)
-l2 <- gaussprocess(lambda=1)
-set.seed(1)
-l3 <- gaussprocess(lambda=10)
-df <- cbind(rbind(l1,l2,l3),
-            data.frame(lambda=c(rep("0.1",m),rep("1",m),rep("10",m))))
-ggplot(df) + geom_line(aes(x=t,y=xt,col=lambda))+ ylab(TeX(paste0("$X($","$s$","$)")))
-
-# run for different values of alpha ----
-m <- 50
-set.seed(1)
-l1 <- gaussprocess(alpha = 0.1,m=m)
-set.seed(1)
-l2 <- gaussprocess(alpha = 1,m=m)
-set.seed(1)
-l3 <- gaussprocess(alpha = 1.9,m=m)
-df <- cbind(rbind(l1,l2,l3),
-            data.frame(alpha=c(rep("0.1",m),rep("1",m),rep("1.9",m))))
-ggplot(df) + geom_line(aes(x=t,y=xt,col=alpha))+ ylab(TeX(paste0("$X($","$s$","$)")))
-
-# sample many times to illustrate the Gaussian density at each 1:m ----
-tmp <- data.frame(t=as.numeric(),xt=as.numeric())
-tmp1 <- data.frame(t=as.numeric(),xt=as.numeric(),ite=as.character())
-set.seed(1234)
-m <- 10
-for (i in 1:1000) {
-  from <- (i-1)*m+1
-  to <- m*i
-  tmp[from:to,] <- gaussprocess(m=m)
-  tmp1[from:to,] <- cbind(tmp[from:to,],data.frame(ite=rep(as.character(i),m)))
-}
-
-ggplot(tmp1) + geom_line(aes(x=t,y=xt,col=ite),alpha=0.2,linewidth=0.05)+ylab(TeX(paste0("$X($","$s$","$)"))) + theme(legend.position="none") 
- # scale_color_manual(values=c(rep("#C11432",500),rep("#009ADA",500)))
-ggplot() + geom_density(tmp1 %>% mutate(t=as.character(t)), mapping=aes(x = xt, col = t),alpha = 0.1,linewidth=0.3)+ theme(legend.position="none") +
-  geom_density(data.frame(x=rnorm(1000)),mapping=aes(x=x))
-
 # conditioning on given values use GP regression ----
 gaussprocessadd <- function(from = 0, to = 1,df, K = function(s1,s2 ) {exp(-(abs(s1-s2)/lambda)^alpha)},
                          start = NULL, m = 50,alpha=1,lambda=1) {
@@ -141,6 +100,9 @@ ggplot() + geom_line(data=tmp,aes(x=t,y=xt),col="#C11432") +geom_point(data=df,a
 
 # sample in two dimensions ----
 x <- seq(0,1)
+K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
+                                      cov = matrix(c(1,rho*sig,rho*sig,sig^2),ncol=2))/lambda)^alpha)}
+
 gaussprocess2d <- function(from = 0, to = 1, K = function(s, t) {exp(-(sqrt((s[1]-t[1])^2+(s[2]-t[2])^2)/lambda)^alpha)},
                          start = NULL, rho=NULL, sig=NULL, m = 10,alpha=1,lambda=1) {
   
@@ -163,8 +125,6 @@ for (i in 1:nrow(xy)){
   return(data.frame("x" = xy$Var1, "y"=xy$Var2, "xt" = path))
 }
 
-K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
-                    cov = matrix(c(1,rho*sig,rho*sig,sig^2),ncol=2))/lambda)^alpha)}
 
 set.seed(1)
 tmp <- gaussprocess2d(m=10,K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
