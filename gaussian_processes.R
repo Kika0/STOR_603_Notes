@@ -180,15 +180,6 @@ ggplot(pp,aes(x=x1,y=x2)) +
   scale_y_continuous(expand=c(0,0)) +
   scale_fill_viridis_c(option = "viridis")
 
-# compute squared exponential kernel on pairwise values
-Sigma <- rbf_D(X,lambda = 0.01,alpha = 1)
-
-# sample from multivariate normal with mean zero, sigma = sigma
-Y <- MASS::mvrnorm(1,rep(0,dim(Sigma)[1]), Sigma)
-
-# plot results
-pp <- data.frame(y=Y,x1=X[,1],x2=X[,2])
-
 # combine GP with conditional models----
 m <- 30
 n <- 1000
