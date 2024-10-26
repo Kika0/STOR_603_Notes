@@ -93,12 +93,8 @@ gaussprocessadd <- function(from = 0, to = 1,df, K = function(s1,s2 ) {exp(-(abs
 }
 
 # sample in two dimensions ----
-x <- seq(0,1)
-K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
-                                      cov = matrix(c(1,rho*sig,rho*sig,sig^2),ncol=2))/lambda)^alpha)}
-
-gaussprocess2d <- function(from = 0, to = 1, K = function(s, t) {exp(-(sqrt((s[1]-t[1])^2+(s[2]-t[2])^2)/lambda)^alpha)},
-                         start = NULL, rho=NULL, sig=NULL, m = 10,alpha=1,lambda=1) {
+gaussprocess2d <- function(from = 0, to = 1,alpha=1,lambda=1,rho=NULL, sig=NULL, K = function(s, t) {exp(-(sqrt((s[1]-t[1])^2+(s[2]-t[2])^2)/lambda)^alpha)},
+                         start = NULL,  m = 10) {
   
   x <- seq(from = from, to = to, length.out = m)
   y <- seq(from = from, to = to, length.out = m)
@@ -121,9 +117,15 @@ for (i in 1:nrow(xy)){
 
 
 set.seed(1)
-tmp <- gaussprocess2d(m=10,K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
-                                                                 cov = matrix(c(1,rho*sig,rho*sig,sig^2),ncol=2))/lambda)^alpha)},
-              rho=1/3,sig=1/2        )
+# try with Mahalanobis distance
+rho <- 1/3
+sig <- 1/2
+a <- 1/2
+lambda <- 1/2
+K <-  function(s, t) {exp(-(mahalanobis(x=s,center = t,
+                                        cov = matrix(c(1,rho*sig,rho*sig,sig^2),ncol=2))/lambda)^a)}
+
+tmp <- gaussprocess2d(m=10,K = K)
 ggplot(tmp,aes(x=x,y=y)) +
   geom_raster(aes(fill=xt), interpolate = TRUE) +
   geom_contour(aes(z=xt), bins = 12, color = "gray30", 
@@ -138,26 +140,24 @@ mx <- 20
 x <- seq(0,1,length=mx)
 # grid of pairwise values
 X <- expand.grid(x, x)
-rho <- c(0.1,0.5,0.9)
-rho <- c(0,0.1,0.2)
-sig <- c(0.5,1,2)
+rhomat <- c(0.1,0.5,0.9)
+sigmat <- c(0.5,1,2)
 pp <- data.frame(y=as.numeric(),x1=as.numeric(),x2=as.numeric(),ite=as.character())
 
-for (i in 1:length(rho)) {
-  for (j in 1:length(sig)) {
+for (i in 1:length(rhomat)) {
+  for (j in 1:length(sigmat)) {
     # sample from multivariate normal with mean zero, sigma = sigma
     set.seed(1)
-    Y <- gaussprocess2d(m=mx,rho = rho[i],sig=sig[j],K = function(s, t) {exp(-(mahalanobis(x=s,center = t,
-                                                                                           cov = matrix(c(1,rho[i]*sig[j],rho[i]*sig[j],sig[j]^2),ncol=2))/lambda)^alpha)})$xt
-    pp <- rbind(pp,data.frame(y=Y,x1=X[,1],x2=X[,2],ite=paste0("rho=",rho[i],", sigma=",sig[j])))
+    rho <- rhomat[i]
+    sig <- sigmat[j]
+    Y <- gaussprocess2d(m=mx, K = K)$xt
+    pp <- rbind(pp,data.frame(y=Y,x1=X[,1],x2=X[,2],ite=paste0("rho=",rhomat[i],", sigma=",sigmat[j])))
   }
 }
 
-# number of samples
 mx <- 30
 x <- seq(0,1,length=mx)
-# grid of pairwise values
-X <- expand.grid(x, x)
+X <- expand.grid(x, x) # grid of pairwise values
 alpha <- c(0.5,1,1.5)
 lambda <- c(0.5,1,2)
 pp <- data.frame(y=as.numeric(),x1=as.numeric(),x2=as.numeric(),ite=as.character())
