@@ -123,12 +123,9 @@ conv <- CnvRttPol(latlon = data.frame(long=ukcp18$Longitude,lat=ukcp18$Latitude)
 uk_sf_rot <- data.frame(lon=conv$lon,lat=conv$lat) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
 uk_sf_rot <- st_transform(uk_sf_rot,27700)
-# coast_dist <- st_geometry(obj = uk) %>%
-#   st_cast(to = 'LINESTRING') %>%
-#   st_distance(y=uk_sf_rot)
 # add buffer
 uk_buffered <- st_buffer(uk, 50000)   
-# polygon(s) of only the buffer
+# polygon of only the buffer
 buffer_only <- st_difference(uk_buffered, uk) 
 tm_shape(buffer_only) + tm_polygons()
 coast_dist <- st_distance(uk_sf_rot,buffer_only)
@@ -293,15 +290,17 @@ pa
 # calculate distance from the 3 conditioning sites
 # transform dataframe to include a vector of x (temperature) and d (distance from the conditioning site)
 p <- list()
+x <- list()
+d <- list()
 for (i in 1:3) {
   cond_var <- i
-x <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
-d <- (ukcp18 %>% arrange(is_location))[-cond_var,] %>% select(4+cond_var) %>% pull() %>% units::drop_units()
-opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x,d=d)
+x[[i]] <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
+d[[i]] <- (ukcp18 %>% arrange(is_location))[-cond_var,] %>% select(4+cond_var) %>% pull() %>% units::drop_units()
+opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x[[i]],d=d[[i]])
 # plot a function of alpha against distance
-a <- exp(-opt$par[1]*d)
-p[[i]] <- ggplot() + geom_line(data=data.frame(x=d,y=a),aes(x=x,y=y)) +
-  geom_point(data=data.frame(x=d,y=x),aes(x=x,y=y)) +
+a <- exp(-opt$par[1]*d[[i]])
+p[[i]] <- ggplot() + geom_line(data=data.frame(x=d[[i]],y=a),aes(x=x,y=y)) +
+  geom_point(data=data.frame(x=d[[i]],y=x[[i]]),aes(x=x,y=y)) +
   ylab(TeX("$\\alpha$")) + xlab("Distance")
 }
 grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3)
