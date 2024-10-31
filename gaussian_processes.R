@@ -285,23 +285,3 @@ pa <- tmap_arrange(tm_shape(uk_tmp3 %>% filter(given==50 & method=="two_step")) 
                    tm_shape(uk_tmp3 %>% filter(given==200 & method=="sequential")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 200"),             
                    tm_shape(uk_tmp3 %>% filter(given==350 & method=="one_step")) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Cond site 350"),ncol=3)
 pa
-
-# use parameteric form for a ----
-# calculate distance from the 3 conditioning sites
-# transform dataframe to include a vector of x (temperature) and d (distance from the conditioning site)
-p <- list()
-x <- list()
-d <- list()
-for (i in 1:3) {
-  cond_var <- i
-x[[i]] <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
-d[[i]] <- (ukcp18 %>% arrange(is_location))[-cond_var,] %>% select(4+cond_var) %>% pull() %>% units::drop_units()
-opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x[[i]],d=d[[i]])
-# plot a function of alpha against distance
-a <- exp(-opt$par[1]*d[[i]])
-p[[i]] <- ggplot() + geom_line(data=data.frame(x=d[[i]],y=a),aes(x=x,y=y)) +
-  geom_point(data=data.frame(x=d[[i]],y=x[[i]]),aes(x=x,y=y)) +
-  ylab(TeX("$\\alpha$")) + xlab("Distance")
-}
-grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3)
-# simulate from the parametric form of alpha to compare with marginal fits
