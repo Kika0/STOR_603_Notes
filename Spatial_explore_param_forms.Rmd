@@ -1,0 +1,52 @@
+---
+title: "Exploration of potential parametric forms of conditional extreme value models"
+output: html_document
+date: "2024-10-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(tidyverse)
+library(latex2exp)
+library(viridis)
+library(plgp)
+library(gridExtra)
+library(here)
+library(tmap)
+library(units)
+library(sf)
+```
+
+## Set-up
+
+Currently, we work with 19 years of daily maximum temperature data over summer months (June, July, August). (The issue with year 20 remains unresolved.)
+
+```{r}
+
+```
+
+## Follow-up from meeting with Simon: exploring $\alpha$ against distance
+
+Recall the plot of marginal estimates of $\alpha$ parameter againt distance[m] for the three conditioning sites.
+
+```{r}
+# pick a function of alpha as a divide: diff for each site 
+
+```
+
+## Sequential parameter estimation
+
+1. Fix $\beta=0$, estimate $\hat{\alpha}$.
+2. Fix $\alpha=\hat{\alpha}$, estimate $\hat{\beta}$.
+3a. Fix $\alpha=\hat{\alpha}$ and $\beta=\hat{\beta}$, estimate $\hat{\mu}$ and $\hat{\sigma}$.
+3b. Calculate observed residuals, estimate $\hat{\mu_{AGG}}$, $\hat{\sigma_{AGG}}$, $\hat{\delta}_l$ and $\hat{\delta}_u$.
+
+
+```{r}
+
+```
+
+## Conditioning on any random site
+
+Currently, the analysis is conditioning on Birmingham, Glasgow and London, ordered as first 3 columns of the temperature data for an easy link. 
