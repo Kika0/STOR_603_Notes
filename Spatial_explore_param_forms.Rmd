@@ -63,24 +63,38 @@ load("alphaspatial.RData")
 grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3)
 ```
 
-We look at Birmingham (left) and Glasgow (right).
+We look at Birmingham (left) and London (right).
 
 ```{r}
 # pick a straight line as a divide: diff for each site 
+is_above <- function(x,y) { y>(y2-y1)/(x2-x1)*(x-x1)+y1
+}
 # pick 2 points on a line for Birmingham
 x1 <- 0
 x2 <- 450000
 y1 <- 1.2
 y2 <- 0.25
-is_above <- function(x,y) { y>(y2-y1)/(x2-x1)*(x-x1)+y1
-}
 df <- data.frame(x=d[[1]],y=x[[1]],z=as.character(is_above(d[[1]],x[[1]])))
 p1 <- ggplot(df) + 
   geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
    geom_point(aes(x=x,y=y,colour=factor(z))) + 
-   ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432"))
-# plot to check Birmingham and Glasgow
-grid.arrange(p1,p1,ncol=2)
+   ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle("Birmingham")
+# pick 2 points on a line for Birmingham
+x1 <- 0
+x2 <- 450000
+y1 <- 1.2
+y2 <- 0.25
+df <- data.frame(x=d[[3]],y=x[[3]],z=as.character(is_above(d[[3]],x[[3]])))
+p2 <- ggplot(df) + 
+  geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
+   geom_point(aes(x=x,y=y,colour=factor(z))) + 
+   ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle("London")
+# plot to check Birmingham and London
+grid.arrange(p1,p2,ncol=2)
+```
+Link both back to spatial locations to explore any potential patterns.
+```{r}
+
 ```
 
 ## Sequential parameter estimation
