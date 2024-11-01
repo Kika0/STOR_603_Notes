@@ -61,23 +61,34 @@ load("alphaspatial.RData")
 
 ```{r}
 grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3)
-# simulate from the parametric form of alpha to compare with marginal fits
+```
 
-# pick a function of alpha as a divide: diff for each site 
-l <- list()
-l[[1]] <- -d[[1]]+50000
-l[[2]] <- -d[[2]]+50000
-l[[3]] <- -d[[3]]+50000
-# plot to check
+We look at Birmingham (left) and Glasgow (right).
 
+```{r}
+# pick a straight line as a divide: diff for each site 
+# pick 2 points on a line for Birmingham
+x1 <- 0
+x2 <- 450000
+y1 <- 1.2
+y2 <- 0.25
+is_above <- function(x,y) { y>(y2-y1)/(x2-x1)*(x-x1)+y1
+}
+df <- data.frame(x=d[[1]],y=x[[1]],z=as.character(is_above(d[[1]],x[[1]])))
+p1 <- ggplot(df) + 
+  geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
+   geom_point(aes(x=x,y=y,colour=factor(z))) + 
+   ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432"))
+# plot to check Birmingham and Glasgow
+grid.arrange(p1,p1,ncol=2)
 ```
 
 ## Sequential parameter estimation
 
 1. Fix $\beta=0$, estimate $\hat{\alpha}$.
 2. Fix $\alpha=\hat{\alpha}$, estimate $\hat{\beta}$.
-3a. Fix $\alpha=\hat{\alpha}$ and $\beta=\hat{\beta}$, estimate $\hat{\mu}$ and $\hat{\sigma}$.
-3b. Calculate observed residuals, estimate $\hat{\mu_{AGG}}$, $\hat{\sigma_{AGG}}$, $\hat{\delta}_l$ and $\hat{\delta}_u$.
+3. Fix $\alpha=\hat{\alpha}$ and $\beta=\hat{\beta}$, estimate $\hat{\mu}$ and $\hat{\sigma}$.
+4. Calculate observed residuals, estimate $\hat{\mu}_{AGG}$, $\hat{\sigma}_{AGG}$, $\hat{\delta}_l$ and $\hat{\delta}_u$.
 
 
 ```{r}
