@@ -5,7 +5,7 @@ date: "2024-10-25"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 library(MASS)
 library(tidyverse)
 library(latex2exp)
@@ -16,6 +16,12 @@ library(here)
 library(tmap)
 library(units)
 library(sf)
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
+source("rotate_unrotate_coordinates.R")
+gr_npole_lat <- 37.5
+gr_npole_lon <- 177.5
+load("spatialobjects.RData") # uk polygon and uk_temp_sf points sf objects
 theme_set(theme_bw())
 theme_replace(
   panel.spacing = unit(2, "lines"),
@@ -29,7 +35,31 @@ theme_replace(
 
 Currently, we work with 19 years of daily maximum temperature data over summer months (June, July, August). (The issue with year 20 remains unresolved.)
 
-```{r}
+```{r, include=FALSE}
+# UKCP 18 data (summer max daily temperatures 1999-2018) ----
+ukcp18 <- readRDS("data/uk_1999_2018_summer.RDS") %>% relocate(dist_london,.after=dist_glasgow)
+# remove last year of the data due to error (same data as first year)
+ukcp18 <- ukcp18[,1:1716]
+conv <- CnvRttPol(latlon = data.frame(long=ukcp18$Longitude,lat=ukcp18$Latitude),spol_coor = c(gr_npole_lon, gr_npole_lat))
+uk_sf_rot <- data.frame(lon=conv$lon,lat=conv$lat) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+uk_sf_rot <- st_transform(uk_sf_rot,27700)
+# add buffer
+uk_buffered <- st_buffer(uk, 50000)   
+# polygon of only the buffer
+buffer_only <- st_difference(uk_buffered, uk) 
+tm_shape(buffer_only) + tm_polygons()
+coast_dist <- st_distance(uk_sf_rot,buffer_only)
+uk_sf_rot <- cbind(uk_sf_rot,data.frame("coast_dist" = coast_dist))
+tm_shape(uk_sf_rot) + tm_dots("coast_dist",size=1)
+ukcp18 <- ukcp18 %>% mutate("Longitude" = conv$lon, "Latitude" = conv$lat, "coast_dist" = uk_sf_rot$coast_dist) %>% relocate(coast_dist,.before = dist_birmingham)
+sims <- ukcp18 %>% dplyr::arrange(is_location)%>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
+# ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
+colnames(sims) <- paste0("Y",1:ncol(sims))
+# transform to Laplace margins
+sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+# calculate the residuals for Birmingham (1), then Glasgow (2) and London (3)
+sites <- c("Birmingham","Glasgow","London")
 
 ```
 
@@ -74,7 +104,8 @@ x1 <- 0
 x2 <- 450000
 y1 <- 1.2
 y2 <- 0.25
-df <- data.frame(x=d[[1]],y=x[[1]],z=as.character(is_above(d[[1]],x[[1]])))
+cond_var <- 1
+df <- data.frame(x=d[[cond_var]],y=x[[cond_var]],z=as.character(is_above(d[[cond_var]],x[[cond_var]])))
 p1 <- ggplot(df) + 
   geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
    geom_point(aes(x=x,y=y,colour=factor(z))) + 
@@ -84,7 +115,8 @@ x1 <- 0
 x2 <- 450000
 y1 <- 1.2
 y2 <- 0.25
-df <- data.frame(x=d[[3]],y=x[[3]],z=as.character(is_above(d[[3]],x[[3]])))
+cond_var <- 3
+df <- data.frame(x=d[[cond_var]],y=x[[cond_var]],z=as.character(is_above(d[[cond_var]],x[[cond_var]])))
 p2 <- ggplot(df) + 
   geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
    geom_point(aes(x=x,y=y,colour=factor(z))) + 
@@ -94,8 +126,17 @@ grid.arrange(p1,p2,ncol=2)
 ```
 Link both back to spatial locations to explore any potential patterns.
 ```{r}
-
+cond_var <- 1
+df1 <- data.frame(is_above = factor( as.character(is_above(d[[cond_var]],x[[cond_var]])))) %>%  add_row(.before=cond_var)
+cond_var <- 3
+df3 <- data.frame(is_above = factor( as.character(is_above(d[[cond_var]],x[[cond_var]])))) %>%  add_row(.before=cond_var)
+uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
+  arrange(is_location) 
+tmp1 <- uk_tmp %>% cbind(df1)
+tmp3 <- uk_tmp %>% cbind(df3)
+tmap_arrange(tm_shape(tmp1) + tm_dots(col="is_above",size=0.3,palette=c("TRUE" = "#C11432", "FALSE" = "black")) + tm_layout(main.title="Birmingham"), tm_shape(tmp3) + tm_dots(col="is_above",size=0.3,palette=c("TRUE" = "#C11432", "FALSE" = "black")) + tm_layout(main.title="London"), ncol=2 )
 ```
+Both conditioning sites show a similar pattern, which suggest higher dependence decay with distance (black) in the south of the mainland UK and in the vicinity of the conditioning sites. The dividing line could be moved to explore this result further.
 
 ## Sequential parameter estimation
 
