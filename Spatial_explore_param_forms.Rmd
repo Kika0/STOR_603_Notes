@@ -145,11 +145,83 @@ Both conditioning sites show a similar pattern, which suggest higher dependence 
 3. Fix $\alpha=\hat{\alpha}$ and $\beta=\hat{\beta}$, estimate $\hat{\mu}$ and $\hat{\sigma}$.
 4. Calculate observed residuals, estimate $\hat{\mu}_{AGG}$, $\hat{\sigma}_{AGG}$, $\hat{\delta}_l$ and $\hat{\delta}_u$.
 
+```{r, include=FALSE}
+# function for plotting parameter estimates on a map and against distance
+plot_map_param <- function(tmp_est1,tmp_est2,tmp_est3) {
+  cond_var <- 1
+ tmp <- tmp_est1 %>% mutate(given=factor(given,levels = cond_var))
+tmp1 <- tmp %>% add_row(.before=cond_var)
+# match back to spatial locations and plot
+uk_tmp1 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
+  arrange(is_location) %>% cbind(tmp1) 
+cond_var <- 2
+ tmp <- tmp_est2 %>% mutate(given=factor(given,levels = cond_var))
+tmp1 <- tmp %>% add_row(.before=cond_var)
+# match back to spatial locations and plot
+uk_tmp2 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
+  arrange(is_location) %>% cbind(tmp1) 
+cond_var <- 3
+ tmp <- tmp_est3 %>% mutate(given=factor(given,levels = cond_var))
+tmp1 <- tmp %>% add_row(.before=cond_var)
+# match back to spatial locations and plot
+uk_tmp3 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
+  arrange(is_location) %>% cbind(tmp1) 
 
-```{r}
+pa <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="London"),ncol=3)
 
+pb <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")) + tm_layout(main.title="London"),ncol=3)
+
+pmu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$")) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$")) + tm_layout(main.title="London"),ncol=3)
+
+psig <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$")) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$")) + tm_layout(main.title="London"),ncol=3)
+
+pmuagg <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")) + tm_layout(main.title="London"),ncol=3)
+
+psigl <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$")) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$")) + tm_layout(main.title="London"),ncol=3)
+
+psigu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$")) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$")) + tm_layout(main.title="London"),ncol=3)
+
+pdeltal <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$")) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$")) + tm_layout(main.title="London"),ncol=3)
+
+pdeltau <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$")) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$")) + tm_layout(main.title="London"),ncol=3)
+return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,pdeltal,pdeltau))
+}
 ```
+
+```{r, echo=FALSE}
+# plot parameter estimates against distance and on a map
+# cond_var <- 1
+# tmp_est1 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
+# cond_var <- 2
+# tmp_est2 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
+# cond_var <- 3
+# tmp_est3 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
+# save these objects for faster knitting
+# save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,file = "spatialobjects.RData")
+#plot_dist_param(site1=tmp_est1,site2=tmp_est2,site3=tmp_est3)
+plot_map_param(tmp_est1=tmp_est1,tmp_est2=tmp_est2,tmp_est3=tmp_est3)
+```
+
+Now, the same approach with alpha values on the fitted exponential curve with distance.
+
+1. Fix $\beta=0$, estimate $\hat{\alpha}$.
+2. Fix $\alpha=\hat{\alpha}$, estimate $\hat{\beta}$.
+3. Fix $\alpha=\hat{\alpha}$ and $\beta=\hat{\beta}$, estimate $\hat{\mu}$ and $\hat{\sigma}$.
+4. Calculate observed residuals, estimate $\hat{\mu}_{AGG}$, $\hat{\sigma}_{AGG}$, $\hat{\delta}_l$ and $\hat{\delta}_u$.
 
 ## Conditioning on any random site
 
 Currently, the analysis is conditioning on Birmingham, Glasgow and London, ordered as first 3 columns of the temperature data for an easy link. 
+
+```{r, include=FALSE}
+
+```
