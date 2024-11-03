@@ -70,6 +70,19 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
         sig_hat <- append(sig_hat,optb$par[length(optb$par)])         
         likb <- append(likb,-optb$value)
       }
+      if (method=="sequential2") {
+        init_para <- c(0.8,0,1)
+        opta <- optim(par=init_para,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],b_hat=0,control = list(fnscale=-1,maxit=2000))
+        a_hat <- append(a_hat,opta$par[1])
+        lika <- append(lika,-opta$value)
+        init_parb <- c(0.2,0,1)
+        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=opta$par[1],control = list(fnscale=-1,maxit=2000))
+        b_hat <- append(b_hat,optb$par[length(optb$par)-2])
+        optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
+        mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
+        sig_hat <- append(sig_hat,optmusig$par[length(optmusig$par)])         
+        likb <- append(likb,-optb$value)
+      }
       if (method=="two_step" | (method=="one_step" & margin=="Normal")) {
         init_par <- c(0.8,0.2,0,1)
         opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1,maxit=2000))
@@ -188,7 +201,16 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
   
-  if (margin=="AGG" & method=="sequential") {
+  if (margin=="AGGsigdelta" & method %in% c("sequential","sequential2")) {
+    par_sum <- data.frame("lik" = nas, "lika"= lika,"likb"= likb,"lik2"=lik2,
+                          "a" = a_hat, "b" = b_hat,
+                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
+                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
+                          "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
+                          "given" = rep(given,each=(d-1)), "res" = res_var)
+  }
+  
+  if (margin=="AGG" & method %in% c("sequential","sequential2")) {
     par_sum <- data.frame("lik" = nas, "lika"=lika,"likb"=likb,"lik2"=lik2,
                           "a" = a_hat, "b" = b_hat,
                           "mu" = mu_hat,"mu_agg"=mu_agg_hat,
