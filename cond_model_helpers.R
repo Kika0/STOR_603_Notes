@@ -45,7 +45,7 @@ for (i in 1:ncol(ZN)) {
 }
 
 # generate a table of parameter estimates conditional on (given) each of the specified vector of variables
-par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
+par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=NULL) {
   lik <- lika <- likb <- lik2 <- a_hat <- b_hat <- mu_hat <- mu_agg_hat <- sig_hat <- sig_agg_hat <- sigl_hat <- sigu_hat <- delta_hat <- deltal_hat <- deltau_hat <- res_var <- c()
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
@@ -54,6 +54,9 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
     res <- c(1:d)[-j]
     init_par <- c()
     init_lik <- c()
+    if (is.vector(a) & method=="sequential3") {
+      a_hat <- a
+    }
     for (i in 2:d) {
       # optimise using the initial parameters
       Y1 <- Y_given_1_extreme[,j]
@@ -83,6 +86,15 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
         sig_hat <- append(sig_hat,optmusig$par[length(optmusig$par)])         
         likb <- append(likb,-optb$value)
       }
+      if (method=="sequential3") {
+        init_parb <- c(0.2,0,1)
+        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=a_hat[i-1],control = list(fnscale=-1,maxit=2000))
+        b_hat <- append(b_hat,optb$par[length(optb$par)-2])
+        optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=a_hat[i-1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
+        mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
+        sig_hat <- append(sig_hat,optmusig$par[length(optmusig$par)])         
+        likb <- append(likb,-optb$value)
+      }      
       if (method=="two_step" | (method=="one_step" & margin=="Normal")) {
         init_par <- c(0.8,0.2,0,1)
         opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1,maxit=2000))
@@ -210,6 +222,15 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
   
+  if (margin=="AGGsigdelta" & method %in% c("sequential3")) {
+    par_sum <- data.frame("lik" = nas, "lika"= nas,"likb"= likb,"lik2"=lik2,
+                          "a" = a_hat, "b" = b_hat,
+                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
+                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
+                          "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
+                          "given" = rep(given,each=(d-1)), "res" = res_var)
+  }
+  
   if (margin=="AGG" & method %in% c("sequential","sequential2")) {
     par_sum <- data.frame("lik" = nas, "lika"=lika,"likb"=likb,"lik2"=lik2,
                           "a" = a_hat, "b" = b_hat,
@@ -218,6 +239,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step") {
                           "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
+  
   return(par_sum)
 }
 
