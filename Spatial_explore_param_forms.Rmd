@@ -5,7 +5,7 @@ date: "2024-10-25"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 library(MASS)
 library(tidyverse)
 library(latex2exp)
@@ -125,7 +125,7 @@ p2 <- ggplot(df) +
 grid.arrange(p1,p2,ncol=2)
 ```
 Link both back to spatial locations to explore any potential patterns.
-```{r}
+```{r, warning=FALSE}
 cond_var <- 1
 df1 <- data.frame(is_above = factor( as.character(is_above(d[[cond_var]],x[[cond_var]])))) %>%  add_row(.before=cond_var)
 cond_var <- 3
@@ -211,12 +211,27 @@ return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,pdeltal,pdeltau))
 plot_map_param(tmp_est1=tmp_est1,tmp_est2=tmp_est2,tmp_est3=tmp_est3)
 ```
 
-Now, the same approach with alpha values on the fitted exponential curve with distance.
+Now, the same approach with alpha values on the fitted exponential curve with distance, so we use estimates of $\hat{\alpha}$ to fit an exponential curve to as a function of distance of site $i$ from the conditioning site $j$.
 
-1. Fix $\beta=0$, estimate $\hat{\alpha}$.
-2. Fix $\alpha=\hat{\alpha}$, estimate $\hat{\beta}$.
-3. Fix $\alpha=\hat{\alpha}$ and $\beta=\hat{\beta}$, estimate $\hat{\mu}$ and $\hat{\sigma}$.
-4. Calculate observed residuals, estimate $\hat{\mu}_{AGG}$, $\hat{\sigma}_{AGG}$, $\hat{\delta}_l$ and $\hat{\delta}_u$.
+1. Fix $\alpha=\alpha \left( d_{ij} \right) = \exp \left\{ - \phi d_{ij} \right\}$, estimate $\hat{\beta}$.
+2. Fix $\alpha=\alpha \left( d_{ij} \right)$ and $\beta=\hat{\beta}$, estimate $\hat{\mu}$ and $\hat{\sigma}$.
+3. Calculate observed residuals, estimate $\hat{\mu}_{AGG}$, $\hat{\sigma}_{AGG}$, $\hat{\delta}_l$ and $\hat{\delta}_u$.
+
+```{r, echo=FALSE}
+# plot parameter estimates against distance and on a map
+# opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x[[cond_var]],d=d[[cond_var]])
+# cond_var <- 1
+# tmp_est1a <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential3", a=exp(-opt$par[1]*d[[cond_var]]))
+# cond_var <- 2
+# tmp_est2a <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential3", a=exp(-opt$par[1]*d[[cond_var]]))
+# cond_var <- 3
+# tmp_est3a <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential3",a=exp(-opt$par[1]*d[[cond_var]]))
+# save these objects for faster knitting
+# save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,file = "spatialobjects.RData")
+plot_map_param(tmp_est1=tmp_est1a,tmp_est2=tmp_est2a,tmp_est3=tmp_est3a)
+```
+
+We can observe that imposing a parametric form on $\hat{\alpha}$ that only changes with distance leads to some unexpected values of $\hat{\beta}$ close to $1$. For the AGG distribution estimates, $\hat{\mu}_{AGG}$ is the mode of the distribution whereas $\hat{\mu}$ is the median as well as the mode for the symmetric Gaussian distribution. Therefore, lower values for $\hat{\mu}_{AGG}$ suggest heavier tails for the upper tail of the distribution. This is also shown by a positive difference of $\hat{\sigma}_u-\hat{\sigma}_l$.
 
 ## Conditioning on any random site
 
