@@ -96,45 +96,39 @@ grid.arrange(p[[1]],p[[2]],p[[3]],ncol=3)
 We look at Birmingham (left) and London (right).
 
 ```{r}
-# pick a straight line as a divide: diff for each site 
-is_above <- function(x,y) { y>(y2-y1)/(x2-x1)*(x-x1)+y1
+# pick a straight line as a divide using 2 points: diff for each site 
+is_above <- function(x,y,x1,x2,y1,y2) { y>(y2-y1)/(x2-x1)*(x-x1)+y1
 }
-# pick 2 points on a line for Birmingham
-x1 <- 0
-x2 <- 450000
-y1 <- 1.2
-y2 <- 0.25
-cond_var <- 1
-df <- data.frame(x=d[[cond_var]],y=x[[cond_var]],z=as.character(is_above(d[[cond_var]],x[[cond_var]])))
-p1 <- ggplot(df) + 
+plot_is_above <- function(x1,x2,y1,y2,cond_var) {
+sites <- c("Birmingham", "Glasgow", "London")
+df <- data.frame(x=d[[cond_var]],y=x[[cond_var]],z=as.character(is_above(d[[cond_var]],x[[cond_var]],x1=x1,x2=x2,y1=y1,y2=y2)))
+p <- ggplot(df) + 
   geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
    geom_point(aes(x=x,y=y,colour=factor(z))) + 
-   ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle("Birmingham")
-# pick 2 points on a line for Birmingham
-x1 <- 0
-x2 <- 450000
-y1 <- 1.2
-y2 <- 0.25
-cond_var <- 3
-df <- data.frame(x=d[[cond_var]],y=x[[cond_var]],z=as.character(is_above(d[[cond_var]],x[[cond_var]])))
-p2 <- ggplot(df) + 
-  geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
-   geom_point(aes(x=x,y=y,colour=factor(z))) + 
-   ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle("London")
-# plot to check Birmingham and London
-grid.arrange(p1,p2,ncol=2)
+   ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(sites[cond_var])
+return(p)
+}
+
+# plot to check Birmingham, Glasgow and London
+p1 <- plot_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=1)
+p2 <- plot_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=2)
+p3 <- plot_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=3)
+grid.arrange(p1,p2,p3,ncol=3)
 ```
 Link both back to spatial locations to explore any potential patterns.
 ```{r, warning=FALSE}
-cond_var <- 1
-df1 <- data.frame(is_above = factor( as.character(is_above(d[[cond_var]],x[[cond_var]])))) %>%  add_row(.before=cond_var)
-cond_var <- 3
-df3 <- data.frame(is_above = factor( as.character(is_above(d[[cond_var]],x[[cond_var]])))) %>%  add_row(.before=cond_var)
+map_is_above <- function(x1,x2,y1,y2,cond_var) {
+  sites <- c("Birmingham", "Glasgow", "London")
+  df <- data.frame(is_above = factor( as.character(is_above(d[[cond_var]],x[[cond_var]],x1=x1,x2=x2,y1=y1,y2=y2)))) %>%  add_row(.before=cond_var)
 uk_tmp <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
   arrange(is_location) 
-tmp1 <- uk_tmp %>% cbind(df1)
-tmp3 <- uk_tmp %>% cbind(df3)
-tmap_arrange(tm_shape(tmp1) + tm_dots(col="is_above",size=0.3,palette=c("TRUE" = "#C11432", "FALSE" = "black")) + tm_layout(main.title="Birmingham"), tm_shape(tmp3) + tm_dots(col="is_above",size=0.3,palette=c("TRUE" = "#C11432", "FALSE" = "black")) + tm_layout(main.title="London"), ncol=2 )
+tmp1 <- uk_tmp %>% cbind(df)
+tm_shape(tmp1) + tm_dots(col="is_above",size=0.3,palette=c("TRUE" = "#C11432", "FALSE" = "black")) + tm_layout(main.title=sites[cond_var])
+}
+p1 <- map_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=1)
+p2 <- map_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=2)
+p3 <- map_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=3)
+tmap_arrange(p1,p2,p3,ncol=3)
 ```
 Both conditioning sites show a similar pattern, which suggest higher dependence decay with distance (black) in the south of the mainland UK and in the vicinity of the conditioning sites. The dividing line could be moved to explore this result further.
 
