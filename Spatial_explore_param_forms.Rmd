@@ -188,14 +188,15 @@ psigl <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sigl",style="cont",size=0
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigu),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigu),na.rm = TRUE),length.out=6)
 psigu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title="Birmingham"),
              tm_shape(uk_tmp2) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+deltamax <- 5
+deltamin <- min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$deltal),as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$deltau),na.rm = TRUE)
+lims <- seq(deltamin,deltamax,length.out=6)
+pdeltal <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2 %>% filter(deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3 %>% filter(deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 
-lims <- seq(1,3,length.out=6)
-pdeltal <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
-
-lims <- seq(1,3,length.out=6)
-pdeltau <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(deltamin,deltamax,length.out=6)
+pdeltau <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,pdeltal,pdeltau))
 }
 ```
