@@ -113,7 +113,7 @@ return(p)
 p1 <- plot_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=1)
 p2 <- plot_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=2)
 p3 <- plot_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=3)
-grid.arrange(p1,p2,p3,ncol=3)
+grid.arrange(p1,p2,p3,nrow=3)
 ```
 Link both back to spatial locations to explore any potential patterns.
 ```{r, warning=FALSE}
@@ -130,7 +130,7 @@ p2 <- map_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=2)
 p3 <- map_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=3)
 tmap_arrange(p1,p2,p3,ncol=3)
 ```
-Both conditioning sites show a similar pattern, which suggest higher dependence decay with distance (black) in the south of the mainland UK and in the vicinity of the conditioning sites. The dividing line could be moved to explore this result further.
+Birmingham and London show a similar pattern, which suggest higher dependence decay with distance (black) in the south of the mainland UK and in the vicinity of the conditioning sites. The dividing line could be moved to explore this result further.
 
 ## Sequential parameter estimation
 
@@ -143,7 +143,7 @@ Both conditioning sites show a similar pattern, which suggest higher dependence 
 # function for plotting parameter estimates on a map and against distance
 plot_map_param <- function(tmp_est1,tmp_est2,tmp_est3) {
   cond_var <- 1
- tmp <- tmp_est1 %>% mutate(given=factor(given,levels = cond_var))
+ tmp <- tmp_est1 %>% mutate(given=factor(given,levels = cond_var)) 
 tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
 uk_tmp1 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
@@ -161,32 +161,41 @@ tmp1 <- tmp %>% add_row(.before=cond_var)
 uk_tmp3 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
   arrange(is_location) %>% cbind(tmp1) 
 
-pa <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$")) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),length.out=5)
+pa <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),length.out=5)
+lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),length.out=6)
+pb <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 
-pb <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$")) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),length.out=6)
+pmu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 
-pmu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$")) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$")) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),length.out=6)
+psig <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 
-psig <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$")) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$")) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),length.out=6)
+pmuagg <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 
-pmuagg <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$")) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigl),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigl),na.rm = TRUE),length.out=6)
+psigl <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 
-psigl <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$")) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$")) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigu),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigu),na.rm = TRUE),length.out=6)
+psigu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 
-psigu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$")) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$")) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(1,3,length.out=6)
+pdeltal <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 
-pdeltal <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$")) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$")) + tm_layout(main.title="London"),ncol=3)
-
-pdeltau <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$")) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$")) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$")) + tm_layout(main.title="London"),ncol=3)
+lims <- seq(1,3,length.out=6)
+pdeltau <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Birmingham"),
+             tm_shape(uk_tmp2) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
 return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,pdeltal,pdeltau))
 }
 ```
