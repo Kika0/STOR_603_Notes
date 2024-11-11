@@ -243,6 +243,10 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
   return(par_sum)
 }
 
+par_est_ite <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=NULL)  {
+  
+}
+
 # calculate the observed residuals
 observed_residuals <- function(df=sims,given=1,v=0.99,a=NULL,b=NULL) {
   j <- given
