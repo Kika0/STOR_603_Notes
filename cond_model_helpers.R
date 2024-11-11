@@ -243,8 +243,17 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
   return(par_sum)
 }
 
-par_est_ite <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=NULL)  {
-  
+par_est_ite <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=NULL, show_ite=FALSE)  {
+  a <- mu <- sig <- data.frame(matrix(ncol=0,nrow = nrow(df)))
+  for (i in 1:100) {
+    # calculate a
+    # update mu and sigma
+  }
+  if (show_ite = TRUE) {
+    return(list(a,mu,sig,par_sum))
+  }
+  else {return(par_sum)}
+    
 }
 
 # calculate the observed residuals
