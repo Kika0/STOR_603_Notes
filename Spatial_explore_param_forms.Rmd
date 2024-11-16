@@ -144,7 +144,7 @@ Birmingham and London show a similar pattern, which suggest higher dependence de
 
 ```{r, include=FALSE}
 # function for plotting parameter estimates on a map and against distance
-plot_map_param <- function(tmp_est1,tmp_est2,tmp_est3) {
+plot_map_param <- function(tmp_est1,tmp_est2,tmp_est3,method = "AGG") {
   cond_var <- 1
  tmp <- tmp_est1 %>% mutate(given=factor(given,levels = cond_var)) 
 tmp1 <- tmp %>% add_row(.before=cond_var)
@@ -167,11 +167,11 @@ uk_tmp3 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>%
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),length.out=5)
 pa <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title="Birmingham"),
              tm_shape(uk_tmp2) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),length.out=5)
+ if (method=="AGG") {
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),length.out=6)
 pb <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title="Birmingham"),
              tm_shape(uk_tmp2) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
-
+}
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),length.out=6)
 pmu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title="Birmingham"),
              tm_shape(uk_tmp2) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
@@ -180,7 +180,7 @@ sigmax <- 3
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),sigmax,length.out=6)
 psig <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title="Birmingham"),
              tm_shape(uk_tmp2) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
-
+if (method=="AGG") {
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),length.out=6)
 pmuagg <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title="Birmingham"),
              tm_shape(uk_tmp2) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
@@ -201,7 +201,9 @@ pdeltal <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(deltal < deltamax)) + tm_dot
 lims <- seq(deltamin,deltamax,length.out=6)
 pdeltau <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Birmingham"),
              tm_shape(uk_tmp2 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
-return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,pdeltal,pdeltau))
+return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,pdeltal,pdeltau)) 
+}
+if (method!="AGG") {return(list(pa,pmu,psig))}
 }
 ```
 
@@ -240,6 +242,50 @@ plot_map_param(tmp_est1=tmp_est1a,tmp_est2=tmp_est2a,tmp_est3=tmp_est3a)
 ```
 
 We can observe that imposing a parametric form on $\hat{\alpha}$ that only changes with distance leads to some unexpected values of $\hat{\beta}$ close to $1$. For the AGG distribution estimates, $\hat{\mu}_{AGG}$ is the mode of the distribution whereas $\hat{\mu}$ is the median as well as the mode for the symmetric Gaussian distribution. Therefore, lower values for $\hat{\mu}_{AGG}$ suggest heavier tails for the upper tail of the distribution. This is also shown by a positive difference of $\hat{\sigma}_u-\hat{\sigma}_l$.
+
+## New iterative approach
+
+```{r, echo=FALSE}
+d1j <- d[[1]]
+d2j <- d[[2]]
+d3j <- d[[3]]
+newite1 <- par_est_ite(df = sims, d1j = d1j, v = 0.9, given = 1, N = 10, show_ite = TRUE)
+```
+First, we plot the iterations of parameter estimates to check convergence.
+
+```{r}
+pick_site <- 100
+df <- data.frame("a"=as.numeric(newite1[[1]][pick_site,]), "mu" = as.numeric(newite1[[2]][pick_site,]), "sig" = as.numeric(newite1[[3]][pick_site,]), "index" = 0:(ncol(newite[[1]])-1))
+p1 <- ggplot(df) + geom_point(aes(x=index,y=a)) + ylab(TeX("$\\alpha$"))
+p2 <- ggplot(df) + geom_point(aes(x=index,y=mu)) + ylab(TeX("$\\mu$"))
+p3 <- ggplot(df) + geom_point(aes(x=index,y=sig)) + ylab(TeX("$\\sigma$"))
+grid.arrange(p1,p2,p3,ncol=1)
+```
+Repeat also for Glasgow
+```{r}
+newite2 <- par_est_ite(df = sims, d1j = d2j, v = 0.9, given = 2, N = 10, show_ite = TRUE)
+pick_site <- 100
+df <- data.frame("a"=as.numeric(newite2[[1]][pick_site,]), "mu" = as.numeric(newite2[[2]][pick_site,]), "sig" = as.numeric(newite2[[3]][pick_site,]), "index" = 0:(ncol(newite[[1]])-1))
+p1 <- ggplot(df) + geom_point(aes(x=index,y=a)) + ylab(TeX("$\\alpha$"))
+p2 <- ggplot(df) + geom_point(aes(x=index,y=mu)) + ylab(TeX("$\\mu$"))
+p3 <- ggplot(df) + geom_point(aes(x=index,y=sig)) + ylab(TeX("$\\sigma$"))
+grid.arrange(p1,p2,p3,ncol=1)
+```
+and London.
+```{r}
+newite3 <- par_est_ite(df = sims, d1j = d3j, v = 0.9, given = 3, N = 10, show_ite = TRUE)
+pick_site <- 70
+df <- data.frame("a"=as.numeric(newite3[[1]][pick_site,]), "mu" = as.numeric(newite3[[2]][pick_site,]), "sig" = as.numeric(newite3[[3]][pick_site,]), "index" = 0:(ncol(newite[[1]])-1))
+p1 <- ggplot(df) + geom_point(aes(x=index,y=a)) + ylab(TeX("$\\alpha$"))
+p2 <- ggplot(df) + geom_point(aes(x=index,y=mu)) + ylab(TeX("$\\mu$"))
+p3 <- ggplot(df) + geom_point(aes(x=index,y=sig)) + ylab(TeX("$\\sigma$"))
+grid.arrange(p1,p2,p3,ncol=1)
+```
+
+Plot also on a map.
+```{r}
+plot_map_param(tmp_est1 = newite1[[4]], tmp_est2 = newite2[[4]], tmp_est3 = newite3[[4]],method= "iterative_alpha")
+```
 
 ## Conditioning on any random site
 
