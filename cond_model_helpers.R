@@ -243,27 +243,28 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
   return(par_sum)
 }
 
-par_est_ite <- function(df=sims,d1j = d[[1]], v=0.9, given=c(1),N=100, show_ite=FALSE)  {
+par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE)  {
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   Y_given1extreme <- df %>% filter(df[,given]>quantile(df[,given],v))
   nv <- nrow(Y_given1extreme)
   res <- c(1:d)[-given]
-  a <- mu <- sig <- data.frame(matrix(ncol=(N+1),nrow = (nv-1)))
+  d1j <- d1j/1000
+  a <- mu <- sig <- data.frame(matrix(ncol=(N+1),nrow = (d-1)))
   # calculate a with initial values for mu and sigma
-  mu[1,1] <- 0
-  sig[1,1] <- 1
-  opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,mu=0,sig=1,d=d,par=c(1),control=list(maxit=2000),method = "BFGS")
+  mu[,1] <- 0
+  sig[,1] <- 1
+  opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,mu=0,sig=1,d=d,par=c(0.001),control=list(maxit=2000),method = "BFGS")
   phi <- opt$par
   a[,1] <- exp(-phi*d1j)
   for (i in 1:N) {
-    for (j in 2:nv) {
+    for (j in 1:(d-1)) {
    # update mu and sigma
-   mu[j,i+1] <- 1/nv*sum(Y_given1extreme[,j]-exp(-phi*d1j[j])*Y_given1extreme[,1])
-    sig[j,i+1] <- 1/nv*sum(Y_given1extreme[,j]-exp(-phi*d1j[j])*Y_given1extreme[,1]-mu[j,i])
+   mu[j,i+1] <- 1/nv*sum(Y_given1extreme[,res[j]]-exp(-phi*d1j[j])*Y_given1extreme[,1])
+    sig[j,i+1] <- 1/nv*sum((Y_given1extreme[,res[j]]-exp(-phi*d1j[j])*Y_given1extreme[,1]-mu[j,i+1])^2)
   }
    # calculate a 
-    opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,mu=as.numeric(mu[,i+1]),sig=as.numeric(sig[,i+1]),d=d,par=c(1),control=list(maxit=2000),method = "BFGS")
+    opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,d=d,mu=as.numeric(mu[,i+1]),sig=as.numeric(sig[,i+1]),par=c(0.001),control=list(maxit=2000),method = "BFGS")
     phi <- opt$par
     a[,i+1] <- exp(-phi*d1j)
   }
