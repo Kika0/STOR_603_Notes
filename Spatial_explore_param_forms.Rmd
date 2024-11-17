@@ -60,7 +60,6 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # calculate the residuals for Birmingham (1), then Glasgow (2) and London (3)
 sites <- c("Birmingham","Glasgow","London")
-
 ```
 
 ## Follow-up from meeting with Simon: exploring $\alpha$ against distance
@@ -144,63 +143,72 @@ Birmingham and London show a similar pattern, which suggest higher dependence de
 
 ```{r, include=FALSE}
 # function for plotting parameter estimates on a map and against distance
-plot_map_param <- function(tmp_est1,tmp_est2,tmp_est3,method = "AGG") {
-  cond_var <- 1
- tmp <- tmp_est1 %>% mutate(given=factor(given,levels = cond_var)) 
+plot_map_param <- function(tmp_est1,tmp_est2,tmp_est3,method = "AGG",threesites=c("Birmingham","Glasgow","London"), indeces=1:3) {
+  cond_var <- indeces[1]
+ tmp <- tmp_est1 %>% mutate(given=factor(cond_var,levels = cond_var)) 
 tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
+if (identical(indeces,1:3)) {
 uk_tmp1 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
   arrange(is_location) %>% cbind(tmp1) 
-cond_var <- 2
- tmp <- tmp_est2 %>% mutate(given=factor(given,levels = cond_var))
+}
+else {uk_tmp1 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8])  %>% cbind(tmp1) }
+cond_var <- indeces[2]
+ tmp <- tmp_est2 %>% mutate(given=factor(cond_var,levels = cond_var))
 tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
+if (identical(indeces,1:3)){
 uk_tmp2 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
   arrange(is_location) %>% cbind(tmp1) 
-cond_var <- 3
- tmp <- tmp_est3 %>% mutate(given=factor(given,levels = cond_var))
+}
+else {uk_tmp2 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8])  %>% cbind(tmp1) }
+cond_var <- indeces[3]
+ tmp <- tmp_est3 %>% mutate(given=factor(cond_var,levels = cond_var))
 tmp1 <- tmp %>% add_row(.before=cond_var)
 # match back to spatial locations and plot
+if (identical(indeces,1:3)){
 uk_tmp3 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
   arrange(is_location) %>% cbind(tmp1) 
+}
+else {uk_tmp3 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8])  %>% cbind(tmp1) }
 
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),length.out=5)
-pa <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+pa <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+             tm_shape(uk_tmp2) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
  if (method=="AGG") {
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),length.out=6)
-pb <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+pb <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+             tm_shape(uk_tmp2) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
 }
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),length.out=6)
-pmu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+pmu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+             tm_shape(uk_tmp2) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="mu",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
 
 sigmax <- 3
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),sigmax,length.out=6)
-psig <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+psig <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+             tm_shape(uk_tmp2) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
 if (method=="AGG") {
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),length.out=6)
-pmuagg <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+pmuagg <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+             tm_shape(uk_tmp2) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="viridis",title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
 
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigl),na.rm = TRUE),sigmax,length.out=6)
-psigl <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2 %>% filter(sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3 %>% filter(sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+psigl <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+             tm_shape(uk_tmp2 %>% filter(sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
 
 lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigu),na.rm = TRUE),sigmax,length.out=6)
-psigu <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2 %>% filter(sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3 %>% filter(sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+psigu <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+             tm_shape(uk_tmp2 %>% filter(sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
 deltamax <- 5
 deltamin <- min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$deltal),as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$deltau),na.rm = TRUE)
 lims <- seq(deltamin,deltamax,length.out=6)
-pdeltal <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2 %>% filter(deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3 %>% filter(deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+pdeltal <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+             tm_shape(uk_tmp2 %>% filter(deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
 
 lims <- seq(deltamin,deltamax,length.out=6)
-pdeltau <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Birmingham"),
-             tm_shape(uk_tmp2 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="Glasgow"),tm_shape(uk_tmp3 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title="London"),ncol=3)
+pdeltau <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+             tm_shape(uk_tmp2 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
 return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,pdeltal,pdeltau)) 
 }
 if (method!="AGG") {return(list(pa,pmu,psig))}
@@ -249,37 +257,36 @@ We can observe that imposing a parametric form on $\hat{\alpha}$ that only chang
 d1j <- d[[1]]
 d2j <- d[[2]]
 d3j <- d[[3]]
-newite1 <- par_est_ite(df = sims, d1j = d1j, v = 0.9, given = 1, N = 10, show_ite = TRUE)
 ```
+
+```{r}
+newite1 <- par_est_ite(df = sims, d1j = d1j, v = 0.9, given = 1, N = 10, show_ite = TRUE)
+newite2 <- par_est_ite(df = sims, d1j = d2j, v = 0.9, given = 2, N = 10, show_ite = TRUE)
+newite3 <- par_est_ite(df = sims, d1j = d3j, v = 0.9, given = 3, N = 10, show_ite = TRUE)
+```
+
 First, we plot the iterations of parameter estimates to check convergence.
 
 ```{r}
-pick_site <- 100
-df <- data.frame("a"=as.numeric(newite1[[1]][pick_site,]), "mu" = as.numeric(newite1[[2]][pick_site,]), "sig" = as.numeric(newite1[[3]][pick_site,]), "index" = 0:(ncol(newite[[1]])-1))
+plot_par_est_ite <- function(newite,pick_site=100) {
+df <- data.frame("a"=as.numeric(newite[[1]][pick_site,]), "mu" = as.numeric(newite[[2]][pick_site,]), "sig" = as.numeric(newite[[3]][pick_site,]), "index" = 0:(ncol(newite[[1]])-1))
 p1 <- ggplot(df) + geom_point(aes(x=index,y=a)) + ylab(TeX("$\\alpha$"))
 p2 <- ggplot(df) + geom_point(aes(x=index,y=mu)) + ylab(TeX("$\\mu$"))
 p3 <- ggplot(df) + geom_point(aes(x=index,y=sig)) + ylab(TeX("$\\sigma$"))
-grid.arrange(p1,p2,p3,ncol=1)
+return(grid.arrange(p1,p2,p3,ncol=3))
+}
+plot_par_est_ite(newite = newite1)
 ```
-Repeat also for Glasgow
+
+Repeat also for Glasgow.
+
 ```{r}
-newite2 <- par_est_ite(df = sims, d1j = d2j, v = 0.9, given = 2, N = 10, show_ite = TRUE)
-pick_site <- 100
-df <- data.frame("a"=as.numeric(newite2[[1]][pick_site,]), "mu" = as.numeric(newite2[[2]][pick_site,]), "sig" = as.numeric(newite2[[3]][pick_site,]), "index" = 0:(ncol(newite[[1]])-1))
-p1 <- ggplot(df) + geom_point(aes(x=index,y=a)) + ylab(TeX("$\\alpha$"))
-p2 <- ggplot(df) + geom_point(aes(x=index,y=mu)) + ylab(TeX("$\\mu$"))
-p3 <- ggplot(df) + geom_point(aes(x=index,y=sig)) + ylab(TeX("$\\sigma$"))
-grid.arrange(p1,p2,p3,ncol=1)
+plot_par_est_ite(newite = newite2)
 ```
 and London.
+
 ```{r}
-newite3 <- par_est_ite(df = sims, d1j = d3j, v = 0.9, given = 3, N = 10, show_ite = TRUE)
-pick_site <- 70
-df <- data.frame("a"=as.numeric(newite3[[1]][pick_site,]), "mu" = as.numeric(newite3[[2]][pick_site,]), "sig" = as.numeric(newite3[[3]][pick_site,]), "index" = 0:(ncol(newite[[1]])-1))
-p1 <- ggplot(df) + geom_point(aes(x=index,y=a)) + ylab(TeX("$\\alpha$"))
-p2 <- ggplot(df) + geom_point(aes(x=index,y=mu)) + ylab(TeX("$\\mu$"))
-p3 <- ggplot(df) + geom_point(aes(x=index,y=sig)) + ylab(TeX("$\\sigma$"))
-grid.arrange(p1,p2,p3,ncol=1)
+plot_par_est_ite(newite = newite3)
 ```
 
 Plot also on a map.
@@ -291,6 +298,77 @@ plot_map_param(tmp_est1 = newite1[[4]], tmp_est2 = newite2[[4]], tmp_est3 = newi
 
 Currently, the analysis is conditioning on Birmingham, Glasgow and London, ordered as first 3 columns of the temperature data for an easy link.
 
-```{r, include=FALSE}
+One way would be to calculate distance from each of the site and then filter distance for the site needed, which will be faster as this distance matrix will be already saved (twice as $d_{ij}$ and $d_{ji}$ are identical ).
 
+We find the index of the grid sites closest to Inverness, Lancaster and Newcastle to get a better idea of potential parametric forms of the parameters.
+
+```{r, include=FALSE}
+Inverness <- c(-4.22498,57.48065) # Inverness bus station
+Lancaster <- c(-2.78440,54.00871) # PSC building Lancaster University
+Newcastle <- c(-1.61682,54.96902) # Newcastle railway station
+
+# find site closest to a vector of lon lat coordinates
+find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% select()) {
+  # convert site coordinates
+site_sf <- st_sfc(st_point(site),crs=4326) 
+site_sf <- st_transform(site_sf, crs=27700) # set BNG crs
+x <- which.min(as.numeric(st_distance(site_sf,grid_uk)))
+# check it works
+#return(tm_shape(uk_sf_rot) + tm_dots() + tm_shape(site_sf) + tm_dots(col="#C11432") + tm_shape(uk_sf_rot[x,])+ tm_dots(col="#009ADA"))
+return(x)
+}
+# test function
+find_site_index()
 ```
+
+## Sequential parameter estimation: other conditioning sites
+
+We repeat the parameter estimation method described above for three other conditioning sites: Inverness, Lancaster and Newcastle.
+
+```{r}
+sims <- ukcp18 %>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
+colnames(sims) <- paste0("Y",1:ncol(sims))
+# transform to Laplace margins
+sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+
+given <- find_site_index(Inverness)
+dij <- as.numeric(st_distance(uk_sf_rot[given,],uk_sf_rot[-given,]))
+newite4 <- par_est_ite(df = sims, d1j = dij, v = 0.9, given = given, N = 10, show_ite = TRUE)
+
+given <- find_site_index(Lancaster)
+dij <- as.numeric(st_distance(uk_sf_rot[given,],uk_sf_rot[-given,]))
+newite5 <- par_est_ite(df = sims, d1j = dij, v = 0.9, given = given, N = 10, show_ite = TRUE)
+
+given <- find_site_index(Newcastle)
+dij <- as.numeric(st_distance(uk_sf_rot[given,],uk_sf_rot[-given,]))
+newite6 <- par_est_ite(df = sims, d1j = dij, v = 0.9, given = given, N = 10, show_ite = TRUE)
+# save into the R object
+save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,newite1,newite2,newite3,newite4,newite5,newite6,file = "spatialobjects.RData")
+```
+
+Examine similar plots of parameter estimate iterations for a randomly picked site $j$ (set to $j=100$).
+
+Inverness:
+
+```{r}
+plot_par_est_ite(newite = newite4)
+```
+
+Lancaster:
+
+```{r}
+plot_par_est_ite(newite = newite5)
+```
+
+Newcastle:
+
+```{r}
+plot_par_est_ite(newite = newite6)
+```
+
+Similar to the previous section, we map the parameter estimates of the final iteration.
+
+```{r}
+plot_map_param(tmp_est1 = newite4[[4]], tmp_est2 = newite5[[4]], tmp_est3 = newite6[[4]],method= "iterative_alpha",threesites = c("Inverness","Lancaster","Newcastle"),indeces=c(find_site_index(Inverness),find_site_index(Lancaster),find_site_index(Newcastle)))
+```
+
