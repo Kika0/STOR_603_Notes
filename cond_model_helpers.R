@@ -254,7 +254,7 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
   # calculate a with initial values for mu and sigma
   mu[,1] <- 0
   sig[,1] <- 1
-  opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,mu=0,sig=1,d=d,par=c(0.001),control=list(maxit=2000),method = "BFGS")
+  opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,mu=as.numeric(unlist(mu[,1])),sig=as.numeric(unlist(sig[,1])),d=d,par=c(0.001),control=list(maxit=2000),method = "BFGS")
   phi <- opt$par
   a[,1] <- exp(-phi*d1j)
   for (i in 1:N) {
@@ -264,7 +264,7 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
     sig[j,i+1] <- 1/nv*sum((Y_given1extreme[,res[j]]-exp(-phi*d1j[j])*Y_given1extreme[,1]-mu[j,i+1])^2)
   }
    # calculate a 
-    opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,d=d,mu=as.numeric(mu[,i+1]),sig=as.numeric(sig[,i+1]),par=c(0.001),control=list(maxit=2000),method = "BFGS")
+    opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,d=d,mu=as.numeric(unlist(mu[,i+1])),sig=as.numeric(unlist(sig[,i+1])),par=c(0.001),control=list(maxit=2000),method = "BFGS")
     phi <- opt$par
     a[,i+1] <- exp(-phi*d1j)
   }
@@ -282,29 +282,29 @@ observed_residuals <- function(df=sims,given=1,v=0.99,a=NULL,b=NULL) {
   df_orig <- df
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
-  Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
-  n_v <- nrow(Y_given_1_extreme)
+  Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+  nv <- nrow(Y_given1extreme)
   res <- c(1:d)[-j]
   init_par <- c()
   for (i in 2:d) {
     if (is.numeric(a) & is.numeric(b)) {
       a_hat <- a[i-1]
       b_hat <- b[i-1]
-      res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
-      Y1 <- Y_given_1_extreme[,j]
-      Y2 <- Y_given_1_extreme[,res[i-1]]
+      res_var <- append(res_var,rep(paste0("Z",res[i-1]),nv))
+      Y1 <- Y_given1extreme[,j]
+      Y2 <- Y_given1extreme[,res[i-1]]
       tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat)))
     }
     else {
     # optimise using the initial parameters
-    init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given1extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
     init_par <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
-    opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
     a_hat <- opt$par[1]
     # a_hat <- 1
     b_hat <- opt$par[2]
     # b_hat <- 0
-    res_var <- append(res_var,rep(paste0("Z",res[i-1]),n_v))
+    res_var <- append(res_var,rep(paste0("Z",res[i-1]),nv))
     Y1 <- Y_given_1_extreme[,j]
     Y2 <- Y_given_1_extreme[,res[i-1]]
     tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat))) }
