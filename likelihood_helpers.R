@@ -263,12 +263,13 @@ NLL_exp_norm_noise <- function(d,x,theta) {
  return(-sum(dnorm(x,mean = exp(-phi*d),sd=sd,log = TRUE)))
 }
 
-NLL_expalpha_HT <- function(phi,df = Y_given1extreme, d1j = d1j,mu,sig,d) {
+NLL_expalpha_HT <- function(phi,df = Y_given1extreme, d1j = d1j,mu,sig,d,given=given,res=res) {
+  nv <- nrow(df)
   mu <- rep(mu,each=nv)
   sig <- rep(sig,each=nv)
-  Y1 <- rep(as.numeric(Y_given1extreme[,given]),d-1)
-  Yj <- as.numeric(unlist(Y_given1extreme[,res]))
-  d1j <- rep(d1j,nrow(Y_given1extreme))
+  Y1 <- rep(as.numeric(unlist(df[,given])),d-1)
+  Yj <- as.numeric(unlist(df[,res]))
+  d1j <- rep(d1j,nv)
   # if (a<(-1) | a>1 ) {
   #   log_lik <- (-10^6) # low log-likelihood outside bounds
   # }
