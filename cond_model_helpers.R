@@ -254,7 +254,7 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
   # calculate a with initial values for mu and sigma
   mu[,1] <- 0
   sig[,1] <- 1
-  opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,mu=as.numeric(unlist(mu[,1])),sig=as.numeric(unlist(sig[,1])),d=d,par=c(0.001),control=list(maxit=2000),method = "BFGS")
+  opt <- optim(fn=NLL_expalpha_HT,par=c(0.001),control=list(maxit=2000),method = "BFGS")
   phi <- opt$par
   a[,1] <- exp(-phi*d1j)
   for (i in 1:N) {
@@ -264,7 +264,7 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
     sig[j,i+1] <- 1/nv*sum((Y_given1extreme[,res[j]]-exp(-phi*d1j[j])*Y_given1extreme[,1]-mu[j,i+1])^2)
   }
    # calculate a 
-    opt <- optim(fn=NLL_expalpha_HT,df=Y_given1extreme,d1j = d1j,d=d,mu=as.numeric(unlist(mu[,i+1])),sig=as.numeric(unlist(sig[,i+1])),par=c(0.001),control=list(maxit=2000),method = "BFGS")
+    opt <- optim(fn=NLL_expalpha_HT,mu1=as.numeric(unlist(mu[,i+1])),sig1=as.numeric(unlist(sig[,i+1])),par=c(0.001),control=list(maxit=2000),method = "BFGS")
     phi <- opt$par
     a[,i+1] <- exp(-phi*d1j)
   }
