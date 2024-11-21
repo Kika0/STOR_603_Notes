@@ -239,6 +239,7 @@ if (method!="AGG") {return(list(pa,pmu,psig))}
 
 ```{r, echo=FALSE}
 # plot parameter estimates against distance and on a map
+# v <- 0.9
 # cond_var <- 1
 # tmp_est1 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
 # cond_var <- 2
@@ -268,7 +269,7 @@ Now, the same approach with alpha values on the fitted exponential curve with di
 # cond_var <- 3
 # opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x[[cond_var]],d=d[[cond_var]])
 # tmp_est3a <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential3",a=exp(-opt$par[1]*d[[cond_var]]))
-# save these objects for faster knitting
+# # save these objects for faster knitting
 # save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,file = "spatialobjects.RData")
 plot_map_param(tmp_est1=tmp_est1a,tmp_est2=tmp_est2a,tmp_est3=tmp_est3a)
 ```
@@ -278,15 +279,15 @@ We can observe that imposing a parametric form on $\hat{\alpha}$ that only chang
 ## New iterative approach
 
 ```{r, echo=FALSE}
-d1j <- d[[1]]
-d2j <- d[[2]]
-d3j <- d[[3]]
+# d1j <- d[[1]]
+# d2j <- d[[2]]
+# d3j <- d[[3]]
 ```
 
 ```{r}
-newite1 <- par_est_ite(df = sims, d1j = d1j, v = 0.9, given = 1, N = 10, show_ite = TRUE)
-newite2 <- par_est_ite(df = sims, d1j = d2j, v = 0.9, given = 2, N = 10, show_ite = TRUE)
-newite3 <- par_est_ite(df = sims, d1j = d3j, v = 0.9, given = 3, N = 10, show_ite = TRUE)
+# newite1 <- par_est_ite(df = sims, d1j = d1j, v = 0.9, given = 1, N = 10, show_ite = TRUE)
+# newite2 <- par_est_ite(df = sims, d1j = d2j, v = 0.9, given = 2, N = 10, show_ite = TRUE)
+# newite3 <- par_est_ite(df = sims, d1j = d3j, v = 0.9, given = 3, N = 10, show_ite = TRUE)
 ```
 
 First, we plot the iterations of parameter estimates to check convergence.
@@ -351,22 +352,22 @@ find_site_index()
 We repeat the parameter estimation method described above for three other conditioning sites: Inverness, Lancaster and Newcastle.
 
 ```{r}
-v <- 0.9
-sims <- ukcp18 %>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
-colnames(sims) <- paste0("Y",1:ncol(sims))
-# transform to Laplace margins
-sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-cond_site <- find_site_index(Inverness)
-dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
-newite4 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
-
-cond_site <- find_site_index(Lancaster)
-dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
-newite5 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
-
-cond_site <- find_site_index(Newcastle)
-dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
-newite6 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
+# v <- 0.9
+# sims <- ukcp18 %>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
+# colnames(sims) <- paste0("Y",1:ncol(sims))
+# # transform to Laplace margins
+# sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+# cond_site <- find_site_index(Inverness)
+# dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
+# newite4 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
+# 
+# cond_site <- find_site_index(Lancaster)
+# dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
+# newite5 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
+# 
+# cond_site <- find_site_index(Newcastle)
+# dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
+# newite6 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
 # save into the R object
 # save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,newite1,newite2,newite3,newite4,newite5,newite6,file = "spatialobjects.RData")
 ```
