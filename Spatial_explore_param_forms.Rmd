@@ -306,7 +306,7 @@ plot_par_est_ite(newite = newite1)
 Repeat also for Glasgow.
 
 ```{r}
-plot_par_est_ite(newite = newite2)
+plot_par_est_ite(newite = newite2,pick_site = 50)
 ```
 
 and London.
