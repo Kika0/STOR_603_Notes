@@ -42,7 +42,7 @@ ukcp18 <- readRDS("data/uk_1999_2018_summer.RDS") %>% relocate(dist_london,.afte
 # remove last year of the data due to error (same data as first year)
 ukcp18 <- ukcp18[,1:1716]
 conv <- CnvRttPol(latlon = data.frame(long=ukcp18$Longitude,lat=ukcp18$Latitude),spol_coor = c(gr_npole_lon, gr_npole_lat))
-uk_sf_rot <- data.frame(lon=conv$lon,lat=conv$lat) %>%
+uk_sf_rot <- data.frame(lon=conv$lon,lat=conv$lat,ind=conv$ind) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
 uk_sf_rot <- st_transform(uk_sf_rot,27700)
 # add buffer
@@ -53,7 +53,7 @@ tm_shape(buffer_only) + tm_polygons()
 coast_dist <- st_distance(uk_sf_rot,buffer_only)
 uk_sf_rot <- cbind(uk_sf_rot,data.frame("coast_dist" = coast_dist))
 tm_shape(uk_sf_rot) + tm_dots("coast_dist",size=1)
-ukcp18 <- ukcp18 %>% mutate("Longitude" = conv$lon, "Latitude" = conv$lat, "coast_dist" = uk_sf_rot$coast_dist) %>% relocate(coast_dist,.before = dist_birmingham)
+ukcp18 <- ukcp18 %>% mutate("Longitude_conv" = conv$lon, "Latitude_conv" = conv$lat, "coast_dist" = uk_sf_rot$coast_dist) %>% relocate(coast_dist,.before = dist_birmingham) %>% relocate(c(Longitude_conv,Latitude_conv),.before = is_location)
 sims <- ukcp18 %>% dplyr::arrange(is_location)%>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
 # ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
 colnames(sims) <- paste0("Y",1:ncol(sims))
@@ -65,7 +65,7 @@ sites <- c("Birmingham","Glasgow","London")
 
 ## Follow-up from meeting with Simon: exploring $\alpha$ against distance
 
-Recall the plot of marginal estimates of $\alpha$ parameter againt distance[m] for the three conditioning sites. This is done using the sequential method (see below).
+Recall the plot of marginal estimates of $\alpha$ parameter against distance[m] for the three conditioning sites. This is done using the sequential method (see below).
 
 ```{r, echo=FALSE}
 # use parameteric form for a ----
@@ -108,7 +108,6 @@ p <- ggplot(df) +
    ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(sites[cond_var])
 return(p)
 }
-
 # plot to check Birmingham, Glasgow and London
 p1 <- plot_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=1)
 p2 <- plot_is_above(x1=0,x2=450000,y1=1.2,y2=0.25,cond_var=2)
@@ -279,15 +278,39 @@ We can observe that imposing a parametric form on $\hat{\alpha}$ that only chang
 ## New iterative approach
 
 ```{r, echo=FALSE}
-# d1j <- d[[1]]
-# d2j <- d[[2]]
-# d3j <- d[[3]]
+v <- 0.9
+sims <- ukcp18 %>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
+colnames(sims) <- paste0("Y",1:ncol(sims))
+# transform to Laplace margins
+sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+# find site closest to a vector of lon lat coordinates
+find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% select()) {
+  # convert site coordinates
+site_sf <- st_sfc(st_point(site),crs=4326) 
+site_sf <- st_transform(site_sf, crs=27700) # set BNG crs
+x <- which.min(as.numeric(st_distance(site_sf,grid_uk)))
+# check it works
+#return(tm_shape(uk_sf_rot) + tm_dots() + tm_shape(site_sf) + tm_dots(col="#C11432") + tm_shape(uk_sf_rot[x,])+ tm_dots(col="#009ADA"))
+return(x)
+}
+
+Birmingham <- c(-1.9032,52.4806)
+Glasgow <- c(-4.258109,55.859112)
+London <- c(-0.127676,51.529972)
 ```
 
 ```{r}
-# newite1 <- par_est_ite(df = sims, d1j = d1j, v = 0.9, given = 1, N = 10, show_ite = TRUE)
-# newite2 <- par_est_ite(df = sims, d1j = d2j, v = 0.9, given = 2, N = 10, show_ite = TRUE)
-# newite3 <- par_est_ite(df = sims, d1j = d3j, v = 0.9, given = 3, N = 10, show_ite = TRUE)
+# cond_site <- find_site_index(Birmingham)
+# dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
+# newite1 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
+# 
+# cond_site <- find_site_index(Glasgow)
+# dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
+# newite2 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
+# 
+# cond_site <- find_site_index(London)
+# dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
+# newite3 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
 ```
 
 First, we plot the iterations of parameter estimates to check convergence.
@@ -317,7 +340,7 @@ plot_par_est_ite(newite = newite3)
 
 Plot also on a map.
 ```{r}
-plot_map_param(tmp_est1 = newite1[[4]], tmp_est2 = newite2[[4]], tmp_est3 = newite3[[4]],method= "iterative_alpha")
+plot_map_param(tmp_est1 = newite1[[4]], tmp_est2 = newite2[[4]], tmp_est3 = newite3[[4]],method= "iterative_alpha",threesites = c("Bimingham","Glasgow","London"),indeces=c(find_site_index(Birmingham),find_site_index(Glasgow),find_site_index(London)))
 ```
 
 ## Conditioning on any random site
@@ -332,19 +355,6 @@ We find the index of the grid sites closest to Inverness, Lancaster and Newcastl
 Inverness <- c(-4.22498,57.48065) # Inverness bus station
 Lancaster <- c(-2.78440,54.00871) # PSC building Lancaster University
 Newcastle <- c(-1.61682,54.96902) # Newcastle railway station
-
-# find site closest to a vector of lon lat coordinates
-find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% select()) {
-  # convert site coordinates
-site_sf <- st_sfc(st_point(site),crs=4326) 
-site_sf <- st_transform(site_sf, crs=27700) # set BNG crs
-x <- which.min(as.numeric(st_distance(site_sf,grid_uk)))
-# check it works
-#return(tm_shape(uk_sf_rot) + tm_dots() + tm_shape(site_sf) + tm_dots(col="#C11432") + tm_shape(uk_sf_rot[x,])+ tm_dots(col="#009ADA"))
-return(x)
-}
-# test function
-find_site_index()
 ```
 
 ## Sequential parameter estimation: other conditioning sites
@@ -352,10 +362,10 @@ find_site_index()
 We repeat the parameter estimation method described above for three other conditioning sites: Inverness, Lancaster and Newcastle.
 
 ```{r}
-# v <- 0.9
-# sims <- ukcp18 %>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
-# colnames(sims) <- paste0("Y",1:ncol(sims))
-# # transform to Laplace margins
+v <- 0.9
+sims <- ukcp18 %>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
+colnames(sims) <- paste0("Y",1:ncol(sims))
+# transform to Laplace margins
 # sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # cond_site <- find_site_index(Inverness)
 # dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
@@ -368,7 +378,7 @@ We repeat the parameter estimation method described above for three other condit
 # cond_site <- find_site_index(Newcastle)
 # dij <- as.numeric(st_distance(uk_sf_rot[cond_site,],uk_sf_rot[-cond_site,]))
 # newite6 <- par_est_ite(df = sims, d1j = dij, v = v, given = cond_site, N = 10, show_ite = TRUE)
-# save into the R object
+# # save into the R object
 # save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,newite1,newite2,newite3,newite4,newite5,newite6,file = "spatialobjects.RData")
 ```
 
