@@ -263,11 +263,11 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
       # mu[j,i+1] <- 1/nv*sum(as.numeric(Y_given1extreme[,res[j]])-as.numeric(a[,i])*as.numeric(Y_given1extreme[,1]))
       # sig[j,i+1] <- 1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-as.numeric(a[,i])*as.numeric(Y_given1extreme[,1])-as.numeric(mu[j,i+1]))^2)
       
-   mu[j,i+1] <- 1/nv*sum(as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,1]))
-   sig[j,i+1] <- 1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,1])-as.numeric(mu[j,i+1]))^2)
+   mu[j,i+1] <- 1/nv*sum(as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,given]))
+   sig[j,i+1] <- 1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,given])-as.numeric(mu[j,i+1]))^2)
   }
    # calculate a 
-    opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme,, d1j. = d1j, mu1=as.numeric(unlist(mu[,i+1])),sig1=as.numeric(unlist(sig[,i+1])),d.=d,given.=given,res.=res,par=c(0.001),control=list(maxit=2000),method = "BFGS")
+    opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme, d1j. = d1j, mu1=as.numeric(unlist(mu[,i+1])),sig1=as.numeric(unlist(sig[,i+1])),d.=d,given.=given,res.=res,par=c(0.001),control=list(maxit=2000),method = "BFGS")
     phi <- opt$par
     a[,i+1] <- exp(-phi*d1j)
   }
