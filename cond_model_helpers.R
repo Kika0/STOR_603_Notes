@@ -249,13 +249,15 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
   Y_given1extreme <- df %>% filter(df[,given]>quantile(df[,given],v))
   nv <- nrow(Y_given1extreme)
   res <- c(1:d)[-given]
-  d1j <- d1j/1000
+  d1j <- d1j/1000000
   a <- mu <- sig <- data.frame(matrix(ncol=(N+1),nrow = (d-1)))
+  phi. <- c()
   # calculate a with initial values for mu and sigma
   mu[,1] <- 0
   sig[,1] <- 1
-  opt <- optim(fn=NLL_expalpha_HT,par=c(0.001),df = Y_given1extreme,d1j. = d1j,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
+  opt <- optim(fn=NLL_expalpha_HT,par=c(1),df = Y_given1extreme,d1j. = d1j,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
   phi <- opt$par
+  phi. <- append(phi.,phi)
   a[,1] <- exp(-phi*d1j)
   for (i in 1:N) {
     for (j in 1:(d-1)) {
@@ -264,16 +266,17 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
       # sig[j,i+1] <- 1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-as.numeric(a[,i])*as.numeric(Y_given1extreme[,1])-as.numeric(mu[j,i+1]))^2)
       
    mu[j,i+1] <- 1/nv*sum(as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,given]))
-   sig[j,i+1] <- 1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,given])-as.numeric(mu[j,i+1]))^2)
+   sig[j,i+1] <- sqrt(1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,given])-as.numeric(mu[j,i+1]))^2))
   }
    # calculate a 
     opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme, d1j. = d1j, mu1=as.numeric(unlist(mu[,i+1])),sig1=as.numeric(unlist(sig[,i+1])),d.=d,given.=given,res.=res,par=c(0.001),control=list(maxit=2000),method = "BFGS")
     phi <- opt$par
+    phi. <- append(phi.,phi)
     a[,i+1] <- exp(-phi*d1j)
   }
     par_sum <- data.frame("a" = as.numeric(a[,N+1]),"mu" = as.numeric(mu[,N+1]), "sig" = as.numeric(sig[,N+1]))
   if (show_ite == TRUE) {
-    return(list(a,mu,sig,par_sum))
+    return(list(a,mu,sig,par_sum,phi.))
   } else {return(par_sum)}
 }
 
