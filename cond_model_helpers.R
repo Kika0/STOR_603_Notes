@@ -44,6 +44,7 @@ for (i in 1:ncol(ZN)) {
   return(Z)
 }
 
+
 # generate a table of parameter estimates conditional on (given) each of the specified vector of variables
 par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=NULL) {
   lik <- lika <- likb <- lik2 <- a_hat <- b_hat <- mu_hat <- mu_agg_hat <- sig_hat <- sig_agg_hat <- sigl_hat <- sigu_hat <- delta_hat <- deltal_hat <- deltau_hat <- res_var <- c()
@@ -255,7 +256,8 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
   # calculate a with initial values for mu and sigma
   mu[,1] <- 0
   sig[,1] <- 1
-  opt <- optim(fn=NLL_expalpha_HT,par=c(1),df = Y_given1extreme,d1j. = d1j,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
+  phi_init <- 0.1
+  opt <- optim(fn=NLL_expalpha_HT,par=phi_init,df = Y_given1extreme,d1j. = d1j,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
   phi <- opt$par
   phi. <- append(phi.,phi)
   a[,1] <- exp(-phi*d1j)
@@ -269,7 +271,7 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
    sig[j,i+1] <- sqrt(1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,given])-as.numeric(mu[j,i+1]))^2))
   }
    # calculate a 
-    opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme, d1j. = d1j, mu1=as.numeric(unlist(mu[,i+1])),sig1=as.numeric(unlist(sig[,i+1])),d.=d,given.=given,res.=res,par=c(0.001),control=list(maxit=2000),method = "BFGS")
+    opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme, d1j. = d1j, mu1=as.numeric(unlist(mu[,i+1])),sig1=as.numeric(unlist(sig[,i+1])),d.=d,given.=given,res.=res,par=phi_init,control=list(maxit=2000),method = "BFGS")
     phi <- opt$par
     phi. <- append(phi.,phi)
     a[,i+1] <- exp(-phi*d1j)
