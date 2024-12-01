@@ -244,7 +244,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
   return(par_sum)
 }
 
-par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE)  {
+par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,method="onephi")  {
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   Y_given1extreme <- df %>% filter(df[,given]>quantile(df[,given],v))
@@ -254,9 +254,14 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
   a <- mu <- sig <- data.frame(matrix(ncol=(N+1),nrow = (d-1)))
   phi. <- c()
   # calculate a with initial values for mu and sigma
+  if (is.numeric(mu_init) & is.numeric(sig_init)) {
+   mu[,1] <- mu_init
+   sig[,1] <- sig_init
+  } else {
   mu[,1] <- 0
   sig[,1] <- 1
-  phi_init <- 0.1
+  }
+  phi_init <- 1
   opt <- optim(fn=NLL_expalpha_HT,par=phi_init,df = Y_given1extreme,d1j. = d1j,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
   phi <- opt$par
   phi. <- append(phi.,phi)
