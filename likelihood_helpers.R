@@ -277,9 +277,10 @@ NLL_expalpha_HT <- function(phi,df = Y_given1extreme, d1j. = d1j,mu1=as.numeric(
   return(log_lik)
 }
 
-NLL_expalpha_twophi <- function(phi,df = Y_given1extreme, d1j. = d1j,SN.=SN,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res) {
+NLL_expalpha_twophi <- function(theta,df = Y_given1extreme, d1j. = d1j,SN.=SN,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res) {
   phi1 <- theta[1] # in the same region as the conditioning site
   phi0 <- theta[2] # in a different region as the conditioning site
+  # if(phi1<=0 | phi0<=0 ){return(10e10)}
   nv <- nrow(df)
   mu1 <- rep(mu1,each=nv)
   sig1 <- rep(sig1,each=nv)
