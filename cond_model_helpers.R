@@ -244,7 +244,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
   return(par_sum)
 }
 
-par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,method="onephi")  {
+par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,method="onephi",SN=NULL)  {
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   Y_given1extreme <- df %>% filter(df[,given]>quantile(df[,given],v))
@@ -252,7 +252,14 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
   res <- c(1:d)[-given]
   d1j <- d1j/1000000
   a <- mu <- sig <- data.frame(matrix(ncol=(N+1),nrow = (d-1)))
+  if (method=="onephi") {
   phi. <- c()
+  }
+  if (method=="twophi") {
+    SN <- as.numeric(SN[-given])*as.numeric(SN[given])+as.numeric(!SN[-given])*as.numeric(!SN[given])
+    phi1. <- c()
+    phi0. <- c()
+  }
   # calculate a with initial values for mu and sigma
   if (is.numeric(mu_init) & is.numeric(sig_init)) {
    mu[,1] <- mu_init
@@ -261,29 +268,51 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
   mu[,1] <- 0
   sig[,1] <- 1
   }
-  phi_init <- 1
-  opt <- optim(fn=NLL_expalpha_HT,par=phi_init,df = Y_given1extreme,d1j. = d1j,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
-  phi <- opt$par
-  phi. <- append(phi.,phi)
-  a[,1] <- exp(-phi*d1j)
+  if (method=="onephi") {
+    phi_init <- 1
+    opt <- optim(fn=NLL_expalpha_HT,par=phi_init,df = Y_given1extreme,d1j. = d1j,mu1=as.numeric(mu[,1]),sig1=as.numeric(sig[,1]),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
+    phi <- opt$par
+    phi. <- append(phi.,phi)
+    a[,1] <- exp(-phi*d1j)
+  }
+  if (method=="twophi") {
+    phi_init <- c(1,1)
+    opt <- optim(fn=NLL_expalpha_twophi,par=phi_init,df=Y_given1extreme,d1j.=d1j,SN.=SN,mu1=as.numeric(mu[,1]),sig1=as.numeric(sig[,1]),d.=d,res.=res,control=list(maxit=2000),method = "BFGS")
+    phi1 <- opt$par[1]
+    phi0 <- opt$par[2]
+    phi1. <- append(phi1.,phi1)
+    phi0. <- append(phi0.,phi0)
+    a[,1] <- exp(-(phi1*as.numeric(SN)+phi0*as.numeric(!SN))*d1j)
+    }
   for (i in 1:N) {
     for (j in 1:(d-1)) {
-   # update mu and sigma
-      # mu[j,i+1] <- 1/nv*sum(as.numeric(Y_given1extreme[,res[j]])-as.numeric(a[,i])*as.numeric(Y_given1extreme[,1]))
-      # sig[j,i+1] <- 1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-as.numeric(a[,i])*as.numeric(Y_given1extreme[,1])-as.numeric(mu[j,i+1]))^2)
-      
-   mu[j,i+1] <- 1/nv*sum(as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,given]))
-   sig[j,i+1] <- sqrt(1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-exp(-phi*d1j[j])*as.numeric(Y_given1extreme[,given])-as.numeric(mu[j,i+1]))^2))
+   mu[j,i+1] <- 1/nv*sum(as.numeric(Y_given1extreme[,res[j]])-as.numeric(a[j,i])*as.numeric(Y_given1extreme[,given]))
+   sig[j,i+1] <- sqrt(1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-as.numeric(a[j,i])*as.numeric(Y_given1extreme[,given])-as.numeric(mu[j,i+1]))^2))
   }
    # calculate a 
-    opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme, d1j. = d1j, mu1=as.numeric(unlist(mu[,i+1])),sig1=as.numeric(unlist(sig[,i+1])),d.=d,given.=given,res.=res,par=phi_init,control=list(maxit=2000),method = "BFGS")
+    if (method=="onephi") {
+    opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme, d1j. = d1j, mu1=as.numeric(mu[,i+1]),sig1=as.numeric(sig[,i+1]),d.=d,given.=given,res.=res,par=phi_init,control=list(maxit=2000),method = "BFGS")
     phi <- opt$par
     phi. <- append(phi.,phi)
     a[,i+1] <- exp(-phi*d1j)
+    }
+    if (method=="twophi") {
+      opt <- optim(fn=NLL_expalpha_twophi,par=phi_init,df=Y_given1extreme,d1j.=d1j,SN.=SN,mu1=as.numeric(mu[,i+1]),sig1=as.numeric(sig[,i+1]),d.=d,res.=res,control=list(maxit=2000),method = "BFGS")
+      phi1 <- opt$par[1]
+      phi0 <- opt$par[2]
+      phi1. <- append(phi1.,phi1)
+      phi0. <- append(phi0.,phi0)
+      a[,i+1] <- exp(-(phi1*as.numeric(SN)+phi0*as.numeric(!SN))*d1j)
+    }
   }
     par_sum <- data.frame("a" = as.numeric(a[,N+1]),"mu" = as.numeric(mu[,N+1]), "sig" = as.numeric(sig[,N+1]))
   if (show_ite == TRUE) {
+    if (method=="onephi") {
     return(list(a,mu,sig,par_sum,phi.))
+    }
+    if (method=="twophi") {
+      return(list(a,mu,sig,par_sum,phi1.,phi0.))
+    }
   } else {return(par_sum)}
 }
 
