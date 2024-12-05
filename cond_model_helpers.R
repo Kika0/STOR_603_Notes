@@ -244,14 +244,14 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
   return(par_sum)
 }
 
-par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,method="onephi",SN=NULL)  {
+par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,method="onephi",SN=NULL, b_inc=TRUE)  {
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   Y_given1extreme <- df %>% filter(df[,given]>quantile(df[,given],v))
   nv <- nrow(Y_given1extreme)
   res <- c(1:d)[-given]
   d1j <- d1j/1000000
-  a <- mu <- sig <- data.frame(matrix(ncol=(N+1),nrow = (d-1)))
+  a <- b <- mu <- sig <- data.frame(matrix(ncol=(N+1),nrow = (d-1)))
   if (method=="onephi") {
   phi. <- c()
   }
@@ -264,9 +264,11 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
   if (is.numeric(mu_init) & is.numeric(sig_init)) {
    mu[,1] <- mu_init
    sig[,1] <- sig_init
+   b[,1] <- 0
   } else {
   mu[,1] <- 0
   sig[,1] <- 1
+  b[,1] <- 0
   }
   if (method=="onephi") {
     phi_init <- 1
@@ -286,9 +288,19 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
     }
   for (i in 1:N) {
     for (j in 1:(d-1)) {
+      if (b_inc==FALSE) {
    mu[j,i+1] <- 1/nv*sum(as.numeric(Y_given1extreme[,res[j]])-as.numeric(a[j,i])*as.numeric(Y_given1extreme[,given]))
    sig[j,i+1] <- sqrt(1/nv*sum((as.numeric(Y_given1extreme[,res[j]])-as.numeric(a[j,i])*as.numeric(Y_given1extreme[,given])-as.numeric(mu[j,i+1]))^2))
-  }
+   b[j,i+1] <- 0
+      }
+      if (b_inc==TRUE) {
+        init_parb <- c(b[j,i],mu[j,i],sig[j,i])
+        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=given,sim=res[j],a_hat=as.numeric(a[j,i]),control = list(fnscale=-1,maxit=2000))
+        b[j,i+1] <- optb$par[1]
+        mu[j,i+1] <- optb$par[2]
+        sig[j,i+1] <- optb$par[3]
+      }
+   }
    # calculate a 
     if (method=="onephi") {
     opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme, d1j. = d1j, mu1=as.numeric(mu[,i+1]),sig1=as.numeric(sig[,i+1]),d.=d,given.=given,res.=res,par=phi_init,control=list(maxit=2000),method = "BFGS")
@@ -308,10 +320,10 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
     par_sum <- data.frame("a" = as.numeric(a[,N+1]),"mu" = as.numeric(mu[,N+1]), "sig" = as.numeric(sig[,N+1]))
   if (show_ite == TRUE) {
     if (method=="onephi") {
-    return(list(a,mu,sig,par_sum,phi.))
+    return(list(a,b,mu,sig,par_sum,phi.))
     }
     if (method=="twophi") {
-      return(list(a,mu,sig,par_sum,phi1.,phi0.))
+      return(list(a,b,mu,sig,par_sum,phi1.,phi0.))
     }
   } else {return(par_sum)}
 }
