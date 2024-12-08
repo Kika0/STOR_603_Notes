@@ -244,7 +244,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
   return(par_sum)
 }
 
-par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,method="onephi",SN=NULL, b_inc=TRUE)  {
+par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   Y_given1extreme <- df %>% filter(df[,given]>quantile(df[,given],v))
