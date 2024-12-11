@@ -556,6 +556,572 @@ fitw</code></pre>
 ## $p.value.Schwarz
 ## [1] 0.9289998</code></pre>
 </div>
+<div id="fitting-a-vine-copula-to-the-observed-residuals" class="section level2">
+<h2>Fitting a vine copula to the observed residuals</h2>
+<p><code>fitress</code> is a matrix of observed residuals on the uniform
+margins for the summer pollution dataset conditioning on <span class="math inline">\(O_3\)</span> being extreme.</p>
+<pre class="r"><code>v &lt;- 0.7
+# transform to Laplace margins
+winter_lap &lt;- as.data.frame((winter %&gt;% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %&gt;% apply(c(1,2),FUN=unif_laplace_pit) %&gt;% as.data.frame()
+summer_lap &lt;- as.data.frame((summer %&gt;% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %&gt;% apply(c(1,2),FUN=unif_laplace_pit) %&gt;% as.data.frame()
+
+obsresw &lt;- (observed_residuals(df = winter_lap,given = 1,v = v) %&gt;% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
+
+obsress &lt;- (observed_residuals(df = summer_lap,given = 1,v = v) %&gt;% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+
+fitrw &lt;- RVineStructureSelect(obsresw,
+                     trunclevel = 3, indeptest = TRUE)
+fitrs &lt;- RVineStructureSelect(obsress,
+                     trunclevel = 3, indeptest = TRUE)
+# with imposed tree structure
+fitrs2 &lt;- RVineCopSelect(data = obsress, Matrix = fitrw$Matrix,
+                     trunclevel = 3, indeptest = FALSE)
+fitrw2 &lt;- RVineCopSelect(data = obsresw, Matrix = fitrs$Matrix,
+                     trunclevel = 3, indeptest = FALSE)</code></pre>
+<p>Summer observed residual vine copula structure.</p>
+<pre class="r"><code>fitrs</code></pre>
+<pre><code>## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Rotated Tawn type 2 180 degrees (par = 2.45, par2 = 0.73, tau = 0.47) 
+## 4,1  Frank (par = 4.01, tau = 0.39) 
+## 4,3  Survival BB8 (par = 4.11, par2 = 0.74, tau = 0.42) 
+## 
+## Tree 2:
+## 4,2;1  Independence 
+## 3,1;4  Independence 
+## 
+## Tree 3:
+## 3,2;4,1  Independence 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,
+## 4 &lt;-&gt; PM10</code></pre>
+<p>Summer observed residuals vine cop parameters with imposed winter
+copula structure.</p>
+<pre class="r"><code>fitrs2</code></pre>
+<pre><code>## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 2,1  Rotated Tawn type 1 180 degrees (par = 2.45, par2 = 0.73, tau = 0.47) 
+## 4,2  Frank (par = 3.29, tau = 0.33) 
+## 4,3  Survival BB8 (par = 4.11, par2 = 0.74, tau = 0.42) 
+## 
+## Tree 2:
+## 4,1;2  Frank (par = 2.05, tau = 0.22) 
+## 3,2;4  Survival Joe (par = 1.21, tau = 0.11) 
+## 
+## Tree 3:
+## 3,1;4,2  Clayton (par = 0.16, tau = 0.07) 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,   4 &lt;-&gt; PM10</code></pre>
+<p>Winter observed residual vine copula structure.</p>
+<pre class="r"><code>fitrw</code></pre>
+<pre><code>## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 2,1  Survival BB8 (par = 6, par2 = 0.8, tau = 0.6) 
+## 4,2  Tawn  type 1 (par = 1.74, par2 = 0.47, tau = 0.26) 
+## 4,3  t (par = 0.34, par2 = 3.87, tau = 0.22) 
+## 
+## Tree 2:
+## 4,1;2  Independence 
+## 3,2;4  Rotated Tawn type 2 180 degrees (par = 1.6, par2 = 0.31, tau = 0.17) 
+## 
+## Tree 3:
+## 3,1;4,2  Independence 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,
+## 4 &lt;-&gt; PM10</code></pre>
+<p>Winter observed residuals vine cop parameters with imposed summer
+copula structure.</p>
+<pre class="r"><code>fitrw2</code></pre>
+<pre><code>## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Survival BB8 (par = 6, par2 = 0.8, tau = 0.6) 
+## 4,1  Frank (par = 2.18, tau = 0.23) 
+## 4,3  t (par = 0.34, par2 = 3.87, tau = 0.22) 
+## 
+## Tree 2:
+## 4,2;1  Tawn  type 1 (par = 3.76, par2 = 0.08, tau = 0.08) 
+## 3,1;4  Survival Joe (par = 1.28, tau = 0.14) 
+## 
+## Tree 3:
+## 3,2;4,1  Tawn  type 1 (par = 7.49, par2 = 0.02, tau = 0.02) 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,   4 &lt;-&gt; PM10</code></pre>
+<div id="try-vuong-test-on-observed-residuals-vine-copulas." class="section level3">
+<h3>Try Vuong test on observed residuals vine copulas.</h3>
+<p>Summer</p>
+<pre class="r"><code>RVineVuongTest(data= obsress,RVM1 = fitrs, RVM2 = fitrs2)</code></pre>
+<pre><code>## $statistic
+## [1] -1.410064
+## 
+## $statistic.Akaike
+## [1] -0.8810053
+## 
+## $statistic.Schwarz
+## [1] -0.04534292
+## 
+## $p.value
+## [1] 0.1585209
+## 
+## $p.value.Akaike
+## [1] 0.378315
+## 
+## $p.value.Schwarz
+## [1] 0.963834</code></pre>
+<p>and winter</p>
+<pre class="r"><code>RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)</code></pre>
+<pre><code>## $statistic
+## [1] 0.08930114
+## 
+## $statistic.Akaike
+## [1] 0.4045028
+## 
+## $statistic.Schwarz
+## [1] 0.8891528
+## 
+## $p.value
+## [1] 0.9288426
+## 
+## $p.value.Akaike
+## [1] 0.685843
+## 
+## $p.value.Schwarz
+## [1] 0.373921</code></pre>
+<p>Vuong test compares whether model <span class="math inline">\(2\)</span> is an improvement to model <span class="math inline">\(1\)</span>. Since p values are not below
+significance level <span class="math inline">\(0.05\)</span>, we accept
+a model with imposed structure?</p>
+<p>Conditioning on <span class="math inline">\(NO_2\)</span>.</p>
+<pre class="r"><code>x &lt;- fn(j=2)
+x</code></pre>
+<pre><code>## [[1]]
+## C-vine copula with the following pair-copulas:
+## Tree 1:
+## 4,2  Frank (par = 3.55, tau = 0.35) 
+## 4,1  Rotated Gumbel 270 degrees (par = -1.54, tau = -0.35) 
+## 4,3  Frank (par = 3.96, tau = 0.38) 
+## 
+## Tree 2:
+## 1,2;4  Rotated Gumbel 270 degrees (par = -1.11, tau = -0.1) 
+## 3,1;4  Rotated Clayton 270 degrees (par = -0.39, tau = -0.16) 
+## 
+## Tree 3:
+## 3,2;1,4  Independence 
+## 
+## ---
+## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,
+## 4 &lt;-&gt; PM10
+## [[2]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Frank (par = -2.52, tau = -0.26) 
+## 4,1  Rotated Gumbel 270 degrees (par = -1.54, tau = -0.35) 
+## 4,3  Frank (par = 3.96, tau = 0.38) 
+## 
+## Tree 2:
+## 4,2;1  Frank (par = 2.52, tau = 0.26) 
+## 3,1;4  Rotated Clayton 270 degrees (par = -0.39, tau = -0.16) 
+## 
+## Tree 3:
+## 3,2;4,1  t (par = 0.04, par2 = 3.22, tau = 0.02) 
+## 
+## ---
+## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,   4 &lt;-&gt; PM10
+## [[3]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Rotated Tawn type 2 180 degrees (par = 2.45, par2 = 0.73, tau = 0.47) 
+## 4,1  Frank (par = 4.01, tau = 0.39) 
+## 4,3  Survival BB8 (par = 4.11, par2 = 0.74, tau = 0.42) 
+## 
+## Tree 2:
+## 4,2;1  Independence 
+## 3,1;4  Independence 
+## 
+## Tree 3:
+## 3,2;4,1  Independence 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,
+## 4 &lt;-&gt; PM10
+## [[4]]
+## C-vine copula with the following pair-copulas:
+## Tree 1:
+## 4,2  Frank (par = 3.29, tau = 0.33) 
+## 4,1  Frank (par = 4.01, tau = 0.39) 
+## 4,3  Survival BB8 (par = 4.11, par2 = 0.74, tau = 0.42) 
+## 
+## Tree 2:
+## 1,2;4  Rotated Tawn type 2 180 degrees (par = 2.14, par2 = 0.63, tau = 0.39) 
+## 3,1;4  Survival Joe (par = 1.32, tau = 0.15) 
+## 
+## Tree 3:
+## 3,2;1,4  Rotated Joe 270 degrees (par = -1.13, tau = -0.07) 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,   4 &lt;-&gt; PM10
+## [[5]]
+## [[5]]$statistic
+## [1] -0.7611071
+## 
+## [[5]]$statistic.Akaike
+## [1] -0.2975994
+## 
+## [[5]]$statistic.Schwarz
+## [1] 0.415084
+## 
+## [[5]]$p.value
+## [1] 0.4465931
+## 
+## [[5]]$p.value.Akaike
+## [1] 0.7660089
+## 
+## [[5]]$p.value.Schwarz
+## [1] 0.6780804
+## 
+## 
+## [[6]]
+## [[6]]$statistic
+## [1] -1.867386
+## 
+## [[6]]$statistic.Akaike
+## [1] -1.453406
+## 
+## [[6]]$statistic.Schwarz
+## [1] -0.7995124
+## 
+## [[6]]$p.value
+## [1] 0.06184774
+## 
+## [[6]]$p.value.Akaike
+## [1] 0.1461112
+## 
+## [[6]]$p.value.Schwarz
+## [1] 0.4239933</code></pre>
+<p>Conditioning on <span class="math inline">\(NO\)</span>.</p>
+<pre class="r"><code>x &lt;- fn(j=3)
+x</code></pre>
+<pre><code>## [[1]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Gaussian (par = 0.18, tau = 0.12) 
+## 4,1  Frank (par = -2.84, tau = -0.29) 
+## 4,3  Frank (par = 3.08, tau = 0.31) 
+## 
+## Tree 2:
+## 4,2;1  Gumbel (par = 1.2, tau = 0.17) 
+## 3,1;4  Rotated Tawn type 1 90 degrees (par = -2.19, par2 = 0.15, tau = -0.12) 
+## 
+## Tree 3:
+## 3,2;4,1  Independence 
+## 
+## ---
+## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO2,   3 &lt;-&gt; SO2,
+## 4 &lt;-&gt; PM10
+## [[2]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Gaussian (par = 0.18, tau = 0.12) 
+## 4,1  Frank (par = -2.84, tau = -0.29) 
+## 4,3  Frank (par = 3.08, tau = 0.31) 
+## 
+## Tree 2:
+## 4,2;1  Gumbel (par = 1.2, tau = 0.17) 
+## 3,1;4  Rotated Tawn type 1 90 degrees (par = -2.19, par2 = 0.15, tau = -0.12) 
+## 
+## Tree 3:
+## 3,2;4,1  Independence 
+## 
+## ---
+## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO2,   3 &lt;-&gt; SO2,
+## 4 &lt;-&gt; PM10
+## [[3]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Rotated Tawn type 2 180 degrees (par = 2.45, par2 = 0.73, tau = 0.47) 
+## 4,1  Frank (par = 4.01, tau = 0.39) 
+## 4,3  Survival BB8 (par = 4.11, par2 = 0.74, tau = 0.42) 
+## 
+## Tree 2:
+## 4,2;1  Independence 
+## 3,1;4  Independence 
+## 
+## Tree 3:
+## 3,2;4,1  Independence 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,
+## 4 &lt;-&gt; PM10
+## [[4]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Rotated Tawn type 2 180 degrees (par = 2.45, par2 = 0.73, tau = 0.47) 
+## 4,1  Frank (par = 4.01, tau = 0.39) 
+## 4,3  Survival BB8 (par = 4.11, par2 = 0.74, tau = 0.42) 
+## 
+## Tree 2:
+## 4,2;1  Tawn  type 1 (par = 2.39, par2 = 0.08, tau = 0.08) 
+## 3,1;4  Survival Joe (par = 1.32, tau = 0.15) 
+## 
+## Tree 3:
+## 3,2;4,1  Rotated Joe 270 degrees (par = -1.13, tau = -0.07) 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,   4 &lt;-&gt; PM10
+## [[5]]
+## [[5]]$statistic
+## [1] -0.1523074
+## 
+## [[5]]$statistic.Akaike
+## [1] -0.1523074
+## 
+## [[5]]$statistic.Schwarz
+## [1] -0.1523074
+## 
+## [[5]]$p.value
+## [1] 0.8789445
+## 
+## [[5]]$p.value.Akaike
+## [1] 0.8789445
+## 
+## [[5]]$p.value.Schwarz
+## [1] 0.8789445
+## 
+## 
+## [[6]]
+## [[6]]$statistic
+## [1] -2.568387
+## 
+## [[6]]$statistic.Akaike
+## [1] -1.983445
+## 
+## [[6]]$statistic.Schwarz
+## [1] -1.059514
+## 
+## [[6]]$p.value
+## [1] 0.01021729
+## 
+## [[6]]$p.value.Akaike
+## [1] 0.04731769
+## 
+## [[6]]$p.value.Schwarz
+## [1] 0.2893659</code></pre>
+<p>Conditioning on <span class="math inline">\(SO_2\)</span>.</p>
+<pre class="r"><code>x &lt;- fn(j=4)
+x</code></pre>
+<pre><code>## [[1]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 3,2  Gaussian (par = 0.76, tau = 0.55) 
+## 4,1  Rotated Tawn type 1 90 degrees (par = -1.57, par2 = 0.42, tau = -0.21) 
+## 4,3  Frank (par = 6.55, tau = 0.54) 
+## 
+## Tree 2:
+## 4,2;3  Joe (par = 1.35, tau = 0.16) 
+## 3,1;4  Independence 
+## 
+## Tree 3:
+## 1,2;4,3  Survival Gumbel (par = 1.32, tau = 0.24) 
+## 
+## ---
+## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO2,   3 &lt;-&gt; NO,   4 &lt;-&gt; PM10
+## [[2]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Survival Joe (par = 1.17, tau = 0.09) 
+## 4,1  Rotated Tawn type 1 90 degrees (par = -1.57, par2 = 0.42, tau = -0.21) 
+## 4,3  Frank (par = 6.55, tau = 0.54) 
+## 
+## Tree 2:
+## 4,2;1  Gumbel (par = 1.98, tau = 0.5) 
+## 3,1;4  Independence 
+## 
+## Tree 3:
+## 3,2;4,1  Gaussian (par = 0.59, tau = 0.4) 
+## 
+## ---
+## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO2,   3 &lt;-&gt; NO,   4 &lt;-&gt; PM10
+## [[3]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Rotated Tawn type 2 180 degrees (par = 2.45, par2 = 0.73, tau = 0.47) 
+## 4,1  Frank (par = 4.01, tau = 0.39) 
+## 4,3  Survival BB8 (par = 4.11, par2 = 0.74, tau = 0.42) 
+## 
+## Tree 2:
+## 4,2;1  Independence 
+## 3,1;4  Independence 
+## 
+## Tree 3:
+## 3,2;4,1  Independence 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,
+## 4 &lt;-&gt; PM10
+## [[4]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 3,2  Survival Joe (par = 1.55, tau = 0.23) 
+## 4,1  Frank (par = 4.01, tau = 0.39) 
+## 4,3  Survival BB8 (par = 4.11, par2 = 0.74, tau = 0.42) 
+## 
+## Tree 2:
+## 4,2;3  Gaussian (par = 0.33, tau = 0.22) 
+## 3,1;4  Survival Joe (par = 1.32, tau = 0.15) 
+## 
+## Tree 3:
+## 1,2;4,3  Frank (par = 4.02, tau = 0.39) 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,   4 &lt;-&gt; PM10
+## [[5]]
+## [[5]]$statistic
+## [1] -1.064985
+## 
+## [[5]]$statistic.Akaike
+## [1] -1.064985
+## 
+## [[5]]$statistic.Schwarz
+## [1] -1.064985
+## 
+## [[5]]$p.value
+## [1] 0.2868827
+## 
+## [[5]]$p.value.Akaike
+## [1] 0.2868827
+## 
+## [[5]]$p.value.Schwarz
+## [1] 0.2868827
+## 
+## 
+## [[6]]
+## [[6]]$statistic
+## [1] -0.1437217
+## 
+## [[6]]$statistic.Akaike
+## [1] 0.1458201
+## 
+## [[6]]$statistic.Schwarz
+## [1] 0.6031593
+## 
+## [[6]]$p.value
+## [1] 0.8857202
+## 
+## [[6]]$p.value.Akaike
+## [1] 0.8840634
+## 
+## [[6]]$p.value.Schwarz
+## [1] 0.5464027</code></pre>
+<p>Conditioning on <span class="math inline">\(PM_{10}\)</span>.</p>
+<pre class="r"><code>x &lt;- fn(j=5)
+x</code></pre>
+<pre><code>## [[1]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 2,3  BB1 (par = 0.27, par2 = 1.49, tau = 0.41) 
+## 4,1  Rotated Clayton 270 degrees (par = -0.57, tau = -0.22) 
+## 4,2  Clayton (par = 0.36, tau = 0.15) 
+## 
+## Tree 2:
+## 4,3;2  Independence 
+## 2,1;4  Rotated Tawn type 1 180 degrees (par = 2.26, par2 = 0.18, tau = 0.14) 
+## 
+## Tree 3:
+## 1,3;4,2  Frank (par = -1.79, tau = -0.19) 
+## 
+## ---
+## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO2,   3 &lt;-&gt; NO,   4 &lt;-&gt; SO2
+## [[2]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Rotated Tawn type 2 180 degrees (par = 2.16, par2 = 0.16, tau = 0.13) 
+## 4,1  Rotated Clayton 270 degrees (par = -0.57, tau = -0.22) 
+## 4,3  Clayton (par = 0.37, tau = 0.16) 
+## 
+## Tree 2:
+## 4,2;1  Survival Joe (par = 1.29, tau = 0.14) 
+## 3,1;4  Rotated Joe 90 degrees (par = -1.11, tau = -0.06) 
+## 
+## Tree 3:
+## 3,2;4,1  Gumbel (par = 1.6, tau = 0.37) 
+## 
+## ---
+## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO2,   3 &lt;-&gt; NO,   4 &lt;-&gt; SO2
+## [[3]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 1,2  Rotated Tawn type 2 180 degrees (par = 2.45, par2 = 0.73, tau = 0.47) 
+## 4,1  Frank (par = 4.01, tau = 0.39) 
+## 4,3  Survival BB8 (par = 4.11, par2 = 0.74, tau = 0.42) 
+## 
+## Tree 2:
+## 4,2;1  Independence 
+## 3,1;4  Independence 
+## 
+## Tree 3:
+## 3,2;4,1  Independence 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,
+## 4 &lt;-&gt; PM10
+## [[4]]
+## D-vine copula with the following pair-copulas:
+## Tree 1:
+## 2,3  Survival Joe (par = 1.55, tau = 0.23) 
+## 4,1  Frank (par = 4.01, tau = 0.39) 
+## 4,2  Frank (par = 3.29, tau = 0.33) 
+## 
+## Tree 2:
+## 4,3;2  Gaussian (par = 0.52, tau = 0.35) 
+## 2,1;4  Rotated Tawn type 1 180 degrees (par = 2.14, par2 = 0.63, tau = 0.39) 
+## 
+## Tree 3:
+## 1,3;4,2  Rotated Tawn type 1 180 degrees (par = 20, par2 = 0, tau = 0) 
+## 
+## ---
+## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,   4 &lt;-&gt; PM10
+## [[5]]
+## [[5]]$statistic
+## [1] 1.179106
+## 
+## [[5]]$statistic.Akaike
+## [1] 1.179106
+## 
+## [[5]]$statistic.Schwarz
+## [1] 1.179106
+## 
+## [[5]]$p.value
+## [1] 0.2383561
+## 
+## [[5]]$p.value.Akaike
+## [1] 0.2383561
+## 
+## [[5]]$p.value.Schwarz
+## [1] 0.2383561
+## 
+## 
+## [[6]]
+## [[6]]$statistic
+## [1] -1.083062
+## 
+## [[6]]$statistic.Akaike
+## [1] -0.6654862
+## 
+## [[6]]$statistic.Schwarz
+## [1] -0.005913458
+## 
+## [[6]]$p.value
+## [1] 0.2787809
+## 
+## [[6]]$p.value.Akaike
+## [1] 0.5057396
+## 
+## [[6]]$p.value.Schwarz
+## [1] 0.9952818</code></pre>
+</div>
+</div>
 
 
 

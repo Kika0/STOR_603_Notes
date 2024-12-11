@@ -78,5 +78,118 @@ fitw2
 ```{r}
 RVineVuongTest(data= as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)),RVM1 = fitw, RVM2 = fitw2)
 ```
+
+## Fitting a vine copula to the observed residuals
+
+`fitress` is a matrix of observed residuals on the uniform margins for the summer pollution dataset conditioning on $O_3$ being extreme.
+
+```{r}
+v <- 0.7
+# transform to Laplace margins
+winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+
+obsresw <- (observed_residuals(df = winter_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
+
+obsress <- (observed_residuals(df = summer_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+
+fitrw <- RVineStructureSelect(obsresw,
+                     trunclevel = 3, indeptest = TRUE)
+fitrs <- RVineStructureSelect(obsress,
+                     trunclevel = 3, indeptest = TRUE)
+# with imposed tree structure
+fitrs2 <- RVineCopSelect(data = obsress, Matrix = fitrw$Matrix,
+                     trunclevel = 3, indeptest = FALSE)
+fitrw2 <- RVineCopSelect(data = obsresw, Matrix = fitrs$Matrix,
+                     trunclevel = 3, indeptest = FALSE)
+```
+
+ Summer observed residual vine copula structure.
  
+```{r}
+fitrs
+```
  
+Summer observed residuals vine cop parameters with imposed winter copula structure.
+ 
+```{r}
+fitrs2
+```
+ 
+Winter observed residual vine copula structure.
+  
+```{r}
+fitrw
+```
+
+Winter observed residuals vine cop parameters with imposed summer copula structure.
+ 
+```{r}
+fitrw2
+```
+
+### Try Vuong test on observed residuals vine copulas.
+
+Summer
+```{r}
+RVineVuongTest(data= obsress,RVM1 = fitrs, RVM2 = fitrs2)
+```
+and winter
+
+```{r}
+RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)
+```
+
+Vuong test compares whether model $2$ is an improvement to model $1$. Since p values are not below significance level $0.05$, we accept a model with imposed structure?
+
+```{r, echo= FALSE}
+# write into a function for conditioning on other pollutants
+
+fn <- function(j) {
+obsresw <- (observed_residuals(df = winter_lap,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
+
+obsress <- (observed_residuals(df = summer_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+
+fitrw <- RVineStructureSelect(obsresw,
+                     trunclevel = 3, indeptest = TRUE)
+fitrs <- RVineStructureSelect(obsress,
+                     trunclevel = 3, indeptest = TRUE)
+# with imposed tree structure
+fitrs2 <- RVineCopSelect(data = obsress, Matrix = fitrw$Matrix,
+                     trunclevel = 3, indeptest = FALSE)
+fitrw2 <- RVineCopSelect(data = obsresw, Matrix = fitrs$Matrix,
+                     trunclevel = 3, indeptest = FALSE)
+testw <- RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)
+tests <- RVineVuongTest(data= obsress,RVM1 = fitrs, RVM2 = fitrs2)
+return(list(fitrw,fitrw2,fitrs,fitrs2,testw,tests))
+}
+```
+
+Conditioning on $NO_2$.
+
+```{r}
+x <- fn(j=2)
+x
+```
+
+Conditioning on $NO$.
+
+```{r}
+x <- fn(j=3)
+x
+```
+
+Conditioning on $SO_2$.
+
+```{r}
+x <- fn(j=4)
+x
+```
+
+Conditioning on $PM_{10}$.
+
+```{r}
+x <- fn(j=5)
+x
+```
+
