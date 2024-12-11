@@ -263,21 +263,24 @@ NLL_exp_norm_noise <- function(d,x,theta) {
  return(-sum(dnorm(x,mean = exp(-phi*d),sd=sd,log = TRUE)))
 }
 
-NLL_expalpha_HT <- function(phi,df = Y_given1extreme, d1j. = d1j,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res) {
+NLL_expalpha_HT <- function(phi,df = Y_given1extreme, d1j. = d1j,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res,beta1=as.numeric(unlist(b[,1]))) {
   nv <- nrow(df)
   mu1 <- rep(mu1,each=nv)
   sig1 <- rep(sig1,each=nv)
+  beta1 <- rep(beta1,each=nv)
   Y1 <- rep(as.numeric(unlist(df[,given.])),d.-1)
   Yj <- as.numeric(unlist(df[,res.]))
   dij. <- rep(d1j.,each=nv)
   # if (a<(-1) | a>1 ) {
   #   log_lik <- (-10^6) # low log-likelihood outside bounds
   # }
-    log_lik <- sum(log(sig1) + (Yj-exp(-phi*dij.)*Y1-mu1)^2/(2*sig1^2))
+  log_lik <- sum(log(sig1*Y1^beta1) + (Yj-exp(-phi*dij.)*Y1-mu1*Y1^beta1)^2/(2*(sig1*Y1^beta1)^2))
+  
+    # log_lik <- sum(log(sig1) + (Yj-exp(-phi*dij.)*Y1-mu1)^2/(2*sig1^2))
   return(log_lik)
 }
 
-NLL_expalpha_twophi <- function(theta,df = Y_given1extreme, d1j. = d1j,SN.=SN,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res,beta1=0) {
+NLL_expalpha_twophi <- function(theta,df = Y_given1extreme, d1j. = d1j,SN.=SN,mu1=as.numeric(unlist(mu[,1])),sig1=as.numeric(unlist(sig[,1])),d.=d,given.=given,res.=res,beta1=as.numeric(unlist(b[,1]))) {
   phi1 <- theta[1] # in the same region as the conditioning site
   phi0 <- theta[2] # in a different region as the conditioning site
   # if(phi1<=0 | phi0<=0 ){return(10e10)}
@@ -289,9 +292,6 @@ NLL_expalpha_twophi <- function(theta,df = Y_given1extreme, d1j. = d1j,SN.=SN,mu
   Yj <- as.numeric(unlist(df[,res.]))
   dij <- rep(d1j.,each=nv)
   SN. <- rep(SN.,each=nv)
-  # if (a<(-1) | a>1 ) {
-  #   log_lik <- (-10^6) # low log-likelihood outside bounds
-  # }
   log_lik <- sum(log(sig1*Y1^beta1) + (Yj-exp(-(phi1*SN.+phi0*!SN.)*dij)*Y1-mu1*Y1^beta1)^2/(2*(Y1^beta1*sig1)^2))
   return(log_lik)
 }
