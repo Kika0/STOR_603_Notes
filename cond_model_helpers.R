@@ -244,7 +244,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
   return(par_sum)
 }
 
-par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
+par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,b_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   Y_given1extreme <- df %>% filter(df[,given]>quantile(df[,given],v))
@@ -264,22 +264,26 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
   if (is.numeric(mu_init) & is.numeric(sig_init)) {
    mu[,1] <- mu_init
    sig[,1] <- sig_init
-   b[,1] <- 0
   } else {
   mu[,1] <- 0
   sig[,1] <- 1
-  b[,1] <- 0
+
+  }
+  if (is.numeric(b_init)) {
+    b[,1] <- b_init
+  } else {
+    b[,1] <- 0
   }
   if (method=="onephi") {
     phi_init <- 1
-    opt <- optim(fn=NLL_expalpha_HT,par=phi_init,df = Y_given1extreme,d1j. = d1j,mu1=as.numeric(mu[,1]),sig1=as.numeric(sig[,1]),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
+    opt <- optim(fn=NLL_expalpha_HT,par=phi_init,df = Y_given1extreme,d1j. = d1j,mu1=as.numeric(mu[,1]),sig1=as.numeric(sig[,1]),beta1=as.numeric(b[,1]),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
     phi <- opt$par
     phi. <- append(phi.,phi)
     a[,1] <- exp(-phi*d1j)
   }
   if (method=="twophi") {
     phi_init <- c(1,1)
-    opt <- optim(fn=NLL_expalpha_twophi,par=phi_init,df=Y_given1extreme,d1j.=d1j,SN.=SN,mu1=as.numeric(mu[,1]),sig1=as.numeric(sig[,1]),d.=d,res.=res,control=list(maxit=2000),method = "BFGS")
+    opt <- optim(fn=NLL_expalpha_twophi,par=phi_init,df=Y_given1extreme,d1j.=d1j,SN.=SN,mu1=as.numeric(mu[,1]),sig1=as.numeric(sig[,1]),beta1=as.numeric(b[,1]),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
     phi1 <- opt$par[1]
     phi0 <- opt$par[2]
     phi1. <- append(phi1.,phi1)
@@ -303,13 +307,13 @@ par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FAL
    }
    # calculate a 
     if (method=="onephi") {
-    opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme, d1j. = d1j, mu1=as.numeric(mu[,i+1]),sig1=as.numeric(sig[,i+1]),d.=d,given.=given,res.=res,par=phi_init,control=list(maxit=2000),method = "BFGS")
+    opt <- optim(fn=NLL_expalpha_HT,df = Y_given1extreme, d1j. = d1j, mu1=as.numeric(mu[,i+1]),sig1=as.numeric(sig[,i+1]),beta1=as.numeric(b[,i+1]),d.=d,given.=given,res.=res,par=phi_init,control=list(maxit=2000),method = "BFGS")
     phi <- opt$par
     phi. <- append(phi.,phi)
     a[,i+1] <- exp(-phi*d1j)
     }
     if (method=="twophi") {
-      opt <- optim(fn=NLL_expalpha_twophi,par=phi_init,df=Y_given1extreme,d1j.=d1j,SN.=SN,mu1=as.numeric(mu[,i+1]),sig1=as.numeric(sig[,i+1]),d.=d,res.=res,control=list(maxit=2000),method = "BFGS")
+      opt <- optim(fn=NLL_expalpha_twophi,par=phi_init,df=Y_given1extreme,d1j.=d1j,SN.=SN,mu1=as.numeric(mu[,i+1]),sig1=as.numeric(sig[,i+1]),beta1=as.numeric(b[,i+1]),d.=d,given.=given,res.=res,control=list(maxit=2000),method = "BFGS")
       phi1 <- opt$par[1]
       phi0 <- opt$par[2]
       phi1. <- append(phi1.,phi1)
@@ -359,8 +363,8 @@ observed_residuals <- function(df=sims,given=1,v=0.99,a=NULL,b=NULL) {
     b_hat <- opt$par[2]
     # b_hat <- 0
     res_var <- append(res_var,rep(paste0("Z",res[i-1]),nv))
-    Y1 <- Y_given_1_extreme[,j]
-    Y2 <- Y_given_1_extreme[,res[i-1]]
+    Y1 <- Y_given1extreme[,j]
+    Y2 <- Y_given1extreme[,res[i-1]]
     tmp_z <- append(tmp_z,(Y2-a_hat*Y1/(Y1^b_hat))) }
   }
   Z <- data.frame(res_var,tmp_z) %>% mutate(res_var=factor(res_var,levels=paste0("Z",res))) %>% group_by(res_var) %>% 
@@ -635,4 +639,151 @@ G_laplace <- function(z,a) {
 (1+exp(-z/a))^(a-1)
 }
   
+# map spatial parameters
+# function for plotting parameter estimates on a map and against distance
+plot_map_param <- function(tmp_est,method = "AGG",threesites=c("Birmingham","Glasgow","London"), indeces=1:3) {
+  misscol <- "aquamarine"
+  cond_var <- indeces[1]
+  tmp <- tmp_est1 %>% mutate(given=factor(cond_var,levels = cond_var)) 
+  tmp1 <- tmp %>% add_row(.before=cond_var)
+  # match back to spatial locations and plot
+  if (identical(indeces,1:3)) {
+    uk_tmp1 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
+      arrange(is_location) %>% cbind(tmp1)
+  }
+  else {uk_tmp1 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8])  %>% cbind(tmp1) }
+  if (method=="AGG") {
+    uk_tmp1 <- uk_tmp1 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
+  }
   
+  cond_var <- indeces[2]
+  tmp <- tmp_est2 %>% mutate(given=factor(cond_var,levels = cond_var))
+  tmp1 <- tmp %>% add_row(.before=cond_var)
+  # match back to spatial locations and plot
+  if (identical(indeces,1:3)) {
+    uk_tmp2 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
+      arrange(is_location) %>% cbind(tmp1)
+  }
+  else {uk_tmp2 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8])  %>% cbind(tmp1) }
+  if (method=="AGG") {
+    uk_tmp2 <- uk_tmp2 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
+  }
+  cond_var <- indeces[3]
+  tmp <- tmp_est3 %>% mutate(given=factor(cond_var,levels = cond_var))
+  tmp1 <- tmp %>% add_row(.before=cond_var)
+  # match back to spatial locations and plot
+  if (identical(indeces,1:3)) {
+    uk_tmp3 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
+      arrange(is_location) %>% cbind(tmp1)
+  }
+  else {uk_tmp3 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8])  %>% cbind(tmp1) }
+  if (method=="AGG") {
+    uk_tmp3 <- uk_tmp3 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
+  }
+  
+  lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),length.out=5)
+  pa <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                     tm_shape(uk_tmp2) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+  if (method=="AGG") {
+    lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),length.out=6)
+    pb <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                       tm_shape(uk_tmp2) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+  }
+  lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),length.out=6)
+  pmu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                      tm_shape(uk_tmp2) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3) 
+  
+  sigmax <- 3
+  lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),min(max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),sigmax),length.out=6)
+  psig <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                       tm_shape(uk_tmp2 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter( is.na(sig) | sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+  if (method=="AGG") {
+    lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),length.out=6)
+    pmuagg <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                           tm_shape(uk_tmp2) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+    
+    lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigl),na.rm = TRUE),sigmax,length.out=6)
+    psigl <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(sigl) | sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                          tm_shape(uk_tmp2 %>% filter(is.na(sigl) |sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(sigl) |sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+    
+    lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigu),na.rm = TRUE),sigmax,length.out=6)
+    psigu <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(sigu) | sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                          tm_shape(uk_tmp2 %>% filter(is.na(sigu) |sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(sigu) |sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+    
+    lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigdiff),na.rm = TRUE),sigmax,length.out=6)
+    psigdiff <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(sigdiff) | sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",midpoint=0,colorNA=misscol,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                             tm_shape(uk_tmp2 %>% filter(is.na(sigdiff) |sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(sigdiff) |sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+    
+    deltamax <- 5
+    deltamin <- min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$deltal),as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$deltau),na.rm = TRUE)
+    lims <- seq(deltamin,deltamax,length.out=6)
+    pdeltal <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                            tm_shape(uk_tmp2 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+    
+    lims <- seq(deltamin,deltamax,length.out=6)
+    pdeltau <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(deltau) | deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                            tm_shape(uk_tmp2 %>% filter(is.na(deltau) |deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(deltau) |deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+    
+    deltamin <- -5
+    lims <- seq(deltamin,deltamax,length.out=6)
+    pdeltadiff <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax&deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
+                               tm_shape(uk_tmp2 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax&deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax&deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
+    return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,psigdiff,pdeltal,pdeltau,pdeltadiff)) 
+  }
+  if (method!="AGG") {return(list(pa,pmu,psig))}
+}
+
+# function for plotting parameter estimates on a map and against distance
+map_param <- function(tmp_est,method = "AGG",site="Birmingham") {
+  misscol <- "aquamarine"
+  tmp <- tmp_est %>% mutate(site_index = rep(1:445,length(unique(est_all$cond_site))))
+  # match back to spatial locations and plot
+  uk_temp_sf <- uk_temp_sf %>% mutate(site_index=1:445) %>% dplyr::select(site_index) %>% cbind(ukcp18[,1:8])
+  uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index")) 
+  uk_tmp1 <- st_as_sf(uk_tmp %>% filter(cond_site %in% site))
+  if (method=="AGG") {
+  uk_tmp1 <- uk_tmp1 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
+  }
+  
+  lims <- seq(min(as.numeric(uk_tmp1$a),na.rm = TRUE),max(as.numeric(uk_tmp1$a),na.rm = TRUE),length.out=5)
+  pa <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims) 
+  
+  if (method=="AGG") {
+    lims <- seq(min(as.numeric(uk_tmp1$b),na.rm = TRUE),max(as.numeric(uk_tmp1$b),na.rm = TRUE),length.out=6)
+    pb <- tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims) 
+  }
+  lims <- seq(min(as.numeric(uk_tmp1$mu),na.rm = TRUE),max(as.numeric(uk_tmp1$mu),na.rm = TRUE),length.out=6)
+  pmu <- tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) 
+
+  sigmax <- 3
+  lims <- seq(min(as.numeric(uk_tmp1$sig),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sig),na.rm = TRUE),sigmax),length.out=6)
+  psig <- tm_shape(uk_tmp1 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) 
+
+    if (method=="AGG") {
+    lims <- seq(min(as.numeric(uk_tmp1$mu_agg),na.rm = TRUE),max(as.numeric(uk_tmp1$mu_agg),na.rm = TRUE),length.out=6)
+    pmuagg <- tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims) 
+
+    lims <- seq(min(as.numeric(uk_tmp1$sigl),na.rm = TRUE),sigmax,length.out=6)
+    psigl <- tm_shape(uk_tmp1 %>% filter(is.na(sigl) | sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims) 
+
+    lims <- seq(min(as.numeric(uk_tmp1$sigu),na.rm = TRUE),sigmax,length.out=6)
+    psigu <- tm_shape(uk_tmp1 %>% filter(is.na(sigu) | sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims) 
+
+    lims <- seq(min(as.numeric(uk_tmp1$sigdiff),na.rm = TRUE),sigmax,length.out=6)
+    psigdiff <- tm_shape(uk_tmp1 %>% filter(is.na(sigdiff) | sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",midpoint=0,colorNA=misscol,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims) 
+
+    deltamax <- 5
+    deltamin <- min(as.numeric(uk_tmp1$deltal),as.numeric(uk_tmp1$deltau),na.rm = TRUE)
+    lims <- seq(deltamin,deltamax,length.out=6)
+    pdeltal <- tm_shape(uk_tmp1 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims) 
+
+    lims <- seq(deltamin,deltamax,length.out=6)
+    pdeltau <- tm_shape(uk_tmp1 %>% filter(is.na(deltau) | deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims) 
+    
+    deltamin <- -5
+    lims <- seq(deltamin,deltamax,length.out=6)
+    pdeltadiff <- tm_shape(uk_tmp1 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax&deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims) 
+    return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,psigdiff,pdeltal,pdeltau,pdeltadiff)) 
+  }
+  if (method!="AGG") {return(list(pa,pmu,psig))}
+}
