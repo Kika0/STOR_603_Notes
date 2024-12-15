@@ -748,7 +748,9 @@ p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab("")
   geom_hline(yintercept=vL,color="#009ADA",linetype="dashed") 
 # p3 <- ggplot(x_y %>% filter(x> frechet_laplace_pit(qfrechet(0.99)))%>% filter(y> frechet_laplace_pit(qfrechet(0.99)))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
 # p4 <- ggplot(xy %>% filter(x>qnorm(0.99))%>% filter(y>qnorm(0.99))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
-grid.arrange(p1,p2,ncol=2)
+p <- grid.arrange(p1,p2,ncol=2)
+ggsave(p,filename = "AD_AI_Laplacemargin.png",width=10,height=5)
+ggsave(p,filename = "AD_AI_Laplacemargin.pdf",width=10,height=5)
 
 # simulation study for different margin methods ----
 set.seed(12)
