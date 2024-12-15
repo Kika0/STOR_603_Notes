@@ -44,7 +44,7 @@ ukcp18 <- ukcp18[,1:1716]
 conv <- CnvRttPol(latlon = data.frame(long=ukcp18$Longitude,lat=ukcp18$Latitude),spol_coor = c(gr_npole_lon, gr_npole_lat))
 uk_sf_rot <- data.frame(lon=conv$lon,lat=conv$lat,ind=conv$ind) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
-uk_sf_rot <- st_transform(uk_sf_rot,27700)
+uk_sf_rot <- st_transform(uk_sf_rot,27700) %>% mutate(lon=conv$lon,lat=conv$lat)
 # add buffer
 uk_buffered <- st_buffer(uk, 50000)   
 # polygon of only the buffer
@@ -196,7 +196,7 @@ pmu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,p
              tm_shape(uk_tmp2) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3) 
 
 sigmax <- 3
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),sigmax,length.out=6)
+lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),min(max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),sigmax),length.out=6)
 psig <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[1]),
              tm_shape(uk_tmp2 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter( is.na(sig) | sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
 if (method=="AGG") {
@@ -469,7 +469,7 @@ plot_map_param(tmp_est1 = newite7[[4]], tmp_est2 = newite8[[4]], tmp_est3 = newi
 
 ```{r}
 # # save these objects for faster knitting
-# save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,tmp_est4,tmp_est5,tmp_est6,tmp_est4a,tmp_est5a,tmp_est6a,tmp_est7,tmp_est8,tmp_est9,newite1,newite2,newite3,newite4,newite5,newite6,newite7,newite8,newite9,file = "spatialobjects.RData")
+# save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,tmp_est4,tmp_est5,tmp_est6,tmp_est4a,tmp_est5a,tmp_est6a,tmp_est7,tmp_est8,tmp_est9,tmp_est10,tmp_est11,tmp_est12,newite1,newite2,newite3,newite4,newite5,newite6,newite7,newite8,newite9,file = "spatialobjects.RData")
 
 plot_map_param(tmp_est1=tmp_est7,tmp_est2=tmp_est8,tmp_est3=tmp_est9,threesites = c("Cromer","Hull","Lowestoft"),method="AGG",indeces=c(find_site_index(Cromer),find_site_index(Hull),find_site_index(Lowestoft)))
 ```
