@@ -1,4 +1,4 @@
-PP_plot <- function(observed,simulated,title=NULL,CIcol=NULL) {
+PP_plot <- function(observed,simulated,title=NULL,CIcol=NULL,Uup=NULL,Ulow=NULL) {
 # first do for one dimension
 X1 <- observed
 X2 <- simulated
@@ -14,9 +14,19 @@ for (i in 1:length(x)) {
   a2[i] <- sum(X2<x[i]+10^(-8))/length(X2)
 }
 # add also 95% bootstrap interval
+# special case for custom tolerance bounds
+if (is.numeric(Uup) & is.numeric(Ulow) ) {
+  # add test to check for same length
+  if (length(X1)!=length(Uup) & length(X1)!=length(Ulow)) {
+    stop("Length of tolerance bounds must be the same as the data")
+  }
+  u1 <- l1 <-  seq(0,1,length.out=length(X1)+1)
+  dfCI <- data.frame(u1=u1,u2=Uup,l1=l1,l2=Ulow)
+} else {
 bf1 <- data.frame(x=x)
 bf2 <- data.frame(x=x)
-for (i in 1:1000) {
+Nboot <- 100
+for (i in 1:Nboot) {
   p1 <- p2 <- c()
   # sample data
   Y1 <- sample(size=length(X1),x=X,replace = FALSE)
@@ -29,8 +39,8 @@ for (i in 1:1000) {
   bf1 <- cbind(bf1,p1)
   bf2 <- cbind(bf2,p2)
 }
-bf1num <- as.numeric(unlist(bf1[,2:1001]))
-bf2num <- as.numeric(unlist(bf2[,2:1001]))
+bf1num <- as.numeric(unlist(bf1[,2:(Nboot+1)]))
+bf2num <- as.numeric(unlist(bf2[,2:(Nboot+1)]))
 u1 <- l1 <-  seq(0,1,length.out=length(X1)+1)
 u2 <- l2 <- c()
 for (i in 1:length(u1)) {
@@ -40,6 +50,7 @@ for (i in 1:length(u1)) {
 
 df <- data.frame(x=a1,y=a2)
 dfCI <- data.frame(u1=u1,u2=u2,l1=l1,l2=l2)
+}
 if (is.null(CIcol)) {
   fillcol <- "#C11432"
 } else { fillcol <- CIcol}
