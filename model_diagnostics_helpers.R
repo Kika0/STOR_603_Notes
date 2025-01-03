@@ -1,56 +1,59 @@
-PP_plot <- function(observed,simulated,title=NULL,CIcol=NULL,Uup=NULL,Ulow=NULL) {
+PP_plot <- function(observed,simulated,title=NULL,CIcol=NULL,Uup=NULL,Ulow=NULL,tol_bounds="bootstrap") {
 # first do for one dimension
 X1 <- observed
 X2 <- simulated
 # add test to check for same length
 if (length(X1)!=length(X2)) {
   stop("Length of observed and simulated data must be the same")
-}
+} 
 X <- c(X1,X2)
 x <- sort(X) # sequence to evaluate emp distribution estimates
 a1 <- a2 <- c()
+N <- length(X1)
 for (i in 1:length(x)) {
-  a1[i] <- sum(X1<x[i]+10^(-8))/length(X1)
-  a2[i] <- sum(X2<x[i]+10^(-8))/length(X2)
+  a1[i] <- sum(X1<x[i]+10^(-8))/N
+  a2[i] <- sum(X2<x[i]+10^(-8))/N
 }
 # add also 95% bootstrap interval
+u1 <- l1 <-  1:N/(N+1)
 # special case for custom tolerance bounds
 if (is.numeric(Uup) & is.numeric(Ulow) ) {
   # add test to check for same length
-  if (length(X1)!=length(Uup) & length(X1)!=length(Ulow)) {
+  if (N!=length(Uup) & N!=length(Ulow)) {
     stop("Length of tolerance bounds must be the same as the data")
   }
-  u1 <- l1 <-  seq(0,1,length.out=length(X1)+1)
-  dfCI <- data.frame(u1=u1,u2=Uup,l1=l1,l2=Ulow)
-} else {
+  
+} else if (tol_bounds=="bootstrap") {
 bf1 <- data.frame(x=x)
 bf2 <- data.frame(x=x)
-Nboot <- 100
+Nboot <- 1000
 for (i in 1:Nboot) {
   p1 <- p2 <- c()
   # sample data
-  Y1 <- sample(size=length(X1),x=X,replace = FALSE)
+  Y1 <- sample(size=N,x=X,replace = FALSE)
   Y2 <- lubridate::setdiff(X,Y1)
   # calculate empirical probabilities
-  for (i in 1:length(x)) {
-    p1[i] <- sum(Y1<x[i]+10^(-8))/length(Y1)
-    p2[i] <- sum(Y2<x[i]+10^(-8))/length(Y2)
+  for (i in 1:(2*N)) {
+    p1[i] <- sum(Y1<x[i]+10^(-8))/(N+1)
+    p2[i] <- sum(Y2<x[i]+10^(-8))/(N+1)
   }
   bf1 <- cbind(bf1,p1)
   bf2 <- cbind(bf2,p2)
 }
 bf1num <- as.numeric(unlist(bf1[,2:(Nboot+1)]))
 bf2num <- as.numeric(unlist(bf2[,2:(Nboot+1)]))
-u1 <- l1 <-  seq(0,1,length.out=length(X1)+1)
-u2 <- l2 <- c()
-for (i in 1:length(u1)) {
-  u2[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.975)
-  l2[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.025)
+Uup <- Ulow <- c()
+for (i in 1:N) {
+  Uup[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.975)
+  Ulow[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.025)
 }
-
+} else if (tol_bounds=="beta_dist") {
+  Uup <- Ulow <- c()
+  Uup <- sapply(1:N, function(i){qbeta(0.975, i, N+1-i)})
+  Ulow <- sapply(1:N, function(i){qbeta(0.025, i, N+1-i)})
+}
 df <- data.frame(x=a1,y=a2)
-dfCI <- data.frame(u1=u1,u2=u2,l1=l1,l2=l2)
-}
+dfCI <- data.frame(u1=u1,u2=Uup,l1=l1,l2=Ulow)
 if (is.null(CIcol)) {
   fillcol <- "#C11432"
 } else { fillcol <- CIcol}
