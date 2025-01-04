@@ -52,7 +52,8 @@ for (i in 1:N) {
   Uup <- sapply(1:N, function(i){qbeta(0.975, i, N+1-i)})
   Ulow <- sapply(1:N, function(i){qbeta(0.025, i, N+1-i)})
 }
-df <- data.frame(x=a1,y=a2)
+df <- data.frame(x=X2,y=X1) %>% apply(c(2),FUN=row_number)/(N+1)
+df <- data.frame(x=X2,y=X1)
 dfCI <- data.frame(u1=u1,u2=Uup,l1=l1,l2=Ulow)
 if (is.null(CIcol)) {
   fillcol <- "#C11432"
@@ -63,7 +64,7 @@ if (is.null(CIcol)) {
     # # geom_point(data=dftmp,mapping=aes(x=x,y=y),col=fillcol) +
     geom_line(data=dfCI,aes(x=l1,y=l2),linetype="dashed", col=fillcol) +
     geom_line(data=dfCI,aes(x=u1,y=u2),linetype="dashed", col=fillcol) +
-    geom_line(data=df,aes(x=x,y=y), col="black")  +
+    geom_point(data=df,aes(x=x,y=y), col="black",size=0.2)  +
     geom_ribbon(data=dfCI,aes(x=u1,ymin=l2,ymax=u2), fill=fillcol, alpha=0.2) +
     ggtitle(title) + 
     xlab("Empirical") + ylab("Model") + coord_fixed()
