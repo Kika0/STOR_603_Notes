@@ -54,7 +54,11 @@ for (i in 1:N) {
 }
 df <- data.frame(x=X2,y=X1) %>% apply(c(2),FUN=row_number)/(N+1)
 df <- data.frame(x=X2,y=X1)
+if (tol_bounds!="none") {
 dfCI <- data.frame(u1=u1,u2=Uup,l1=l1,l2=Ulow)
+} else {
+  dfCI <- data.frame(u1=Uup,u2=u1,l1=Ulow,l2=l1)
+}
 if (is.null(CIcol)) {
   fillcol <- "#C11432"
 } else { fillcol <- CIcol}
@@ -66,6 +70,7 @@ if (is.null(CIcol)) {
     geom_line(data=dfCI,aes(x=u1,y=u2),linetype="dashed", col=fillcol) +
     geom_point(data=df,aes(x=x,y=y), col="black",size=0.2)  +
     geom_ribbon(data=dfCI,aes(x=u1,ymin=l2,ymax=u2), fill=fillcol, alpha=0.2) +
+    geom_segment(data=data.frame(x1=0,x2=1,y1=0,y2=1),mapping=aes(x=x1,y=y1,xend=x2,yend=y2),linetype="dashed") +
     ggtitle(title) + 
     xlab("Empirical") + ylab("Model") + coord_fixed()
   return(pp)
