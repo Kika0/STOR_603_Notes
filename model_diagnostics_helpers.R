@@ -72,6 +72,6 @@ if (is.null(CIcol)) {
     geom_ribbon(data=dfCI,aes(x=u1,ymin=l2,ymax=u2), fill=fillcol, alpha=0.2) +
     geom_segment(data=data.frame(x1=0,x2=1,y1=0,y2=1),mapping=aes(x=x1,y=y1,xend=x2,yend=y2),linetype="dashed") +
     ggtitle(title) + 
-    xlab("Empirical") + ylab("Model") + coord_fixed()
+    xlab("Model") + ylab("Empirical") + coord_fixed()
   return(pp)
 }
