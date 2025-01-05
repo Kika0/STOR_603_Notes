@@ -283,7 +283,7 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 # transform to Laplace margins
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 # find site closest to a vector of lon lat coordinates
-find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% select()) {
+find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::select()) {
   # convert site coordinates
 site_sf <- st_sfc(st_point(site),crs=4326) 
 site_sf <- st_transform(site_sf, crs=27700) # set BNG crs
@@ -474,4 +474,47 @@ plot_map_param(tmp_est1 = newite7[[4]], tmp_est2 = newite8[[4]], tmp_est3 = newi
 plot_map_param(tmp_est1=tmp_est7,tmp_est2=tmp_est8,tmp_est3=tmp_est9,threesites = c("Cromer","Hull","Lowestoft"),method="AGG",indeces=c(find_site_index(Cromer),find_site_index(Hull),find_site_index(Lowestoft)))
 ```
 
+# Explore time dependence
+
+```{r}
+# change sims depending on the value of tau and cond_site
+# if tau is positive, remove tau number of rows at the end of each year
+# if tau is negative, remove tau number of rows at the beginning of each year
+shift_time <- function(sims=sims,cond_site=cond_site,tau=0) {
+  if (tau==0) {
+    return(sims)
+  }
+dayshift <- c(-3:3)
+dayremove <- c(88,89,90,0,1,2,3)
+dayremove[dayshift %in% (0:tau)[-1]]
+
+daysremove_condsite <- daysremove_othersites <-  c()
+daysremove_condsite <- as.numeric(sapply(1:19,function(i){append(daysremove_condsite,dayremove[dayshift %in% (0:-tau)[-1]]+90*(i-1))}))
+daysremove_othersites <- as.numeric(sapply(1:19,function(i){append(daysremove_othersites,dayremove[dayshift %in% (0:tau)[-1]]+90*(i-1))}))
+
+sims_tau <-  data.frame(matrix(ncol=ncol(sims),nrow=nrow(sims)-abs(tau)*19))
+names(sims_tau) <- names(sims)
+sims_tau[,cond_site] <- sims[-daysremove_condsite,cond_site]
+sims_tau[,-cond_site] <- sims[-daysremove_othersites,-cond_site]
+return(sims_tau)
+}
+```
+
+```{r}
+dayshift <- c(-3:3)
+cond_site <- find_site_index(Birmingham)
+
+Birmingham_tau <- list()
+for (i in 1:7) {
+sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[i]) 
+Birmingham_tau[[i]] <- par_est(df=sims_tau,v=v,given=cond_site,margin = "AGGsigdelta", method="sequential2")
+}
+```
+
+```{r}
+# plot next to each other
+for (i in 1:7) {
+  
+}
+```
 
