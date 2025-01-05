@@ -87,7 +87,7 @@ QQ_plot <- function(observed,simulated,title=NULL,CIcol=NULL,Uup=NULL,Ulow=NULL,
   x <- sort(X) # sequence to evaluate empirical distribution estimates
   N <- length(X1)
   # add also 95% bootstrap interval
-  u1 <- l1 <-  sort(X1)
+  u1 <- l1 <-  sort(X2)
   # special case for custom tolerance bounds
   if (is.numeric(Uup) & is.numeric(Ulow) ) {
     # add test to check for same length
@@ -112,16 +112,13 @@ QQ_plot <- function(observed,simulated,title=NULL,CIcol=NULL,Uup=NULL,Ulow=NULL,
     Uup <- Ulow <- c()
     for (i in 1:N) {
       # tolerance bounds are on x-axis
-      Uup[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.975)
-      Ulow[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.025)
+      Uup[i] <- quantile(bf1num[round(bf2num,5)==round(u1[i],5)],p=0.975)
+      Ulow[i] <- quantile(bf1num[round(bf2num,5)==round(u1[i],5)],p=0.025)
     }
   } 
   df <- data.frame(x=X2,y=X1)
-  if (tol_bounds!="none") {
-    dfCI <- data.frame(u1=u1,u2=Uup,l1=l1,l2=Ulow)
-  } else {
-    dfCI <- data.frame(u1=Uup,u2=u1,l1=Ulow,l2=l1)
-  }
+  dfCI <- data.frame(u1=u1,u2=Uup,l1=l1,l2=Ulow)
+
   if (is.null(CIcol)) {
     fillcol <- "#C11432"
   } else { fillcol <- CIcol}
