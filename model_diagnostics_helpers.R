@@ -52,8 +52,7 @@ for (i in 1:N) {
   Uup <- sapply(1:N, function(i){qbeta(0.975, i, N+1-i)})
   Ulow <- sapply(1:N, function(i){qbeta(0.025, i, N+1-i)})
 }
-df <- data.frame(x=X2,y=X1) %>% apply(c(2),FUN=row_number)/(N+1)
-df <- data.frame(x=X2,y=X1)
+df <- data.frame(x=X1,y=X2)
 if (tol_bounds!="none") {
 dfCI <- data.frame(u1=u1,u2=Uup,l1=l1,l2=Ulow)
 } else {
@@ -116,12 +115,7 @@ QQ_plot <- function(observed,simulated,title=NULL,CIcol=NULL,Uup=NULL,Ulow=NULL,
       Uup[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.975)
       Ulow[i] <- quantile(bf2num[round(bf1num,5)==round(u1[i],5)],p=0.025)
     }
-  } else if (tol_bounds=="beta_dist") {
-    Uup <- Ulow <- c()
-    Uup <- sapply(1:N, function(i){qbeta(0.975, i, N+1-i)})
-    Ulow <- sapply(1:N, function(i){qbeta(0.025, i, N+1-i)})
-    # PIT to AGG
-  }
+  } 
   df <- data.frame(x=X2,y=X1)
   if (tol_bounds!="none") {
     dfCI <- data.frame(u1=u1,u2=Uup,l1=l1,l2=Ulow)
@@ -144,7 +138,7 @@ QQ_plot <- function(observed,simulated,title=NULL,CIcol=NULL,Uup=NULL,Ulow=NULL,
     geom_ribbon(data=dfCI,aes(x=u1,ymin=l2,ymax=u2), fill=fillcol, alpha=0.2) +
     geom_segment(data=data.frame(x1=Qmin,x2=Qmax,y1=Qmin,y2=Qmax),mapping=aes(x=x1,y=y1,xend=x2,yend=y2),linetype="dashed") +
   ggtitle(title) + 
-    xlab("Model") + ylab("Empirical") + coord_fixed()
+    xlab("Model") + ylab("Empirical") + coord_equal()
   return(qq)
 }
 
