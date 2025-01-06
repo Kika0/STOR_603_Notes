@@ -513,8 +513,12 @@ Birmingham_tau[[i]] <- par_est(df=sims_tau,v=v,given=cond_site,margin = "AGGsigd
 
 ```{r}
 # plot next to each other
-for (i in 1:7) {
-  
+tmp_map <- cbind(Birmingham_tau[[1]],data.frame("tau"=dayshift[1]))
+for (i in 2:7) {
+ tmp_map <- rbind(tmp_map,cbind(Birmingham_tau[[i]],data.frame("tau"=dayshift[i])))
 }
+tmp_map %>% mutate(tau=factor(as.character(tau)))
+
+map_param(tmp_est=tmp_map,method="AGG")
 ```
 
