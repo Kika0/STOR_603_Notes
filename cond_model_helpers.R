@@ -736,7 +736,7 @@ plot_map_param <- function(tmp_est,method = "AGG",threesites=c("Birmingham","Gla
 # function for plotting parameter estimates on a map and against distance
 map_param <- function(tmp_est,method = "AGG",site="Birmingham", facet_var = "cond_site") {
   misscol <- "aquamarine"
-  tmp <- tmp_est %>% mutate(site_index = rep(1:445,length(unique(est_all$cond_site))))
+  tmp <- tmp_est %>% mutate(site_index = rep(1:445,length(unique(tmp_est$cond_site))))
   # match back to spatial locations and plot
   uk_temp_sf <- uk_temp_sf %>% mutate(site_index=1:445) %>% dplyr::select(site_index) %>% cbind(ukcp18[,1:8])
   uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index")) %>% mutate(cond_site=factor(cond_site,levels = site))
