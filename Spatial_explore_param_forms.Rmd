@@ -513,12 +513,19 @@ Birmingham_tau[[i]] <- par_est(df=sims_tau,v=v,given=cond_site,margin = "AGGsigd
 
 ```{r}
 # plot next to each other
-tmp_map <- cbind(Birmingham_tau[[1]],data.frame("tau"=dayshift[1]))
+tmp_map <- cbind(Birmingham_tau[[1]] %>%  add_row(.before=cond_site),data.frame("tau"=dayshift[1]))
 for (i in 2:7) {
- tmp_map <- rbind(tmp_map,cbind(Birmingham_tau[[i]],data.frame("tau"=dayshift[i])))
+ tmp_map <- rbind(tmp_map,cbind(Birmingham_tau[[i]] %>%  add_row(.before=cond_site),data.frame("tau"=dayshift[i])))
 }
-tmp_map %>% mutate(tau=factor(as.character(tau)))
+tmp_map <- tmp_map %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
+head(tmp_map)
+tau_Birm_map <- map_param(tmp_est=tmp_map,method="AGG",facet_var = "tau",title_map = "Birmingham")
+tau_Birm_map[[1]]
+tmap_save(tau_Birm_map[[1]],filename="tau_Birm_mapa.png",width=15,height=4.5)
+condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
+for (i in 1:length(condmodel_params)) {
+ tmap_save(tau_Birm_map[[i]],filename=paste0("tau_Birm_map_",i,"_",condmodel_params[i],".png"),width=15,height=4.5)
+}
 
-map_param(tmp_est=tmp_map,method="AGG")
 ```
 
