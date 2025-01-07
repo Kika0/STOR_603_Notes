@@ -531,9 +531,9 @@ for (i in 1:length(condmodel_params)) {
 
 Add all sites together.
 ```{r}
-Truro <- c()
-Dolgellau <- c()
-Bournemouth <- c()
+Truro <- c(-5.05125342465549,50.263075821232704)
+Dolgellau <- c(-3.8844362867080897,52.74213275545185)
+Bournemouth <- c(-1.8650607066137428,50.72173094587856)
 
 ```
 
