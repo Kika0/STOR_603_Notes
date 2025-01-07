@@ -26,11 +26,11 @@ u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
 bf2 <- data.frame(x=1:Nv)
 bf1num <- bf2num <- numeric()
-Nrep <- 100
+Nrep <- 10
 for (i in 1:Nrep) {
   p1 <- p2 <- c()
   # sample data
-  set.seed(i*123)
+  set.seed(i*12)
   sim2 <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
     apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
   # fit PP plot to the observed residuals
@@ -120,7 +120,7 @@ for (i in 1:Nv) {
   Uup[i] <- quantile(bf1num[round(bf2num,5)==round(u1[i],5)],p=0.975)
   Ulow[i] <- quantile(bf1num[round(bf2num,5)==round(u1[i],5)],p=0.025)
 }
-p3 <- ggplot(tmp) + geom_point(aes(x=x,y=y,col=samp)) + theme(legend.position = "none") + coord_fixed() + ggtitle("100 simulations") + xlab("Model") + ylab("Empirical")
+p3 <- ggplot(tmp) + geom_point(aes(x=x,y=y,col=samp))+ theme(legend.position = "none")  + coord_fixed() + ggtitle("100 simulations") + xlab("Model") + ylab("Empirical")
 p4 <- PP_plot(observed = Z2p, simulated = Z2fit, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title= "100 simulations tolerance bounds")
 grid.arrange(p3,p4,ncol=2)
 
@@ -136,4 +136,9 @@ Ulow <- sapply(1:Nv, function(i){optim(fn=function(x,i) {
 p5 <- QQ_plot(observed = Z2sort, simulated = Z2Q, tol_bounds = "bootstrap", title = "Bootstrap")
 p6 <- QQ_plot(observed = Z2sort, simulated = Z2Q, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title = "Beta distribution")
 grid.arrange(p5,p6,ncol=2) 
+
+# plot also histograms of parameter estimates
+
+# plot these for different threshold
+
 
