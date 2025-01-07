@@ -26,7 +26,7 @@ u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
 bf2 <- data.frame(x=1:Nv)
 bf1num <- bf2num <- numeric()
-Nrep <- 10
+Nrep <- 5
 for (i in 1:Nrep) {
   p1 <- p2 <- c()
   # sample data
@@ -38,8 +38,8 @@ for (i in 1:Nrep) {
   pe <- par_est(df=sim2,v=v,given=1,margin = "AGGsigdelta", method = "two_step")
   # calculate p values for the observed residuals
   Z2p <- data.frame(obs_res) %>% apply(c(2),FUN=row_number)/(nrow(obs_res)+1)
-  Y2 <- as.numeric(as.data.frame(Z2p)$Z2) # observed residuals vector
-  
+  Y2 <- sort(as.numeric(as.data.frame(Z2p)$Z2)) # observed residuals vector
+  Z2 <- sort(as.numeric(obs_res[,1]))
   mu <- pe$mu_agg[1]
   sigl <- pe$sigl[1]
   sigu <- pe$sigu[1]
@@ -47,7 +47,7 @@ for (i in 1:Nrep) {
   deltau <- pe$deltau[1]
   Y1 <- c()
   for (i in 1:nrow(Z2p)) {
-    Y1[i] <- F_AGG(x=as.numeric(obs_res[i,1]),theta = c(mu,sigl,sigu,deltal,deltau))
+    Y1[i] <- F_AGG(x=Z2[i],theta = c(mu,sigl,sigu,deltal,deltau))
   }
   bf1 <- cbind(bf1,Y1)
   bf2 <- cbind(bf2,Y2)
