@@ -39,7 +39,7 @@ for (i in 1:Nrep) {
   # calculate p values for the observed residuals
   Z2p <- data.frame(obs_res) %>% apply(c(2),FUN=row_number)/(nrow(obs_res)+1)
   Y2 <- sort(as.numeric(as.data.frame(Z2p)$Z2)) # observed residuals vector
-  Z2 <- sort(as.numeric(obs_res[,1]))
+  Z2 <- sort(as.numeric(as.data.frame(obs_res[,1])))
   mu <- pe$mu_agg[1]
   sigl <- pe$sigl[1]
   sigu <- pe$sigu[1]
