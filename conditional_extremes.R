@@ -878,17 +878,18 @@ rAGG <- function(theta) {
 } 
 
 AGG_density <- function(x,theta) {
-  sigl <- theta[1]
-  sigu <- theta[2]
-  deltal <- theta[3]
-  deltau <- theta[4]
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  deltal <- theta[4]
+  deltau <- theta[5]
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
   y <- c()
   for (i in seq(x)) {
-  if (x[i]<0) {
-  y[i] <- C_AGG*exp(-abs(x[i]/sigl)^deltal)
+  if (x[i]<mu) {
+  y[i] <- C_AGG*exp(-abs((mu-x[i])/sigl)^deltal)
   }
-  else {y[i] <- C_AGG*exp(-(x[i]/sigu)^deltau)}
+  else {y[i] <- C_AGG*exp(-((x[i]-mu)/sigu)^deltau)}
   }
   return(y)
 }
