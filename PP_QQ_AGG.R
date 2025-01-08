@@ -27,7 +27,7 @@ u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
 bf2 <- data.frame(x=1:Nv)
 bf1num <- bf2num <- numeric()
-Nrep <- 10
+Nrep <- 100
 # store a,b,mu,sig
 a <- b <- mu <- sig <- numeric()
 for (i in 1:Nrep) {
@@ -65,33 +65,20 @@ for (i in 1:Nv) {
 }
 
 # compare bootstrap and beta distribution for obtaining tolerance bounds
-set.seed(14*4)
+set.seed(11)
 v <- 0.99
 sim2 <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 # fit PP plot to the observed residuals
 pe <- par_est(df=sim2,v=v,given=1,margin = "AGGsigdelta", method = "two_step")
-mu <- pe$mu_agg[1]
-sigl <- pe$sigl[1]
-sigu <- pe$sigu[1]
-deltal <- pe$deltal[1]
-deltau <- pe$deltau[1]
 # calculate observed residuals
-obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v)) 
+obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v,a=pe$a[1],b=pe$b[1])) 
 # calculate empirical p values for the observed residuals
 Z2p <- (1:Nv)/(Nv+1)
 # PP plot
 Z2sort <- sort(as.numeric(obs_res[,1]))
-Z2fit <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = c(mu,sigl,sigu,deltal,deltau))})
-plot(Z2fit)
-pl <- ggplot(data.frame(x=Z2sort,y=Z2p)) + geom_density(aes(x=x))
-tr <- AGG_density(x=seq(-3,3,length.out=500),theta = c(mu,sigl,sigu,deltal,deltau))
-tr1 <- AGG_density(x=seq(-3,3,length.out=500),theta = opt$par)
-pl + geom_point(data=data.frame(x=seq(-3,3,length.out=500),y=tr),aes(x=x,y=y),col="#009ADA") +
-  geom_point(data=data.frame(x=seq(-3,3,length.out=500),y=tr1),aes(x=x,y=y),col="#C11432") +
-  xlab("Observed residuals fitted density") + ylab("Density") + ggtitle("Kernel smoothed, wrong (blue) and corrected (red)")
-
 opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
+Z2fit <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = opt$par)})
 
 # compare also with more samples
 names(bf1) <- names(bf2) <- c("remove",paste0("rep",1:Nrep))
