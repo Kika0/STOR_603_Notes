@@ -88,10 +88,10 @@ tmp <- cbind(bf1[,2:(Nrep+1)] %>% pivot_longer(everything(),names_to = "samp",va
 
 # QQ plots
 to_opt <- function(x,i) {
-  return( (F_AGG(x, theta = c(mu,sigl,sigu,deltal,deltau))-(i/(Nv+1)))^2  )  
+  return( (F_AGG(x, theta = opt$par)-(i/(Nv+1)))^2  )  
 }
 
-Z2Q <- sapply(1:Nv, function(i){optim(par=1,fn=to_opt,i=i)$par})
+Z2Q <- sapply(1:Nv, function(i){optim(par=0.1,fn=to_opt,i=i)$par})
 
 Qmin <- min(Z2sort,Z2Q)-0.2
 Qmax <- max(Z2sort,Z2Q)+0.2
@@ -113,7 +113,7 @@ for (i in 1:Nv) {
   Uup[i] <- quantile(bf1num[round(bf2num,5)==round(u1[i],5)],p=0.975)
   Ulow[i] <- quantile(bf1num[round(bf2num,5)==round(u1[i],5)],p=0.025)
 }
-p3 <- ggplot(tmp) + geom_point(aes(x=x,y=y,col=samp))+ theme(legend.position = "none")  + coord_fixed() + ggtitle("100 simulations") + xlab("Model") + ylab("Empirical")
+p3 <- ggplot(tmp) + geom_point(aes(x=x,y=y,col=samp),size=0.1)+ theme(legend.position = "none")  + coord_fixed() + ggtitle("100 simulations") + xlab("Model") + ylab("Empirical")
 p4 <- PP_plot(observed = Z2p, simulated = Z2fit, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title= "100 simulations tolerance bounds")
 grid.arrange(p3,p4,ncol=2)
 
@@ -121,10 +121,10 @@ grid.arrange(p3,p4,ncol=2)
 # calculate tolerance bounds for the beta distribution
 Uup <- Ulow <- c()
 Uup <- sapply(1:Nv, function(i){optim(fn=function(x,i) {
-  return( (F_AGG(x, theta = c(mu,sigl,sigu,deltal,deltau))-qbeta(0.975, i, Nv+1-i))^2  )  
+  return( (F_AGG(x, theta = opt$par)-qbeta(0.975, i, Nv+1-i))^2  )  
 },par=1,i=i)$par})
 Ulow <- sapply(1:Nv, function(i){optim(fn=function(x,i) {
-  return( (F_AGG(x, theta = c(mu,sigl,sigu,deltal,deltau))-qbeta(0.025, i, Nv+1-i))^2  )  
+  return( (F_AGG(x, theta = opt$par)-qbeta(0.025, i, Nv+1-i))^2  )  
 },par=1,i=i)$par})
 p5 <- QQ_plot(observed = Z2sort, simulated = Z2Q, tol_bounds = "bootstrap", title = "Bootstrap")
 p6 <- QQ_plot(observed = Z2sort, simulated = Z2Q, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title = "Beta distribution")
