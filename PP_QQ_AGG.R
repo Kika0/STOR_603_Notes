@@ -3,6 +3,7 @@
 library(tidyverse)
 #library(latex2exp)
 library(gridExtra)
+library(pracma)
 #library(viridis)
 #library(MASS) #use dplyr::select to avoid function conflict
 #library(xtable)
@@ -26,29 +27,36 @@ u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
 bf2 <- data.frame(x=1:Nv)
 bf1num <- bf2num <- numeric()
-Nrep <- 5
+Nrep <- 10
+# store a,b,mu,sig
+a <- b <- mu <- sig <- numeric()
 for (i in 1:Nrep) {
   p1 <- p2 <- c()
   # sample data
   set.seed(i*12)
   sim2 <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
     apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-  # fit PP plot to the observed residuals
-  obs_res <- observed_residuals(df = sim2,given = 1,v = v) 
-  pe <- par_est(df=sim2,v=v,given=1,margin = "AGGsigdelta", method = "two_step")
+  pe <- par_est(df=sim2,v=v,given=1,margin = "AGGsigdelta", method = "sequential2")
   # calculate p values for the observed residuals
-  Z2p <- data.frame(obs_res) %>% apply(c(2),FUN=row_number)/(nrow(obs_res)+1)
-  Y2 <- sort(as.numeric(as.data.frame(Z2p)$Z2)) # observed residuals vector
-  Z2 <- sort(as.numeric(as.data.frame(obs_res[,1])))
-  mu <- pe$mu_agg[1]
+  Z2p <- 1:Nv/(Nv+1)
+  Y2 <- Z2p # observed residuals vector
+  Z2 <- sort(as.numeric(as.data.frame(obs_res)[,1]))
+  # append to a,b,mu,sig
+  a <- append(a,pe$a[1])
+  b <- append(b,pe$b[1])
+  mu <- append(mu,pe$mu[1])
+  sig <- append(sig,pe$sig[1])
+  muagg <- pe$mu_agg[1]
   sigl <- pe$sigl[1]
   sigu <- pe$sigu[1]
   deltal <- pe$deltal[1]
   deltau <- pe$deltau[1]
+  obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v,a=pe$a[1],b=pe$b[1]))
+  Z2p <- 1:Nv/(Nv+1)
+  Y2 <- Z2p # observed residuals vector
   Y1 <- c()
-  for (i in 1:nrow(Z2p)) {
-    Y1[i] <- F_AGG(x=Z2[i],theta = c(mu,sigl,sigu,deltal,deltau))
-  }
+  Z2sort <- sort(as.numeric(obs_res[,1])) # sorted observed residuals
+  Y1 <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = c(muagg,sigl,sigu,deltal,deltau))})
   bf1 <- cbind(bf1,Y1)
   bf2 <- cbind(bf2,Y2)
 }
@@ -60,8 +68,16 @@ for (i in 1:Nv) {
   Ulow[i] <- quantile(bf1num[round(bf2num,5)==round(u1[i],5)],p=0.025)
 }
 
+y2 <- sim2 %>% filter(sim2[,1]>quantile(sim2[,1],v)) %>% select(2)
+y1 <- sim2 %>% filter(sim2[,1]>quantile(sim2[,1],v)) %>% select(1) 
+y2 <- as.numeric(unlist(y2))
+y1 <- as.numeric(unlist(y1))
+obser_res <-y2-pe$a[1]*y1/(y1^pe$b[1])
+hist(obser_res)
+hist(Z2sort)
+
 # compare bootstrap and beta distribution for obtaining tolerance bounds
-set.seed(11)
+set.seed(14*4)
 v <- 0.99
 sim2 <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
@@ -74,18 +90,14 @@ sigl <- pe$sigl[1]
 sigu <- pe$sigu[1]
 deltal <- pe$deltal[1]
 deltau <- pe$deltau[1]
-obs_res <- observed_residuals(df = sim2,given = 1,v = v) 
-
+obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v)) 
 # calculate empirical p values for the observed residuals
 Z2p <- (1:Nv)/(Nv+1)
 
 # PP plot
 Z2sort <- sort(as.numeric(as.data.frame(obs_res)[,1]))
 Z2fit <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = c(mu,sigl,sigu,deltal,deltau))})
-# for (i in 1:nrow(Z2p)) {
-#   Z2fit[i] <- F_AGG(x=as.numeric(obs_res[i,1]),theta = c(mu,sigl,sigu,deltal,deltau))
-# }
-
+plot(Z2fit)
 
 # compare also with more samples
 names(bf1) <- names(bf2) <- c("remove",paste0("rep",1:Nrep))
