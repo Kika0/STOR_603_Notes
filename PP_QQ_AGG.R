@@ -46,17 +46,13 @@ for (i in 1:Nrep) {
   b <- append(b,pe$b[1])
   mu <- append(mu,pe$mu[1])
   sig <- append(sig,pe$sig[1])
-  muagg <- pe$mu_agg[1]
-  sigl <- pe$sigl[1]
-  sigu <- pe$sigu[1]
-  deltal <- pe$deltal[1]
-  deltau <- pe$deltau[1]
   obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v,a=pe$a[1],b=pe$b[1]))
   Z2p <- 1:Nv/(Nv+1)
   Y2 <- Z2p # observed residuals vector
   Y1 <- c()
   Z2sort <- sort(as.numeric(obs_res[,1])) # sorted observed residuals
-  Y1 <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = c(muagg,sigl,sigu,deltal,deltau))})
+  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
+  Y1 <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = opt$par)})
   bf1 <- cbind(bf1,Y1)
   bf2 <- cbind(bf2,Y2)
 }
@@ -68,21 +64,11 @@ for (i in 1:Nv) {
   Ulow[i] <- quantile(bf1num[round(bf2num,5)==round(u1[i],5)],p=0.025)
 }
 
-y2 <- sim2 %>% filter(sim2[,1]>quantile(sim2[,1],v)) %>% select(2)
-y1 <- sim2 %>% filter(sim2[,1]>quantile(sim2[,1],v)) %>% select(1) 
-y2 <- as.numeric(unlist(y2))
-y1 <- as.numeric(unlist(y1))
-obser_res <-y2-pe$a[1]*y1/(y1^pe$b[1])
-hist(obser_res)
-hist(Z2sort)
-
 # compare bootstrap and beta distribution for obtaining tolerance bounds
 set.seed(14*4)
 v <- 0.99
 sim2 <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-# calculate observed residuals
-
 # fit PP plot to the observed residuals
 pe <- par_est(df=sim2,v=v,given=1,margin = "AGGsigdelta", method = "two_step")
 mu <- pe$mu_agg[1]
@@ -90,14 +76,22 @@ sigl <- pe$sigl[1]
 sigu <- pe$sigu[1]
 deltal <- pe$deltal[1]
 deltau <- pe$deltau[1]
+# calculate observed residuals
 obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v)) 
 # calculate empirical p values for the observed residuals
 Z2p <- (1:Nv)/(Nv+1)
-
 # PP plot
-Z2sort <- sort(as.numeric(as.data.frame(obs_res)[,1]))
+Z2sort <- sort(as.numeric(obs_res[,1]))
 Z2fit <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = c(mu,sigl,sigu,deltal,deltau))})
 plot(Z2fit)
+pl <- ggplot(data.frame(x=Z2sort,y=Z2p)) + geom_density(aes(x=x))
+tr <- AGG_density(x=seq(-3,3,length.out=500),theta = c(mu,sigl,sigu,deltal,deltau))
+tr1 <- AGG_density(x=seq(-3,3,length.out=500),theta = opt$par)
+pl + geom_point(data=data.frame(x=seq(-3,3,length.out=500),y=tr),aes(x=x,y=y),col="#009ADA") +
+  geom_point(data=data.frame(x=seq(-3,3,length.out=500),y=tr1),aes(x=x,y=y),col="#C11432") +
+  xlab("Observed residuals fitted density") + ylab("Density") + ggtitle("Kernel smoothed, wrong (blue) and corrected (red)")
+
+opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
 
 # compare also with more samples
 names(bf1) <- names(bf2) <- c("remove",paste0("rep",1:Nrep))
