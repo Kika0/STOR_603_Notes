@@ -62,6 +62,22 @@ sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% 
 # calculate the residuals for Birmingham (1), then Glasgow (2) and London (3)
 sites <- c("Birmingham","Glasgow","London")
 ```
+Add all sites together.
+```{r}
+Birmingham <- c(-1.9032,52.4806)
+Glasgow <- c(-4.258109,55.859112)
+London <- c(-0.127676,51.529972)
+Inverness <- c(-4.22498,57.48065) # Inverness bus station
+Lancaster <- c(-2.78440,54.00871) # PSC building Lancaster University
+Newcastle <- c(-1.61682,54.96902) # Newcastle railway station
+Cromer <- c(1.28486,53.05349)
+Hull <- c(-0.335827,53.767750)
+Lowestoft <- c(1.72431,52.48435)
+Truro <- c(-5.05125342465549,50.263075821232704)
+Dolgellau <- c(-3.8844362867080897,52.74213275545185)
+Bournemouth <- c(-1.8650607066137428,50.72173094587856)
+df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth)
+```
 
 ## Follow-up from meeting with Simon: exploring $\alpha$ against distance
 
@@ -292,11 +308,8 @@ x <- which.min(as.numeric(st_distance(site_sf,grid_uk)))
 #return(tm_shape(uk_sf_rot) + tm_dots() + tm_shape(site_sf) + tm_dots(col="#C11432") + tm_shape(uk_sf_rot[x,])+ tm_dots(col="#009ADA"))
 return(x)
 }
-
-Birmingham <- c(-1.9032,52.4806)
-Glasgow <- c(-4.258109,55.859112)
-London <- c(-0.127676,51.529972)
 ```
+
 
 ```{r}
 # cond_site <- find_site_index(Birmingham)
@@ -349,12 +362,6 @@ Currently, the analysis is conditioning on Birmingham, Glasgow and London, order
 One way would be to calculate distance from each of the site and then filter distance for the site needed, which will be faster as this distance matrix will be already saved (twice as $d_{ij}$ and $d_{ji}$ are identical ).
 
 We find the index of the grid sites closest to Inverness, Lancaster and Newcastle to get a better idea of potential parametric forms of the parameters.
-
-```{r, include=FALSE}
-Inverness <- c(-4.22498,57.48065) # Inverness bus station
-Lancaster <- c(-2.78440,54.00871) # PSC building Lancaster University
-Newcastle <- c(-1.61682,54.96902) # Newcastle railway station
-```
 
 ## Sequential parameter estimation: other conditioning sites
 
@@ -446,9 +453,6 @@ plot_map_param(tmp_est1=tmp_est4a,tmp_est2=tmp_est5a,tmp_est3=tmp_est6a,threesit
 ## New sites: Cromer, Hull and Lowestoft
 
 ```{r}
-Cromer <- c(1.28486,53.05349)
-Hull <- c(-0.335827,53.767750)
-Lowestoft <- c(1.72431,52.48435)
 # v <- 0.9
 # N <- 10
 # 
@@ -532,17 +536,10 @@ est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character
 
 ```
 
-Add all sites together.
-```{r}
-Truro <- c(-5.05125342465549,50.263075821232704)
-Dolgellau <- c(-3.8844362867080897,52.74213275545185)
-Bournemouth <- c(-1.8650607066137428,50.72173094587856)
 
-```
 
 Run for all the 12 sites.
 ```{r}
-df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth)
 est_all <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
                           "a" = numeric(), "b" = numeric(),
                           "mu" = numeric(),"mu_agg" = numeric(),
@@ -561,6 +558,17 @@ for (i in 1:ncol(df_sites)) {
 Map and save for all of the sites.
 
 ```{r}
+# est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
+# save(est_all,"est_all.RData")
 
+load("est_all.RData")
+est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
+condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
+for (i in 1:ncol(df_sites)) {
+tau_site_map <- map_param(tmp_est=est_all %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i])
+  for (j in 1:length(condmodel_params)) {
+    tmap_save(tau_site_map[[j]],filename=paste0("tau_",names(df_sites[i]),"_map_",j,"_",condmodel_params[j],".png"),width=15,height=4.5)
+  }
+}
 ```
 
