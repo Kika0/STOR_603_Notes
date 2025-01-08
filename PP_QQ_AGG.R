@@ -19,10 +19,10 @@ theme_replace(
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
 
+PP_QQ_save <- function(v=0.99,Nv=50) {
 # try Nrep macroreplications ----
-N <- 50000
 v <- 0.99
-Nv <- N*(1-v)
+N <- Nv/(1-v)
 u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
 bf2 <- data.frame(x=1:Nv)
@@ -99,13 +99,11 @@ Qmax <- max(Z2sort,Z2Q)+0.2
 ggplot(data.frame(obs_res=Z2sort,Z=Z2Q)) + geom_point(aes(y=obs_res,x=Z)) + coord_fixed() + 
   geom_segment(data=data.frame(x1=Qmin,x2=Qmax,y1=Qmin,y2=Qmax),mapping=aes(x=x1,y=y1,xend=x2,yend=y2),linetype="dashed") 
 
-
-
 ### plotting PP and QQ ----
 # comparison of bootstrap and beta tolerance bounds for PP plots
 p1 <- PP_plot(observed = Z2p, simulated = Z2fit, tol_bounds = "bootstrap", title = "Bootstrap")
 p2 <- PP_plot(observed = Z2p, simulated = Z2fit, tol_bounds ="beta_dist", title = "Beta distribution")
-grid.arrange(p1,p2,ncol=2)
+ggsave(grid.arrange(p1,p2,ncol=2),filename =paste0("bootstrap_beta_PP",Nv,"_v",v,".png"))
 
 # macroreplications PP plots
 Uup <- Ulow <- c()
@@ -115,7 +113,7 @@ for (i in 1:Nv) {
 }
 p3 <- ggplot(tmp) + geom_point(aes(x=x,y=y,col=samp),size=0.1)+ theme(legend.position = "none")  + coord_fixed() + ggtitle("100 simulations") + xlab("Model") + ylab("Empirical")
 p4 <- PP_plot(observed = Z2p, simulated = Z2fit, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title= "100 simulations tolerance bounds")
-grid.arrange(p3,p4,ncol=2)
+ggsave(grid.arrange(p3,p4,ncol=2), filename = paste0("100simul_PP",Nv,"_v",v,".png"))
 
 # comparison of bootstrap and beta tolerance bounds for QQ plots  
 # calculate tolerance bounds for the beta distribution
@@ -128,10 +126,13 @@ Ulow <- sapply(1:Nv, function(i){optim(fn=function(x,i) {
 },par=1,i=i)$par})
 p5 <- QQ_plot(observed = Z2sort, simulated = Z2Q, tol_bounds = "bootstrap", title = "Bootstrap")
 p6 <- QQ_plot(observed = Z2sort, simulated = Z2Q, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title = "Beta distribution")
-grid.arrange(p5,p6,ncol=2) 
-
+ggsave(grid.arrange(p5,p6,ncol=2),filename = paste0("bootstrap_beta_QQ",Nv,"_v",v,".png") )
+}
 # plot also histograms of parameter estimates
 
-# plot these for different threshold
-
+# plot these for different threshold and fixed number of exceedances
+v <- c(0.8,0.9,0.99,0.999)
+for (i in v) {
+  PP_QQ_save(v=i,Nv=50)
+}
 
