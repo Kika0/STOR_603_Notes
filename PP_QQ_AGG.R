@@ -21,7 +21,6 @@ theme_replace(
 
 PP_QQ_save <- function(v=0.99,Nv=50) {
 # try Nrep macroreplications ----
-v <- 0.99
 N <- Nv/(1-v)
 u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
@@ -66,10 +65,9 @@ for (i in 1:Nv) {
 
 # compare bootstrap and beta distribution for obtaining tolerance bounds
 set.seed(11)
-v <- 0.99
 sim2 <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-# fit PP plot to the observed residuals
+# fit PP plot to the obser <- ed residuals
 pe <- par_est(df=sim2,v=v,given=1,margin = "AGGsigdelta", method = "two_step")
 # calculate observed residuals
 obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v,a=pe$a[1],b=pe$b[1])) 
@@ -103,7 +101,7 @@ ggplot(data.frame(obs_res=Z2sort,Z=Z2Q)) + geom_point(aes(y=obs_res,x=Z)) + coor
 # comparison of bootstrap and beta tolerance bounds for PP plots
 p1 <- PP_plot(observed = Z2p, simulated = Z2fit, tol_bounds = "bootstrap", title = "Bootstrap")
 p2 <- PP_plot(observed = Z2p, simulated = Z2fit, tol_bounds ="beta_dist", title = "Beta distribution")
-ggsave(grid.arrange(p1,p2,ncol=2),filename =paste0("bootstrap_beta_PP",Nv,"_v",v,".png"))
+ggsave(grid.arrange(p1,p2,ncol=2),filename =paste0("bootstrap_beta_PP",Nv,"_v",vi,".png"))
 
 # macroreplications PP plots
 Uup <- Ulow <- c()
@@ -112,8 +110,8 @@ for (i in 1:Nv) {
   Ulow[i] <- quantile(bf1num[round(bf2num,5)==round(u1[i],5)],p=0.025)
 }
 p3 <- ggplot(tmp) + geom_point(aes(x=x,y=y,col=samp),size=0.1)+ theme(legend.position = "none")  + coord_fixed() + ggtitle("100 simulations") + xlab("Model") + ylab("Empirical")
-p4 <- PP_plot(observed = Z2p, simulated = Z2fit, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title= "100 simulations tolerance bounds")
-ggsave(grid.arrange(p3,p4,ncol=2), filename = paste0("100simul_PP",Nv,"_v",v,".png"))
+p4 <- PP_plot(observed = Z2p, simulated = Z2fit, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title= paste0("100 simulations tolerance bounds"))
+ggsave(grid.arrange(p3,p4,ncol=2), filename = paste0("100simul_PP",Nv,"_v",vi,".png"))
 
 # comparison of bootstrap and beta tolerance bounds for QQ plots  
 # calculate tolerance bounds for the beta distribution
@@ -126,13 +124,13 @@ Ulow <- sapply(1:Nv, function(i){optim(fn=function(x,i) {
 },par=1,i=i)$par})
 p5 <- QQ_plot(observed = Z2sort, simulated = Z2Q, tol_bounds = "bootstrap", title = "Bootstrap")
 p6 <- QQ_plot(observed = Z2sort, simulated = Z2Q, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title = "Beta distribution")
-ggsave(grid.arrange(p5,p6,ncol=2),filename = paste0("bootstrap_beta_QQ",Nv,"_v",v,".png") )
+ggsave(grid.arrange(p5,p6,ncol=2),filename = paste0("bootstrap_beta_QQ",Nv,"_v",vi,".png") )
 }
 # plot also histograms of parameter estimates
 
 # plot these for different threshold and fixed number of exceedances
 v <- c(0.8,0.9,0.99,0.999)
-for (i in v) {
-  PP_QQ_save(v=i,Nv=50)
+for (vi in v) {
+  PP_QQ_save(v=vi,Nv=50)
 }
 
