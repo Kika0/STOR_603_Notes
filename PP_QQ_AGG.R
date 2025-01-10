@@ -26,7 +26,7 @@ u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
 bf2 <- data.frame(x=1:Nv)
 bf1num <- bf2num <- numeric()
-Nrep <- 10
+Nrep <- 100
 # store a,b,mu,sig
 a <- b <- mu <- sig <- numeric()
 for (i in 1:Nrep) {
@@ -39,7 +39,6 @@ for (i in 1:Nrep) {
   # calculate p values for the observed residuals
   Z2p <- 1:Nv/(Nv+1)
   Y2 <- Z2p # observed residuals vector
-  Z2 <- sort(as.numeric(as.data.frame(obs_res)[,1]))
   # append to a,b,mu,sig
   a <- append(a,pe$a[1])
   b <- append(b,pe$b[1])
@@ -47,6 +46,7 @@ for (i in 1:Nrep) {
   sig <- append(sig,pe$sig[1])
   obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v,a=pe$a[1],b=pe$b[1]))
   Z2p <- 1:Nv/(Nv+1)
+  Z2 <- sort(as.numeric(as.data.frame(obs_res)[,1]))
   Y2 <- Z2p # observed residuals vector
   Y1 <- c()
   Z2sort <- sort(as.numeric(obs_res[,1])) # sorted observed residuals
