@@ -94,11 +94,6 @@ summary(Z2Q)
 Qmin <- min(Z2sort,Z2Q)-0.2
 Qmax <- max(Z2sort,Z2Q)+0.2
 
-pl <- ggplot(data.frame(x=Z2sort,y=Z2p)) + geom_density(aes(x=x))
-tr1 <- AGG_density(x=seq(-3,3,length.out=50),theta = opt$par)
-pl + geom_point(data=data.frame(x=seq(-3,3,length.out=50),y=tr1),aes(x=x,y=y),col="#C11432") +
-  xlab("Observed residuals fitted density") + ylab("Density") + ggtitle("Kernel smoothed and fitted (red)")
-
 ### plotting PP and QQ ----
 # comparison of bootstrap and beta tolerance bounds for PP plots
 p1 <- PP_plot(observed = Z2p, simulated = Z2fit, tol_bounds = "bootstrap", title = "Bootstrap")
