@@ -26,7 +26,7 @@ u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
 bf2 <- data.frame(x=1:Nv)
 bf1num <- bf2num <- numeric()
-Nrep <- 100
+Nrep <- 10
 # store a,b,mu,sig
 a <- b <- mu <- sig <- numeric()
 for (i in 1:Nrep) {
@@ -85,17 +85,19 @@ tmp <- cbind(bf1[,2:(Nrep+1)] %>% pivot_longer(everything(),names_to = "samp",va
   mutate(samp=factor(samp))
 
 # QQ plots
-to_opt <- function(x,i) {
-  return( (F_AGG(x, theta = opt$par)-(i/(Nv+1)))^2  )  
+to_opt <- function(x,i,theta) {
+  return( (F_AGG(x, theta = theta)-Z2p[i])^2  )  
 }
 
-Z2Q <- sapply(1:Nv, function(i){optim(par=0.1,fn=to_opt,i=i)$par})
-
+Z2Q <- sapply(1:Nv, function(i){optim(par=0.1,lower=-10,upper=10,fn=to_opt,i=i,theta=opt$par,method="Brent")$par})
+summary(Z2Q)
 Qmin <- min(Z2sort,Z2Q)-0.2
 Qmax <- max(Z2sort,Z2Q)+0.2
 
-ggplot(data.frame(obs_res=Z2sort,Z=Z2Q)) + geom_point(aes(y=obs_res,x=Z)) + coord_fixed() + 
-  geom_segment(data=data.frame(x1=Qmin,x2=Qmax,y1=Qmin,y2=Qmax),mapping=aes(x=x1,y=y1,xend=x2,yend=y2),linetype="dashed") 
+pl <- ggplot(data.frame(x=Z2sort,y=Z2p)) + geom_density(aes(x=x))
+tr1 <- AGG_density(x=seq(-3,3,length.out=50),theta = opt$par)
+pl + geom_point(data=data.frame(x=seq(-3,3,length.out=50),y=tr1),aes(x=x,y=y),col="#C11432") +
+  xlab("Observed residuals fitted density") + ylab("Density") + ggtitle("Kernel smoothed and fitted (red)")
 
 ### plotting PP and QQ ----
 # comparison of bootstrap and beta tolerance bounds for PP plots
