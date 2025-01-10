@@ -185,7 +185,7 @@ NLL_AGGsigdelta <- function(x,theta) {
     }
     else 
  #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigu)^deltau)
-    z[i] <- log(C_AGG)-((x[i]-mu)/sigu)^deltau 
+    {z[i] <- log(C_AGG)-((x[i]-mu)/sigu)^deltau }
   }
   return(-sum(z))
 }
