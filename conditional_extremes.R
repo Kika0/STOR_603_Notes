@@ -877,23 +877,6 @@ rAGG <- function(theta) {
   return(AGG_sample)
 } 
 
-AGG_density <- function(x,theta) {
-  mu <- theta[1]
-  sigl <- theta[2]
-  sigu <- theta[3]
-  deltal <- theta[4]
-  deltau <- theta[5]
-  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
-  y <- c()
-  for (i in seq(x)) {
-  if (x[i]<mu) {
-  y[i] <- C_AGG*exp(-abs((mu-x[i])/sigl)^deltal)
-  }
-  else {y[i] <- C_AGG*exp(-((x[i]-mu)/sigu)^deltau)}
-  }
-  return(y)
-}
-
 df <- data.frame(matrix(nrow=0,ncol=3))
 names(df) <- c("AGG_sample", "param","sim")
 thetas <- data.frame("sigl"=c(1/2,1,1/2,1),"sigu"=c(1,1,1,1),
