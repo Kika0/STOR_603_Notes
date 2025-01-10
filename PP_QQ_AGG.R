@@ -26,7 +26,7 @@ u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
 bf2 <- data.frame(x=1:Nv)
 bf1num <- bf2num <- numeric()
-Nrep <- 5
+Nrep <- 100
 # store a,b,mu,sig
 a <- b <- mu <- sig <- numeric()
 for (i in 1:Nrep) {
@@ -64,7 +64,7 @@ for (i in 1:Nv) {
 }
 
 # compare bootstrap and beta distribution for obtaining tolerance bounds
-set.seed(11)
+set.seed(1234)
 sim2 <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 # fit PP plot to the obser <- ed residuals
