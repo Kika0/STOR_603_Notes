@@ -26,7 +26,7 @@ u1 <- l1 <-  1:Nv/(Nv+1) # x-axis of PP plot
 bf1 <- data.frame(x=1:Nv)
 bf2 <- data.frame(x=1:Nv)
 bf1num <- bf2num <- numeric()
-Nrep <- 10
+Nrep <- 5
 # store a,b,mu,sig
 a <- b <- mu <- sig <- numeric()
 for (i in 1:Nrep) {
@@ -50,7 +50,7 @@ for (i in 1:Nrep) {
   Y2 <- Z2p # observed residuals vector
   Y1 <- c()
   Z2sort <- sort(as.numeric(obs_res[,1])) # sorted observed residuals
-  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
+  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "SANN")
   Y1 <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = opt$par)})
   bf1 <- cbind(bf1,Y1)
   bf2 <- cbind(bf2,Y2)
@@ -75,9 +75,20 @@ obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v,a=pe$a[1],
 Z2p <- (1:Nv)/(Nv+1)
 # PP plot
 Z2sort <- sort(as.numeric(obs_res[,1]))
-opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
+opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(mean(Z2sort),1,1,1.2,1.8),control=list(maxit=2000),method = "SANN")
 Z2fit <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = opt$par)})
 
+# compare different optim methods
+methods_optim <- c("Nelder-Mead","BFGS","CG","SANN")
+tr1 <- data.frame(y=as.numeric(),x=as.numeric(),Method_optim=as.character())
+for (i in 1:4) {
+  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(mean(Z2sort),1,1,1.2,1.8),control=list(maxit=2000),method = methods_optim[i])
+  tr1 <- rbind(tr1,data.frame(y=AGG_density(x=seq(min(Z2sort),max(Z2sort),length.out=Nv*10),theta = opt$par),x=seq(min(Z2sort),max(Z2sort),length.out=Nv*10),Method_optim=methods_optim[i]))
+}
+pl <- ggplot(data.frame(x=Z2sort,y=Z2p)) + geom_density(aes(x=x))
+pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method_optim)),aes(x=x,y=y,col=Method_optim)) +
+  xlab("Observed residuals fitted density") + ylab("Density") + ggtitle("Kernel smoothed and fitted density")
+ggsave(pl1,filename = paste0("method_optim_v",vi,".png"))
 # compare also with more samples
 names(bf1) <- names(bf2) <- c("remove",paste0("rep",1:Nrep))
 tmp <- cbind(bf1[,2:(Nrep+1)] %>% pivot_longer(everything(),names_to = "samp",values_to="y"),
