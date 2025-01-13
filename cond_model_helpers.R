@@ -758,6 +758,11 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
   lims <- seq(min(as.numeric(uk_tmp1$a),na.rm = TRUE),max(as.numeric(uk_tmp1$a),na.rm = TRUE),length.out=5)
   pa <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
   
+  if (method=="max_tau") {
+    lims <- seq(min(as.numeric(uk_tmp1$a),na.rm = TRUE),max(as.numeric(uk_tmp1$a),na.rm = TRUE),length.out=5)
+    pa <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha_{max}$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pa_tau <- tm_shape(uk_tmp1) + tm_dots(col="a_tau",style="cat",size=0.3,palette="-RdBu",colorNA=misscol,title=TeX("$\\tau_{\\alpha_{max}}$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+  }
   if (method %in% c("Normal","AGG")) {
     lims <- seq(min(as.numeric(uk_tmp1$b),na.rm = TRUE),max(as.numeric(uk_tmp1$b),na.rm = TRUE),length.out=6)
     pb <- tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
@@ -796,6 +801,6 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,psigdiff,pdeltal,pdeltau,pdeltadiff)) 
     } else if (method=="Normal") {
     return(list(pa,pb,pmu,psig))
-  }
+  } else if (method=="max_tau") {return(list(pa,pa_tau))}
   else {return(list(pa,pmu,psig))}
 }
