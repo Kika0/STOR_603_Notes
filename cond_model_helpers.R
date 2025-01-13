@@ -738,9 +738,12 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
   misscol <- "aquamarine"
   if (facet_var == "cond_site") {
     Nfacet <- length(unique(tmp_est$cond_site))
+    facet_label <- levels(est_all_m$cond_site)
+    nrow_facet <- 4
   } else if (facet_var == "tau") {
     Nfacet <- nrow(tmp_est)/445
     facet_label <- levels(tmp_est$tau)
+    nrow_facet <- 1
   }
 
   tmp <- tmp_est %>% mutate(site_index = rep(1:445,Nfacet))
@@ -753,44 +756,46 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
   }
   
   lims <- seq(min(as.numeric(uk_tmp1$a),na.rm = TRUE),max(as.numeric(uk_tmp1$a),na.rm = TRUE),length.out=5)
-  pa <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+  pa <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
   
-  if (method=="AGG") {
+  if (method %in% c("Normal","AGG")) {
     lims <- seq(min(as.numeric(uk_tmp1$b),na.rm = TRUE),max(as.numeric(uk_tmp1$b),na.rm = TRUE),length.out=6)
-    pb <- tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pb <- tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
   }
   lims <- seq(min(as.numeric(uk_tmp1$mu),na.rm = TRUE),max(as.numeric(uk_tmp1$mu),na.rm = TRUE),length.out=6)
-  pmu <- tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+  pmu <- tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
 
   sigmax <- 3
   lims <- seq(min(as.numeric(uk_tmp1$sig),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sig),na.rm = TRUE),sigmax),length.out=6)
-  psig <- tm_shape(uk_tmp1 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+  psig <- tm_shape(uk_tmp1 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
 
     if (method=="AGG") {
     lims <- seq(min(as.numeric(uk_tmp1$mu_agg),na.rm = TRUE),max(as.numeric(uk_tmp1$mu_agg),na.rm = TRUE),length.out=6)
-    pmuagg <- tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pmuagg <- tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
 
     lims <- seq(min(as.numeric(uk_tmp1$sigl),na.rm = TRUE),sigmax,length.out=6)
-    psigl <- tm_shape(uk_tmp1 %>% filter(is.na(sigl) | sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    psigl <- tm_shape(uk_tmp1 %>% filter(is.na(sigl) | sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
 
     lims <- seq(min(as.numeric(uk_tmp1$sigu),na.rm = TRUE),sigmax,length.out=6)
-    psigu <- tm_shape(uk_tmp1 %>% filter(is.na(sigu) | sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    psigu <- tm_shape(uk_tmp1 %>% filter(is.na(sigu) | sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
 
     lims <- seq(min(as.numeric(uk_tmp1$sigdiff),na.rm = TRUE),sigmax,length.out=6)
-    psigdiff <- tm_shape(uk_tmp1 %>% filter(is.na(sigdiff) | sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",midpoint=0,colorNA=misscol,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    psigdiff <- tm_shape(uk_tmp1 %>% filter(is.na(sigdiff) | sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",midpoint=0,colorNA=misscol,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
 
     deltamax <- 5
     deltamin <- min(as.numeric(uk_tmp1$deltal),as.numeric(uk_tmp1$deltau),na.rm = TRUE)
     lims <- seq(deltamin,deltamax,length.out=6)
-    pdeltal <- tm_shape(uk_tmp1 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pdeltal <- tm_shape(uk_tmp1 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
 
     lims <- seq(deltamin,deltamax,length.out=6)
-    pdeltau <- tm_shape(uk_tmp1 %>% filter(is.na(deltau) | deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pdeltau <- tm_shape(uk_tmp1 %>% filter(is.na(deltau) | deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     
     deltamin <- -5
     lims <- seq(deltamin,deltamax,length.out=6)
-    pdeltadiff <- tm_shape(uk_tmp1 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax&deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims) + tm_facets(by=facet_var,nrow = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pdeltadiff <- tm_shape(uk_tmp1 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax&deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.1,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,psigdiff,pdeltal,pdeltau,pdeltadiff)) 
+    } else if (method=="Normal") {
+    return(list(pa,pb,pmu,psig))
   }
-  if (method!="AGG") {return(list(pa,pmu,psig))}
+  else {return(list(pa,pmu,psig))}
 }
