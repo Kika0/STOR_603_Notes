@@ -50,7 +50,7 @@ for (i in 1:Nrep) {
   Y2 <- Z2p # observed residuals vector
   Y1 <- c()
   Z2sort <- sort(as.numeric(obs_res[,1])) # sorted observed residuals
-  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "SANN")
+  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
   Y1 <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = opt$par)})
   bf1 <- cbind(bf1,Y1)
   bf2 <- cbind(bf2,Y2)
@@ -81,8 +81,10 @@ Z2fit <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = opt$par)})
 # compare different optim methods
 methods_optim <- c("Nelder-Mead","BFGS","CG","SANN")
 tr1 <- data.frame(y=as.numeric(),x=as.numeric(),Method_optim=as.character())
+nllv <- c()
 for (i in 1:4) {
   opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(mean(Z2sort),1,1,1.2,1.8),control=list(maxit=2000),method = methods_optim[i])
+  nllv[i] <- opt$value
   tr1 <- rbind(tr1,data.frame(y=AGG_density(x=seq(min(Z2sort),max(Z2sort),length.out=Nv*10),theta = opt$par),x=seq(min(Z2sort),max(Z2sort),length.out=Nv*10),Method_optim=methods_optim[i]))
 }
 pl <- ggplot(data.frame(x=Z2sort,y=Z2p)) + geom_density(aes(x=x))
@@ -109,7 +111,7 @@ Qmax <- max(Z2sort,Z2Q)+0.2
 # comparison of bootstrap and beta tolerance bounds for PP plots
 p1 <- PP_plot(observed = Z2p, simulated = Z2fit, tol_bounds = "bootstrap", title = "Bootstrap")
 p2 <- PP_plot(observed = Z2p, simulated = Z2fit, tol_bounds ="beta_dist", title = "Beta distribution")
-ggsave(grid.arrange(p1,p2,ncol=2),filename =paste0("bootstrap_beta_PP",Nv,"_v",vi,".png"))
+# ggsave(grid.arrange(p1,p2,ncol=2),filename =paste0("bootstrap_beta_PP",Nv,"_v",vi,".png"))
 
 # macroreplications PP plots
 Uup <- Ulow <- c()
@@ -132,7 +134,8 @@ Ulow <- sapply(1:Nv, function(i){optim(fn=function(x,i) {
 },par=1,i=i)$par})
 p5 <- QQ_plot(observed = Z2sort, simulated = Z2Q, tol_bounds = "bootstrap", title = "Bootstrap")
 p6 <- QQ_plot(observed = Z2sort, simulated = Z2Q, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title = "Beta distribution")
-ggsave(grid.arrange(p5,p6,ncol=2),filename = paste0("bootstrap_beta_QQ",Nv,"_v",vi,".png") )
+# ggsave(grid.arrange(p5,p6,ncol=2),filename = paste0("bootstrap_beta_QQ",Nv,"_v",vi,".png") )
+print(nllv)
 }
 # plot also histograms of parameter estimates
 
