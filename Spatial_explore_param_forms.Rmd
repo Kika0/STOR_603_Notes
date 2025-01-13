@@ -601,6 +601,9 @@ for (i in 1:ncol(df_sites)) {
 names(est_all_m)[ncol(est_all_m)] <- "cond_site"
 est_all_m <- est_all_m %>% mutate(cond_site=factor(cond_site,levels=names(df_sites)))
 # map maximum estimates and the time
-tmap_save(map_param(tmp_est=est_all_m,method="Normal",facet_var = "cond_site")[[1]],filename="a_max_tau.png",width=6,height=10)
+tmap_save(map_param(tmp_est=est_all_m,method="max_tau",facet_var = "cond_site")[[1]],filename="a_max_tau.png",width=6,height=10)
+
+tmap_save(map_param(tmp_est=est_all_m,method="max_tau",facet_var = "cond_site")[[2]],filename="a_max_whichtau.png",width=6,height=10)
+
 ```
 
