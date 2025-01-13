@@ -50,7 +50,7 @@ for (i in 1:Nrep) {
   Y2 <- Z2p # observed residuals vector
   Y1 <- c()
   Z2sort <- sort(as.numeric(obs_res[,1])) # sorted observed residuals
-  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "BFGS")
+  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(0,1,1,1.2,1.8),control=list(maxit=2000),method = "CG")
   Y1 <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = opt$par)})
   bf1 <- cbind(bf1,Y1)
   bf2 <- cbind(bf2,Y2)
