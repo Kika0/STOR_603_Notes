@@ -90,7 +90,7 @@ for (i in 1:4) {
 pl <- ggplot(data.frame(x=Z2sort,y=Z2p)) + geom_density(aes(x=x))
 pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method_optim)),aes(x=x,y=y,col=Method_optim)) +
   xlab("Observed residuals fitted density") + ylab("Density") + ggtitle("Kernel smoothed and fitted density")
-ggsave(pl1,filename = paste0("method_optim_v",vi,".png"))
+# ggsave(pl1,filename = paste0("method_optim_v",vi,".png"))
 # compare also with more samples
 names(bf1) <- names(bf2) <- c("remove",paste0("rep",1:Nrep))
 tmp <- cbind(bf1[,2:(Nrep+1)] %>% pivot_longer(everything(),names_to = "samp",values_to="y"),
@@ -121,7 +121,7 @@ for (i in 1:Nv) {
 }
 p3 <- ggplot(tmp) + geom_point(aes(x=x,y=y,col=samp),size=0.1)+ theme(legend.position = "none")  + coord_fixed() + ggtitle("100 simulations") + xlab("Model") + ylab("Empirical")
 p4 <- PP_plot(observed = Z2p, simulated = Z2fit, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title= paste0("100 simulations tolerance bounds"))
-ggsave(grid.arrange(p3,p4,ncol=2), filename = paste0("100simul_PP",Nv,"_v",vi,".png"))
+ggsave(grid.arrange(p3,p4,ncol=2), filename = paste0("100simul_PP",Nv,"_v",vi,method_optim,".png"))
 
 # comparison of bootstrap and beta tolerance bounds for QQ plots  
 # calculate tolerance bounds for the beta distribution
