@@ -44,6 +44,21 @@ for (i in 1:ncol(ZN)) {
   return(Z)
 }
 
+# keef constraints for beta
+keef_constraint1 <- function(b,a,Y1,Y2) {
+  v <- max(Y1)
+  ZmAI <- max((Y2-a*Y1)/(Y1^b))
+  ZmAD <- max(Y2-Y1)
+  return((1-b*ZmAI*v^(b-1)  -a)^2)
+}
+
+keef_constraint2 <- function(b,a,Y1,Y2) {
+  v <- max(Y1)
+  ZmAI <- max((Y2-a*Y1)/(Y1^b))
+  ZmAD <- max(Y2-Y1)
+  return((1-v^(b-1)*ZmAI+v^(-1)*ZmAD  -a)^2)
+}
+
 
 # generate a table of parameter estimates conditional on (given) each of the specified vector of variables
 par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=NULL) {
