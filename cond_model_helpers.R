@@ -63,7 +63,7 @@ keef_constraint2 <- function(b,a,Y1,Y2) {
 
 
 # generate a table of parameter estimates conditional on (given) each of the specified vector of variables
-par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=NULL) {
+par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=NULL, keef_constraints=0) {
   lik <- lika <- likb <- lik2 <- a_hat <- b_hat <- mu_hat <- mu_agg_hat <- sig_hat <- sig_agg_hat <- sigl_hat <- sigu_hat <- delta_hat <- deltal_hat <- deltau_hat <- res_var <- c()
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
@@ -96,9 +96,17 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         opta <- optim(par=init_para,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],b_hat=0,control = list(fnscale=-1,maxit=2000))
         a_hat <- append(a_hat,opta$par[1])
         lika <- append(lika,-opta$value)
-        b_max <- optim(par=0.8,fn = keef_constraint1,a=a_hat[length(a_hat)],Y1=Y1,Y2=Y2,control = list(maxit=2000))$par
+        if (1 %in% keef_constraints) {
+        b_max1 <- optim(par=0.8,fn = keef_constraint1,a=a_hat[length(a_hat)],Y1=Y1,Y2=Y2,control = list(maxit=2000))$par
+        } else {b_max1 <- 1}
+        if (2 %in% keef_constraints) {
+          b_max2 <- optim(par=0.8,fn = keef_constraint2,a=a_hat[length(a_hat)],Y1=Y1,Y2=Y2,control = list(maxit=2000))$par
+        } else {b_max2 <- 1} 
+        b_max <- min(b_max1,b_max2)
         init_parb <- c(b_max/2,0,1)
-        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-Inf,0),upper = c(b_max,Inf,4),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
+        #optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-Inf,0),upper = c(b_max,Inf,4),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
+        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_max=b_max,control = list(fnscale=-1,maxit=2000), method = "Nelder-Mead")
+        
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
         optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
         mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
