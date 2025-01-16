@@ -68,7 +68,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   for (j in given) {
-    Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+    Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
     res <- c(1:d)[-j]
     init_par <- c()
     init_lik <- c()
@@ -77,15 +77,15 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
     }
     for (i in 2:d) {
       # optimise using the initial parameters
-      Y1 <- Y_given_1_extreme[,j]
-      Y2 <- Y_given_1_extreme[,res[i-1]]
+      Y1 <- Y_given1extreme[,j]
+      Y2 <- Y_given1extreme[,res[i-1]]
       if (method=="sequential") {
         init_para <- c(0.8,0,1)
-        opta <- optim(par=init_para,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],b_hat=0,control = list(fnscale=-1,maxit=2000))
+        opta <- optim(par=init_para,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],b_hat=0,control = list(fnscale=-1,maxit=2000))
         a_hat <- append(a_hat,opta$par[1])
         lika <- append(lika,-opta$value)
         init_parb <- c(0.2,0,1)
-        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=opta$par[1],control = list(fnscale=-1,maxit=2000))
+        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],control = list(fnscale=-1,maxit=2000))
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
         mu_hat <- append(mu_hat,optb$par[length(optb$par)-1])
         sig_hat <- append(sig_hat,optb$par[length(optb$par)])         
@@ -93,30 +93,30 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
       }
       if (method=="sequential2") {
         init_para <- c(0.8,0,1)
-        opta <- optim(par=init_para,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],b_hat=0,control = list(fnscale=-1,maxit=2000))
+        opta <- optim(par=init_para,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],b_hat=0,control = list(fnscale=-1,maxit=2000))
         a_hat <- append(a_hat,opta$par[1])
         lika <- append(lika,-opta$value)
         b_max <- optim(par=0.8,fn = keef_constraint1,a=a_hat[length(a_hat)],Y1=Y1,Y2=Y2,control = list(maxit=2000))$par
-        init_parb <- c(0.2,0,1)
-        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-10,0),upper = c(b_max,10,10),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
+        init_parb <- c(b_max/2,0,1)
+        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-Inf,0),upper = c(b_max,Inf,Inf),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
-        optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
+        optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
         mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
         sig_hat <- append(sig_hat,optmusig$par[length(optmusig$par)])         
         likb <- append(likb,-optb$value)
       }
       if (method=="sequential3") {
         init_parb <- c(0.2,0,1)
-        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=a_hat[i-1],control = list(fnscale=-1,maxit=2000))
+        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=a_hat[i-1],control = list(fnscale=-1,maxit=2000))
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
-        optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=a_hat[i-1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
+        optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=a_hat[i-1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
         mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
         sig_hat <- append(sig_hat,optmusig$par[length(optmusig$par)])         
         likb <- append(likb,-optb$value)
       }      
       if (method=="two_step" | (method=="one_step" & margin=="Normal")) {
         init_par <- c(0.8,0.2,0,1)
-        opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1,maxit=2000))
+        opt <- optim(par=init_par,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],control = list(fnscale=-1,maxit=2000))
         a_hat <- append(a_hat,opt$par[1])
         b_hat <- append(b_hat,opt$par[2])
         mu_hat <- append(mu_hat,opt$par[3])
@@ -408,15 +408,15 @@ plot_simulated <- function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
   cond_colours <- c("#C11432","#66A64F","#009ADA")
   d <- ncol(df)
  
-    Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+    Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
     res <- c(1:d)[-j]
     opt <- list()
     for (i in 2:d) {
       # get initial parameters
-      init_opt <- optim(par=c(1,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))$par
+      init_opt <- optim(par=c(1,0,1), fn=Y_likelihood_initial,df=Y_given1extreme,given=j,sim=res[i-1],control = list(fnscale=-1))$par
       init_par <- c(init_opt[1],0.2,init_opt[2],init_opt[3])
       # optimise using the initial parameters
-      opt[[i-1]] <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+      opt[[i-1]] <- optim(par=init_par,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
     }
     a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
     b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
@@ -424,9 +424,9 @@ plot_simulated <- function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
     sig_hat <- c(opt[[1]]$par[4],opt[[2]]$par[4])
     
     # generate residual Z ----
-    Y_1 <- Y_given_1_extreme[,j]
-    Y_2 <- Y_given_1_extreme[,res[1]]
-    Y_3 <- Y_given_1_extreme[,res[2]]
+    Y_1 <- Y_given1extreme[,j]
+    Y_2 <- Y_given1extreme[,res[1]]
+    Y_3 <- Y_given1extreme[,res[2]]
     
     tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
     tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
@@ -468,9 +468,9 @@ plot_simulated <- function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
     # generate Y_1 (extrapolate so above largest observed value)
     
     #plot
-    Y1 <- Y_given_1_extreme[,j]
-    Y2 <- Y_given_1_extreme[,res[1]]
-    Y3 <- Y_given_1_extreme[,res[2]]
+    Y1 <- Y_given1extreme[,j]
+    Y2 <- Y_given1extreme[,res[1]]
+    Y3 <- Y_given1extreme[,res[2]]
     tmp <- data.frame(Y1,Y2,Y3) %>% mutate(sim=rep("data",500))
     names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),"sim")
     thres <- frechet_laplace_pit( qfrechet(0.999))
@@ -508,15 +508,15 @@ simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
   cond_colours <- c("#C11432","#66A64F","#009ADA")
   d <- ncol(df)
   
-  Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+  Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
   res <- c(1:d)[-j]
   opt <- list()
   for (i in 2:d) {
     # get initial parameters
-    init_opt <- optim(par=c(1,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))$par
+    init_opt <- optim(par=c(1,0,1), fn=Y_likelihood_initial,df=Y_given1extreme,given=j,sim=res[i-1],control = list(fnscale=-1))$par
     init_par <- c(init_opt[1],0.2,init_opt[2],init_opt[3])
     # optimise using the initial parameters
-    opt[[i-1]] <- optim(par=init_par,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    opt[[i-1]] <- optim(par=init_par,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
   }
   a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
   b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
@@ -524,9 +524,9 @@ simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
   sig_hat <- c(opt[[1]]$par[4],opt[[2]]$par[4])
   
   # generate residual Z ----
-  Y_1 <- Y_given_1_extreme[,j]
-  Y_2 <- Y_given_1_extreme[,res[1]]
-  Y_3 <- Y_given_1_extreme[,res[2]]
+  Y_1 <- Y_given1extreme[,j]
+  Y_2 <- Y_given1extreme[,res[1]]
+  Y_3 <- Y_given1extreme[,res[2]]
   
   tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
   tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
@@ -553,7 +553,7 @@ simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
   Gen_Y_1 <- data.frame(Y_1=Y_1_gen)
   
   # for each Y, generate a residual and calculate Y_2
-  Y_1 <- Y_given_1_extreme[,j]
+  Y_1 <- Y_given1extreme[,j]
   # Y_2 <- a_hat*Y_1 + Y_1^b_hat *x
   # Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
   Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,1]
@@ -562,8 +562,8 @@ simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
   # generate Y_1 (extrapolate so above largest observed value)
   
   #plot
-  Y_2 <- Y_given_1_extreme[,res[1]]
-  Y_3 <- Y_given_1_extreme[,res[2]]
+  Y_2 <- Y_given1extreme[,res[1]]
+  Y_3 <- Y_given1extreme[,res[2]]
   thres <- frechet_laplace_pit( qfrechet(0.999))
   
   Gen_orig <- rbind(Gen_Y_1,data.frame(Y_1,Y_2,Y_3) %>% mutate(sim=rep("original_laplace",500)))
@@ -591,18 +591,18 @@ Z_3 <- c()
 given <- c()
 d <- ncol(df)
 for (j in 1:ncol(df)) {
-  Y_given_1_extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+  Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
   res <- c(1:d)[-j]
   opt <- list()
   init_par <- list()
   init_lik <- c()
   for (i in 2:d) {
     # get initial parameters
-    init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    init_opt <- optim(par=c(0.5,0,1), fn=Y_likelihood_initial,df=Y_given1extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
     init_lik <- append(init_lik,init_opt$value)
     init_par[[i-1]] <- c(init_opt$par[1],0.2,init_opt$par[2],init_opt$par[3])
     # optimise using the initial parameters
-    opt[[i-1]] <- optim(par=init_par[[i-1]],fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
+    opt[[i-1]] <- optim(par=init_par[[i-1]],fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],control = list(fnscale=-1))
   }
   a_hat <- c(opt[[1]]$par[1],opt[[2]]$par[1])
   b_hat <- c(opt[[1]]$par[2],opt[[2]]$par[2])
@@ -616,9 +616,9 @@ for (j in 1:ncol(df)) {
   sig_hat_init <- c(init_par[[1]][4],init_par[[2]][4])
   
   # generate residual Z ----
-  Y_1 <- Y_given_1_extreme[,j]
-  Y_2 <- Y_given_1_extreme[,res[1]]
-  Y_3 <- Y_given_1_extreme[,res[2]]
+  Y_1 <- Y_given1extreme[,j]
+  Y_2 <- Y_given1extreme[,res[1]]
+  Y_3 <- Y_given1extreme[,res[2]]
   
   tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
   tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
@@ -635,7 +635,7 @@ for (j in 1:ncol(df)) {
 
   
 }
-p <- ggplot() + geom_point(data=Y_given_1_extreme,aes(x=Y_1,y=Y_2),alpha=0.5) + 
+p <- ggplot() + geom_point(data=Y_given1extreme,aes(x=Y_1,y=Y_2),alpha=0.5) + 
   geom_line(data=data.frame(x=x,y=yl),aes(x=x,y=y),linetype="dashed",col="#C11432") +
   geom_line(data=data.frame(x=x,y=ym),aes(x=x,y=y),linetype="dashed",col="#C11432") +
   geom_line(data=data.frame(x=x,y=yp),aes(x=x,y=y),linetype="dashed",col="#C11432") +
