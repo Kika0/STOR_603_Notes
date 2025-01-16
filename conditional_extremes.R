@@ -956,11 +956,12 @@ summary(tmp_est)
 summary(tmp_est1)
 summary(tmp_est2)
 
-tmp <- cbind(tmp_est,tmp_est1,tmp_est2) %>% mutate("iteration"=rep(1:100,each=3))
+tmp <- rbind(tmp_est,tmp_est1,tmp_est2) %>% mutate("iteration"=factor(rep(1:100,3)))
 # exploratory plots to try identify source of the rmse
-ggplot(tmp) + geom_line(aes(x=a,y=b,col=iteration)) +
-  geom_point(aes(x=a,y=b,col=iteration)) +
+ggplot(tmp) + 
+  geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
+  geom_point(aes(x=a,y=b,col=b_constraint)) +
   xlab(TeX("$\\hat{\\alpha}$")) +
-  ylab(TeX("$\\hat{\\beta}$"))
-ggpairs(tmp_est1 %>% filter(a1<0.9 | b1>0.3),col=2:7)
+  ylab(TeX("$\\hat{\\beta}$")) + coord_fixed()
 
+ggplot(data.frame(y=tmp_est1$b-tmp_est2$b,x=1:100)) + geom_point(aes(x=x,y=y)) + ylab(TeX("Difference in $\\beta$ estimates of constraint 1 and 2")) + xlab("Iteration")
