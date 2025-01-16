@@ -75,7 +75,7 @@ obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v,a=pe$a[1],
 Z2p <- (1:Nv)/(Nv+1)
 # PP plot
 Z2sort <- sort(as.numeric(obs_res[,1]))
-opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(mean(Z2sort),1,1,1.2,1.8),control=list(maxit=2000),method = "SANN")
+opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(mean(Z2sort),sd(Z2sort),sd(Z2sort),1.2,1.8),control=list(maxit=2000),method = "SANN")
 Z2fit <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = opt$par)})
 
 # compare different optim methods
