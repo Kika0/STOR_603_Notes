@@ -98,7 +98,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         lika <- append(lika,-opta$value)
         b_max <- optim(par=0.8,fn = keef_constraint1,a=a_hat[length(a_hat)],Y1=Y1,Y2=Y2,control = list(maxit=2000))$par
         init_parb <- c(b_max/2,0,1)
-        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-Inf,0),upper = c(b_max,Inf,Inf),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
+        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-Inf,0),upper = c(b_max,Inf,4),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
         optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
         mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
