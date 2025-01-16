@@ -46,6 +46,7 @@ for (i in 1:ncol(ZN)) {
 
 # keef constraints for beta
 keef_constraint1 <- function(b,a,Y1,Y2) {
+  if (b<0 | b>1) {return(10^6)}
   v <- max(Y1)
   ZmAI <- max((Y2-a*Y1)/(Y1^b))
   ZmAD <- max(Y2-Y1)
@@ -53,6 +54,7 @@ keef_constraint1 <- function(b,a,Y1,Y2) {
 }
 
 keef_constraint2 <- function(b,a,Y1,Y2) {
+  if (b<0 | b>1) {return(10^6)}
   v <- max(Y1)
   ZmAI <- max((Y2-a*Y1)/(Y1^b))
   ZmAD <- max(Y2-Y1)
@@ -94,8 +96,9 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         opta <- optim(par=init_para,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],b_hat=0,control = list(fnscale=-1,maxit=2000))
         a_hat <- append(a_hat,opta$par[1])
         lika <- append(lika,-opta$value)
+        b_max <- optim(par=0.8,fn = keef_constraint1,a=a_hat[length(a_hat)],Y1=Y1,Y2=Y2,control = list(maxit=2000))$par
         init_parb <- c(0.2,0,1)
-        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=opta$par[1],control = list(fnscale=-1,maxit=2000))
+        optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-10,0),upper = c(b_max,10,10),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
         optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given_1_extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
         mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
