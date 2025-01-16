@@ -7,6 +7,7 @@ library(viridis)
 library(MASS) #use dplyr::select to avoid function conflict
 library(xtable)
 library(gnorm)
+library(GGally)
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
 
@@ -927,3 +928,39 @@ ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) +
 
 ggplot() +
   geom_point(data=Gen_Y1,mapping = aes(x=Y1,y=Y2),alpha=0.5,col = "#C11432") + coord_fixed() + geom_point(data=Y_given1extreme,mapping=aes(x=Y1,Y2), alpha = 1) 
+
+# optim(par=c(b_max/2,0,1),fn = Y_likelihood,df=Y_given1extreme,given=1,sim=2,a_hat=a_hat,lower=c(0,-Inf,0),upper = c(b_max,Inf,4),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
+# optim(par=c(b_max,0,1),fn = Y_likelihood,df=Y_given1extreme,given=1,sim=2,a_hat=a_hat,control = list(fnscale=-1,maxit=2000), method = "CG")
+
+# simulation study for Keef constraints ----
+set.seed(12)
+N <- 500
+v <- 0.9
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+tmp_est <- cbind(par_est(sims,v=v,given=c(1),method="sequential2"),data.frame("b_constraint" = "no_constraint"))
+tmp_est1 <- cbind(par_est(sims,v=v,given=c(1),method="sequential2",keef_constraints = 1),data.frame("b_constraint" = "constraint1"))
+tmp_est2 <- cbind(par_est(sims,v=v,given=c(1),method="sequential2",keef_constraints = 2),data.frame("b_constraint" = "constraint2"))
+
+for (i in 2:100) {
+  set.seed(12*i)
+  N <- 500
+  sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+    apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+  tmp_est <- rbind(tmp_est,cbind(par_est(sims,v=v,given=c(1),method="sequential2"),data.frame("b_constraint" = "no_constraint")))
+  tmp_est1 <- rbind(tmp_est1,cbind(par_est(sims,v=v,given=c(1),method="sequential2",keef_constraints = 1),data.frame("b_constraint" = "constraint1")))
+  tmp_est2 <- rbind(tmp_est2,cbind(par_est(sims,v=v,given=c(1),method="sequential2",keef_constraints = 2),data.frame("b_constraint" = "constraint2")))
+}
+
+summary(tmp_est)
+summary(tmp_est1)
+summary(tmp_est2)
+
+tmp <- cbind(tmp_est,tmp_est1,tmp_est2) %>% mutate("iteration"=rep(1:100,each=3))
+# exploratory plots to try identify source of the rmse
+ggplot(tmp) + geom_line(aes(x=a,y=b,col=iteration)) +
+  geom_point(aes(x=a,y=b,col=iteration)) +
+  xlab(TeX("$\\hat{\\alpha}$")) +
+  ylab(TeX("$\\hat{\\beta}$"))
+ggpairs(tmp_est1 %>% filter(a1<0.9 | b1>0.3),col=2:7)
+
