@@ -10,7 +10,7 @@
 #' @export
 #'
 #' @examples
-Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_hat=NULL) {
+Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_hat=NULL,b_max=1) {
   if (is.null(a_hat)==FALSE) {
    a <- a_hat
  } else {a <- theta[1]}
@@ -21,7 +21,7 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_h
   sig <- theta[length(theta)]
   Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
   Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
-  if (a<(-1) | a>1 | b<0 | b>=1) {
+  if (a<(-1) | a>1 | b<0 | b>=b_max) {
     log_lik <- (-10^6) # low log-likelihood outside bounds
   }
   else {
