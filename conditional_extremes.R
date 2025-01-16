@@ -383,7 +383,7 @@ for (i in 1:100) {
   sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
     link_log(dep=1/2) %>%
     apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-  sumar[[i]] <- par_summary(sims=sims)
+  sumar[[i]] <- par_est(df=sims)
 }
 
 # plot boxplots for a,b,mu,sig estimated values
@@ -395,11 +395,11 @@ rhoboot <- c()
 Ys <- rep(c("Y1","Y2","Y3"),length(sumar))
 res <- rep(c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23"),length(sumar))
 for (i in 1:length(sumar)) {
-  aboot <- append(aboot,unname(unlist(sumar[[i]][7,])))
-  bboot <- append(bboot,unname(unlist(sumar[[i]][8,])))
-  muboot <- append(muboot,unname(unlist(sumar[[i]][9,])))
-  sigboot <- append(sigboot,unname(unlist(sumar[[i]][10,])))
-  rhoboot <- append(rhoboot,unname(unlist(sumar[[i]][11,c(2,4,6)])))
+  aboot <- append(aboot,unname(unlist(sumar[[i]][5,])))
+  bboot <- append(bboot,unname(unlist(sumar[[i]][6,])))
+  muboot <- append(muboot,unname(unlist(sumar[[i]][7,])))
+  sigboot <- append(sigboot,unname(unlist(sumar[[i]][8,])))
+# rhoboot <- append(rhoboot,unname(unlist(sumar[[i]][11,c(2,4,6)])))
 }
 
 p1 <- ggplot(data.frame(x=factor(res,levels=c("Z_21","Z_31","Z_12","Z_32","Z_13","Z_23")),y=muboot),aes(x=x,y=y))+
@@ -899,7 +899,7 @@ ggplot(df,aes(x=rep(seq(-5,5,0.0005),4),y=AGG_sample,color=sim)) + geom_line(lin
                      values=c("#C11432","#66A64F","#FDD10A","#009ADA")) +
   xlab(TeX("$z$")) + ylab(TeX("$f_{AGG} (z)$"))
 
-# plot limited extrapolation
+# plot limited extrapolation ----
 set.seed(123)
 N <- 5000
 v <- 0.99
@@ -913,7 +913,7 @@ Y2 <- Y_given1extreme$Y2
 Z2 <- (Y2-pe$a[1]*Y1)/(Y1^pe$b[1])
 # sample from the observed residuals
 Nsim <- 5000
-# Zstar <- data.frame(Z2 = sample(Z2, size = Nsim, replace = TRUE) # without noise
+# Zstar <- data.frame(Z2 = sample(Z2, size = Nsim, replace = TRUE)) # without noise
 Zstar <- data.frame(Z2 = sample(Z2, size = Nsim, replace = TRUE)+ rnorm(n=Nsim,mean=0,sd=density(Z2)$bw))
 # simulate Y1
 Y1_gen <- -log(2*(1-v)) + rexp(Nsim)
@@ -927,4 +927,3 @@ ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) +
 
 ggplot() +
   geom_point(data=Gen_Y1,mapping = aes(x=Y1,y=Y2),alpha=0.5,col = "#C11432") + coord_fixed() + geom_point(data=Y_given1extreme,mapping=aes(x=Y1,Y2), alpha = 1) 
-
