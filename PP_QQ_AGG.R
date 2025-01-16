@@ -50,7 +50,7 @@ for (i in 1:Nrep) {
   Y2 <- Z2p # observed residuals vector
   Y1 <- c()
   Z2sort <- sort(as.numeric(obs_res[,1])) # sorted observed residuals
-  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(mean(Z2sort),1,1,1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+  opt <- optim(fn=NLL_AGGsigdelta,x=Z2sort,par=c(mean(Z2sort),sd(Z2sort),sd(Z2sort),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
   Y1 <- sapply(1:Nv,function(i){ F_AGG(x=Z2sort[i],theta = opt$par)})
   bf1 <- cbind(bf1,Y1)
   bf2 <- cbind(bf2,Y2)
@@ -68,7 +68,7 @@ set.seed(1234)
 sim2 <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 # fit PP plot to the obser <- ed residuals
-pe <- par_est(df=sim2,v=v,given=1,margin = "AGGsigdelta", method = "two_step")
+pe <- par_est(df=sim2,v=v,given=1,margin = "AGGsigdelta", method = "sequential2")
 # calculate observed residuals
 obs_res <- as.data.frame(observed_residuals(df = sim2,given = 1,v = v,a=pe$a[1],b=pe$b[1])) 
 # calculate empirical p values for the observed residuals
@@ -121,7 +121,7 @@ for (i in 1:Nv) {
 }
 p3 <- ggplot(tmp) + geom_point(aes(x=x,y=y,col=samp),size=0.1)+ theme(legend.position = "none")  + coord_fixed() + ggtitle("100 simulations") + xlab("Model") + ylab("Empirical")
 p4 <- PP_plot(observed = Z2p, simulated = Z2fit, Uup = Uup, Ulow = Ulow, tol_bounds ="custom", title= paste0("100 simulations tolerance bounds"))
-ggsave(grid.arrange(p3,p4,ncol=2), filename = paste0("100simul_PP",Nv,"_v",vi,method_optim,".png"))
+ggsave(grid.arrange(p3,p4,ncol=2), filename = paste0("100simul_PP",Nv,"_v",vi,"Nelder-Mead",".png"))
 
 # comparison of bootstrap and beta tolerance bounds for QQ plots  
 # calculate tolerance bounds for the beta distribution
