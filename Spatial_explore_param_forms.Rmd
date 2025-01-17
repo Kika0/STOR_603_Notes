@@ -561,13 +561,14 @@ Map and save for all of the sites.
 # est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
 # save(est_all,file="est_all.RData")
 
-load("est_all.RData")
-est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
+#load("est_all.RData")
+
+est_all <- est_all[1:(70*445),] %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
 condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
 for (i in 1:ncol(df_sites)) {
 tau_site_map <- map_param(tmp_est=est_all %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i])
   for (j in 1:length(condmodel_params)) {
-    tmap_save(tau_site_map[[j]],filename=paste0("../Documents/est_all1/tau_",names(df_sites[i]),"_map_",j,"_",condmodel_params[j],".png"),width=15,height=4.5)
+    tmap_save(tau_site_map[[j]],filename=paste0("../Documents/est_all_keef/tau_",names(df_sites[i]),"_map_",j,"_",condmodel_params[j],".png"),width=15,height=4.5)
   }
 }
 ```
@@ -589,8 +590,8 @@ for (i in 1:ncol(df_sites)) {
       if (j==find_site_index(as.numeric(df_sites[,i]))) {
         max_map[j] <- max_time[j] <- NA
       } else {
-      max_map[j] <- est_all %>% filter(cond_site==names(df_sites[i]),res==j) %>% select(condmodel_params[k]) %>%  pull() %>% max()
-      max_time[j] <- dayshift[est_all %>% filter(cond_site==names(df_sites[i]),res==j) %>% select(condmodel_params[k]) %>%  pull() %>% which.max()]
+      max_map[j] <- est_all %>% filter(cond_site==names(df_sites[i]),res==j) %>% dplyr::select(condmodel_params[k]) %>%  pull() %>% max()
+      max_time[j] <- dayshift[est_all %>% filter(cond_site==names(df_sites[i]),res==j) %>% dplyr::select(condmodel_params[k]) %>%  pull() %>% which.max()]
       }
     }
     est_all_max <- cbind(est_all_max,data.frame(max_map, max_time))
