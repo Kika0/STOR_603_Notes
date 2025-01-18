@@ -933,17 +933,19 @@ ggplot() +
 # optim(par=c(b_max,0,1),fn = Y_likelihood,df=Y_given1extreme,given=1,sim=2,a_hat=a_hat,control = list(fnscale=-1,maxit=2000), method = "CG")
 
 # simulation study for Keef constraints ----
+b_constraint_study <- function(v,nv=50) {
+for (i in 1:length(v)) {
+N <- nv/(1-v)
 set.seed(12)
-N <- 500
-v <- 0.9
+
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 tmp_est <- cbind(par_est(sims,v=v,given=c(1),method="sequential2"),data.frame("b_constraint" = "no_constraint"))
 tmp_est1 <- cbind(par_est(sims,v=v,given=c(1),method="sequential2",keef_constraints = 1),data.frame("b_constraint" = "constraint1"))
 tmp_est2 <- cbind(par_est(sims,v=v,given=c(1),method="sequential2",keef_constraints = 2),data.frame("b_constraint" = "constraint2"))
-
-for (i in 2:100) {
-  set.seed(12*i)
+Nrep <- 100
+for (j in 2:Nrep) {
+  set.seed(12*j)
   N <- 500
   sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
     apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
@@ -956,12 +958,31 @@ summary(tmp_est)
 summary(tmp_est1)
 summary(tmp_est2)
 
-tmp <- rbind(tmp_est,tmp_est1,tmp_est2) %>% mutate("iteration"=factor(rep(1:100,3)))
+tmp <- rbind(tmp_est,tmp_est1,tmp_est2) %>% mutate("iteration"=factor(rep(1:Nrep,3))) %>% mutate("v"=as.character(v)) %>% mutate("b_constraint" = factor(b_constraint,levels = c("no_constraint","constraint1","constraint2")))
+return(tmp)
+}
+ 
+
 # exploratory plots to try identify source of the rmse
+p1 <- ggplot(tmp) + 
+  geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
+  geom_point(aes(x=a,y=b,col=b_constraint),alpha=0.7) +
+  xlab(TeX("$\\hat{\\alpha}$")) +
+  ylab(TeX("$\\hat{\\beta}$")) + coord_fixed() +
+  scale_color_manual(values = c("no_constraint" = "#009ADA", "constraint1" = "#C11432", "constraint2" = "#66A64F")) 
+
+p2 <- ggplot(data.frame(y=tmp_est1$b-tmp_est2$b,x=1:100)) + geom_point(aes(x=x,y=y)) + ylab(TeX("Difference in $\\beta$ estimates of constraint 1 and 2")) + xlab("Iteration")
+return(list(p1,p2)) }
+# repeat for other thresholds as well
+tmp08 <- b_constraint_study(v=0.8)  
+tmp09 <- b_constraint_study(v=0.9) 
+tmp099 <- b_constraint_study(v=0.99)
+tmp0999 <- b_constraint_study(v=0.999)
+tmp <- rbind(tmp08,tmp09,tmp099,tmp0999)
 ggplot(tmp) + 
   geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
-  geom_point(aes(x=a,y=b,col=b_constraint)) +
+  geom_point(aes(x=a,y=b,col=b_constraint),alpha=0.7) +
   xlab(TeX("$\\hat{\\alpha}$")) +
-  ylab(TeX("$\\hat{\\beta}$")) + coord_fixed()
+  ylab(TeX("$\\hat{\\beta}$")) + coord_fixed() +
+  scale_color_manual(values = c("no_constraint" = "#009ADA", "constraint1" = "#C11432", "constraint2" = "#66A64F")) + facet_wrap(~v)
 
-ggplot(data.frame(y=tmp_est1$b-tmp_est2$b,x=1:100)) + geom_point(aes(x=x,y=y)) + ylab(TeX("Difference in $\\beta$ estimates of constraint 1 and 2")) + xlab("Iteration")
