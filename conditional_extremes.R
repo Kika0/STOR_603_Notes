@@ -934,10 +934,8 @@ ggplot() +
 
 # simulation study for Keef constraints ----
 b_constraint_study <- function(v,nv=50) {
-for (i in 1:length(v)) {
 N <- nv/(1-v)
 set.seed(12)
-
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 tmp_est <- cbind(par_est(sims,v=v,given=c(1),method="sequential2"),data.frame("b_constraint" = "no_constraint"))
@@ -946,7 +944,6 @@ tmp_est2 <- cbind(par_est(sims,v=v,given=c(1),method="sequential2",keef_constrai
 Nrep <- 100
 for (j in 2:Nrep) {
   set.seed(12*j)
-  N <- 500
   sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
     apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
   tmp_est <- rbind(tmp_est,cbind(par_est(sims,v=v,given=c(1),method="sequential2"),data.frame("b_constraint" = "no_constraint")))
@@ -964,25 +961,24 @@ return(tmp)
  
 
 # exploratory plots to try identify source of the rmse
-p1 <- ggplot(tmp) + 
+plot_b_cons <- function(tmp) { ggplot(tmp) + 
   geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
   geom_point(aes(x=a,y=b,col=b_constraint),alpha=0.7) +
   xlab(TeX("$\\hat{\\alpha}$")) +
-  ylab(TeX("$\\hat{\\beta}$")) + coord_fixed() +
+  ylab(TeX("$\\hat{\\beta}$")) + 
   scale_color_manual(values = c("no_constraint" = "#009ADA", "constraint1" = "#C11432", "constraint2" = "#66A64F")) 
+}
 
-p2 <- ggplot(data.frame(y=tmp_est1$b-tmp_est2$b,x=1:100)) + geom_point(aes(x=x,y=y)) + ylab(TeX("Difference in $\\beta$ estimates of constraint 1 and 2")) + xlab("Iteration")
-return(list(p1,p2)) }
+plot_b_diff <- function(tmp) {
+  y <- (tmp %>% filter(b_constraint=="constraint1") %>% pull(b)) - (tmp %>% filter(b_constraint=="constraint2") %>% pull(b))
+  ggplot(data.frame(y=y,x=1:100)) + geom_point(aes(x=x,y=y)) + ylab(TeX("Difference in $\\beta$ estimates of constraint 1 and 2")) + xlab("Iteration")
+}
 # repeat for other thresholds as well
 tmp08 <- b_constraint_study(v=0.8)  
 tmp09 <- b_constraint_study(v=0.9) 
 tmp099 <- b_constraint_study(v=0.99)
 tmp0999 <- b_constraint_study(v=0.999)
 tmp <- rbind(tmp08,tmp09,tmp099,tmp0999)
-ggplot(tmp) + 
-  geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
-  geom_point(aes(x=a,y=b,col=b_constraint),alpha=0.7) +
-  xlab(TeX("$\\hat{\\alpha}$")) +
-  ylab(TeX("$\\hat{\\beta}$")) + coord_fixed() +
-  scale_color_manual(values = c("no_constraint" = "#009ADA", "constraint1" = "#C11432", "constraint2" = "#66A64F")) + facet_wrap(~v)
+grid.arrange(plot_b_cons(tmp=tmp09),plot_b_cons(tmp=tmp099),plot_b_cons(tmp=tmp0999),ncol=3)
+grid.arrange(plot_b_diff(tmp=tmp09),plot_b_diff(tmp=tmp099),plot_b_diff(tmp=tmp0999),ncol=3)
 
