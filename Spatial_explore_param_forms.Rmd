@@ -604,3 +604,41 @@ Save max over the time period and which day it is.
 # run rs.restartR() if [[2]] produces lazy-database error
 ```
 
+## Explore high values of $\beta$
+
+```{r}
+cond_site1 <- find_site_index(as.numeric(df_sites[,10])) # column 10 "Truro"
+res_site <- find_site_index(as.numeric(df_sites[,9])) #column 9 "Lowestoft"
+tmp <- est_all %>% filter(cond_site==names(df_sites)[10],res==res_site) %>% select(a,b,res,cond_site,tau)
+tmp
+```
+Scatterplot of $(Y_{172},Y_{Truro}| Y_{Truro}>v$.
+
+```{r}
+sims_tau <- shift_time(sims=sims,cond_site=cond_site1,tau=dayshift[1]) %>% select(all_of(c(cond_site1,res_site))) 
+names(sims_tau) <- c("Y1","Y2")
+pe <- par_est(df=sims_tau,v=v,given=1,,margin = "AGGsigdelta", method="sequential2",keef_constraints = c(1,2)) 
+pe # check that this is same as above
+ggplot(sims_tau) + geom_point(aes(x=Y1,y=Y2)) # laplace margins look fine
+Y_given1extreme <- sims_tau %>% filter(sims_tau[,1]>quantile(sims_tau[,1],v))
+ggplot(Y_given1extreme) + geom_point(aes(x=Y1,y=Y2)) # laplace margins look fine
+ggplot(sims_tau) + geom_density(aes(x=Y2)) # Y1 and Y2 have Laplace margins
+```
+Explore how a scatterplot varies for different $\tau$.
+
+```{r}
+Y <- sims_tau %>% mutate("tau"=dayshift[1])
+Y_given1extreme <- sims_tau %>% filter(sims_tau[,1]>quantile(sims_tau[,1],v)) %>%  mutate("tau"=dayshift[1])
+for (i in dayshift[2:7]) {
+ sims_tau <- shift_time(sims=sims,cond_site=cond_site1,tau=i) %>% select(all_of(c(cond_site1,res_site))) 
+names(sims_tau) <- c("Y1","Y2")
+ Y <- rbind(Y,sims_tau %>% mutate("tau"=i))
+ Y_given1extreme <- rbind(Y_given1extreme,sims_tau %>% filter(sims_tau[,1]>quantile(sims_tau[,1],v)) %>%  mutate("tau"=i))
+}
+Y <- Y %>% mutate(tau=factor(tau))
+Y_given1extreme <- Y_given1extreme %>% mutate(tau=factor(tau))
+ggplot(Y) + geom_point(aes(x=Y1,y=Y2)) + facet_wrap(~tau) 
+ggplot(Y_given1extreme) + geom_point(aes(x=Y1,y=Y2))+ facet_wrap(~tau,ncol=7)  
+
+```
+
