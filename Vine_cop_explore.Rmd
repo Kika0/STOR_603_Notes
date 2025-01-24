@@ -78,6 +78,14 @@ fitw2
 ```{r}
 RVineVuongTest(data= as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)),RVM1 = fitw, RVM2 = fitw2)
 ```
+# Try combining the data on Uniform margins
+```{r}
+sw <- rbind(as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)),as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)))
+
+fitsw <- RVineStructureSelect(sw,trunclevel = 3, indeptest = FALSE)
+fitsw
+```
+
 
 ## Fitting a vine copula to the observed residuals
 
@@ -193,3 +201,20 @@ x <- fn(j=5)
 x
 ```
 
+```{r}
+sw1 <- sw
+fnsw <- function(j) {
+  sw <- as.data.frame((sw %>% apply(c(2),FUN=row_number))/(nrow(sw)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+obsresw <- (observed_residuals(df = sw,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sw)*(1-v)+1)
+
+obsress <- (observed_residuals(df = sw,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sw)*(1-v)+1)
+
+fitrw <- RVineStructureSelect(obsresw,
+                     trunclevel = 3, indeptest = TRUE)
+fitrs <- RVineStructureSelect(obsress,
+                     trunclevel = 3, indeptest = TRUE)
+
+return(list(fitrw,fitrs))
+}
+fnsw(j=1)
+```
