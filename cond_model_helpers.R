@@ -778,8 +778,8 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
   misscol <- "aquamarine"
   if (facet_var == "cond_site") {
     Nfacet <- length(unique(tmp_est$cond_site))
-    facet_label <- levels(est_all_m$cond_site)
-    nrow_facet <- 4
+    facet_label <- levels(tmp_est$cond_site)
+    nrow_facet <- round(length(levels(tmp_est$cond_site))/3)
     legend_outside_size <- 0.3
   } else if (facet_var == "tau") {
     Nfacet <- nrow(tmp_est)/445
