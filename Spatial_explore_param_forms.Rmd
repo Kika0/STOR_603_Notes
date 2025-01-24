@@ -41,11 +41,12 @@ Currently, we work with 19 years of daily maximum temperature data over summer m
 ukcp18 <- readRDS("data/uk_1999_2018_summer.RDS") %>% relocate(dist_london,.after=dist_glasgow)
 # remove last year of the data due to error (same data as first year)
 ukcp18 <- ukcp18[,1:1716]
+
 conv <- CnvRttPol(latlon = data.frame(long=ukcp18$Longitude,lat=ukcp18$Latitude),spol_coor = c(gr_npole_lon, gr_npole_lat))
 uk_sf_rot <- data.frame(lon=conv$lon,lat=conv$lat,ind=conv$ind) %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
 uk_sf_rot <- st_transform(uk_sf_rot,27700) %>% mutate(lon=conv$lon,lat=conv$lat)
-# add buffer
+# add buffer for calculating distance from the coast (distance from within the polygon sometimes causes error)
 uk_buffered <- st_buffer(uk, 50000)   
 # polygon of only the buffer
 buffer_only <- st_difference(uk_buffered, uk) 
@@ -59,8 +60,7 @@ sims <- ukcp18 %>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
 colnames(sims) <- paste0("Y",1:ncol(sims))
 # transform to Laplace margins
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-# calculate the residuals for Birmingham (1), then Glasgow (2) and London (3)
-sites <- c("Birmingham","Glasgow","London")
+v <- 0.9 # set threshold
 ```
 Add all sites together.
 ```{r}
@@ -91,7 +91,7 @@ Recall the plot of marginal estimates of $\alpha$ parameter against distance[m] 
 # x <- list()
 # d <- list()
 # for (i in 1:3) {
-#   cond_var <- i
+#   cond_var <- find_site_index(as.numeric(df_sites[,i]))
 # x[[i]] <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
 # d[[i]] <- (ukcp18 %>% arrange(is_location))[-cond_var,] %>% select(4+cond_var) %>% pull() %>% units::drop_units()
 # opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x[[i]],d=d[[i]])
@@ -263,7 +263,9 @@ if (method!="AGG") {return(list(pa,pmu,psig))}
 # save these objects for faster knitting
 # save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,file = "spatialobjects.RData")
 #plot_dist_param(site1=tmp_est1,site2=tmp_est2,site3=tmp_est3)
-plot_map_param(tmp_est1=tmp_est1,tmp_est2=tmp_est2,tmp_est3=tmp_est3)
+tmp <- rbind(tmp_est1 %>% mutate("cond_site"=names(df_sites)[1]),tmp_est2 %>% mutate("cond_site"=names(df_sites)[2]),tmp_est3 %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
+map_param(tmp_est = tmp,method = "AGG",facet_var = "cond_site")[[1]]
+plot_map_param(tmp_est1=tmp_est1,tmp_est2=tmp_est2,tmp_est3=tmp_est3)[[1]]
 ```
 
 Now, the same approach with alpha values on the fitted exponential curve with distance, so we use estimates of $\hat{\alpha}$ to fit an exponential curve to as a function of distance of site $i$ from the conditioning site $j$.
@@ -292,24 +294,7 @@ We can observe that imposing a parametric form on $\hat{\alpha}$ that only chang
 
 ## New iterative approach
 
-```{r, echo=FALSE}
-v <- 0.9
-sims <- ukcp18 %>% dplyr::select(!contains("i")) %>% t() %>% as.data.frame()
-colnames(sims) <- paste0("Y",1:ncol(sims))
-# transform to Laplace margins
-sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-# find site closest to a vector of lon lat coordinates
-find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::select()) {
-  # convert site coordinates
-site_sf <- st_sfc(st_point(site),crs=4326) 
-site_sf <- st_transform(site_sf, crs=27700) # set BNG crs
-x <- which.min(as.numeric(st_distance(site_sf,grid_uk)))
-# check it works
-#return(tm_shape(uk_sf_rot) + tm_dots() + tm_shape(site_sf) + tm_dots(col="#C11432") + tm_shape(uk_sf_rot[x,])+ tm_dots(col="#009ADA"))
-return(x)
-}
-```
-
+Try a parametric alpha decaying exponentially with distance.
 
 ```{r}
 # cond_site <- find_site_index(Birmingham)
