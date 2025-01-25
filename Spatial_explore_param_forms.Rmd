@@ -87,21 +87,21 @@ Recall the plot of marginal estimates of $\alpha$ parameter against distance[m] 
 # use parameteric form for a ----
 # calculate distance from the 3 conditioning sites
 # transform dataframe to include a vector of x (temperature) and d (distance from the conditioning site)
-# p <- list()
-# x <- list()
-# d <- list()
-# for (i in 1:3) {
-#   cond_var <- find_site_index(as.numeric(df_sites[,i]))
-# x[[i]] <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
-# d[[i]] <- (ukcp18 %>% arrange(is_location))[-cond_var,] %>% select(4+cond_var) %>% pull() %>% units::drop_units()
-# opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x[[i]],d=d[[i]])
-# # plot a function of alpha against distance
-# a <- exp(-opt$par[1]*d[[i]])
-# p[[i]] <- ggplot() + geom_line(data=data.frame(x=d[[i]],y=a),aes(x=x,y=y)) +
-#   geom_point(data=data.frame(x=d[[i]],y=x[[i]]),aes(x=x,y=y)) +
-#   ylab(TeX("$\\alpha$")) + xlab("Distance")
-# }
-# save(p,x,d,file = "alphaspatial.RData")
+p <- list()
+x <- list()
+d <- list()
+for (i in 1:3) {
+  cond_var <- find_site_index(as.numeric(df_sites[,i]))
+x[[i]] <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
+d[[i]] <- (ukcp18)[-cond_var,] %>% select(6+i) %>% pull() %>% units::drop_units()
+opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x[[i]],d=d[[i]])
+# plot a function of alpha against distance
+a <- exp(-opt$par[1]*d[[i]])
+p[[i]] <- ggplot() + geom_line(data=data.frame(x=d[[i]],y=a),aes(x=x,y=y)) +
+  geom_point(data=data.frame(x=d[[i]],y=x[[i]]),aes(x=x,y=y)) +
+  ylab(TeX("$\\alpha$")) + xlab("Distance")
+}
+save(p,x,d,file = "alphaspatial.RData")
 load("alphaspatial.RData")
 ```
 
