@@ -263,9 +263,9 @@ if (method!="AGG") {return(list(pa,pmu,psig))}
 # save these objects for faster knitting
 # save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,file = "spatialobjects.RData")
 #plot_dist_param(site1=tmp_est1,site2=tmp_est2,site3=tmp_est3)
-tmp <- rbind(tmp_est1 %>% mutate("cond_site"=names(df_sites)[1]),tmp_est2 %>% mutate("cond_site"=names(df_sites)[2]),tmp_est3 %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
-map_param(tmp_est = tmp,method = "AGG",facet_var = "cond_site")[[1]]
-plot_map_param(tmp_est1=tmp_est1,tmp_est2=tmp_est2,tmp_est3=tmp_est3)[[1]]
+tmp <- rbind(tmp_est1 %>% add_row(.before=find_site_index(as.numeric(df_sites[,1]))) %>% mutate("cond_site"=names(df_sites)[1]),tmp_est2 %>% add_row(.before=find_site_index(as.numeric(df_sites[,2]))) %>% mutate("cond_site"=names(df_sites)[2]),tmp_est3 %>% add_row(.before=find_site_index(as.numeric(df_sites[,3]))) %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
+# separate spatial estimates (no Keef constraints)
+map_param(tmp_est = tmp,method = "AGG",facet_var = "cond_site")
 ```
 
 Now, the same approach with alpha values on the fitted exponential curve with distance, so we use estimates of $\hat{\alpha}$ to fit an exponential curve to as a function of distance of site $i$ from the conditioning site $j$.
@@ -287,6 +287,14 @@ Now, the same approach with alpha values on the fitted exponential curve with di
 # tmp_est3a <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential3",a=exp(-opt$par[1]*d[[cond_var]]))
 # # save these objects for faster knitting
 # save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,file = "spatialobjects.RData")
+index1 <- find_site_index(as.numeric(df_sites[,1]))
+index2 <- find_site_index(as.numeric(df_sites[,2]))
+index3 <- find_site_index(as.numeric(df_sites[,3]))
+                          
+tmp <- rbind(tmp_est1a %>%  add_row(.before=index1) %>% mutate("cond_site"=names(df_sites)[1]),tmp_est2a %>% add_row(.before=index2) %>% mutate("cond_site"=names(df_sites)[2]),tmp_est3a %>% add_row(.before=index3) %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
+# spatial sequantial estimates (parametric alpha, no Keef constraints)
+map_param(tmp_est = tmp,method = "AGG",facet_var = "cond_site")
+
 plot_map_param(tmp_est1=tmp_est1a,tmp_est2=tmp_est2a,tmp_est3=tmp_est3a)
 ```
 
@@ -337,6 +345,12 @@ plot_par_est_ite(newite = newite3)
 
 Plot also on a map.
 ```{r}
+index1 <- find_site_index(as.numeric(df_sites[,1]))
+index2 <- find_site_index(as.numeric(df_sites[,2]))
+index3 <- find_site_index(as.numeric(df_sites[,3]))
+                          
+tmp <- rbind(newite1 %>%  add_row(.before=index1) %>% mutate("cond_site"=names(df_sites)[1]), newite2 %>% add_row(.before=index2) %>% mutate("cond_site"=names(df_sites)[2]), newite3 %>% add_row(.before=index3) %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
+
 plot_map_param(tmp_est1 = newite1[[4]], tmp_est2 = newite2[[4]], tmp_est3 = newite3[[4]],method= "iterative_alpha",threesites = c("Bimingham","Glasgow","London"),indeces=c(find_site_index(Birmingham),find_site_index(Glasgow),find_site_index(London)))
 ```
 
@@ -409,6 +423,14 @@ plot_map_param(tmp_est1 = newite4[[4]], tmp_est2 = newite5[[4]], tmp_est3 = newi
 # cond_var <- find_site_index(Newcastle)
 # tmp_est6 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
 #plot_dist_param(site1=tmp_est4,site2=tmp_est5,site3=tmp_est6)
+
+index1 <- find_site_index(as.numeric(df_sites[,4]))
+index2 <- find_site_index(as.numeric(df_sites[,5]))
+index3 <- find_site_index(as.numeric(df_sites[,6]))
+                          
+tmp <- rbind(tmp_est4 %>%  add_row(.before=index1) %>% mutate("cond_site"=names(df_sites)[4]),tmp_est5 %>% add_row(.before=index2) %>% mutate("cond_site"=names(df_sites)[5]),tmp_est6 %>% add_row(.before=index3) %>% mutate("cond_site"=names(df_sites)[6])) %>% mutate(cond_site=factor(cond_site))
+
+
 plot_map_param(tmp_est1=tmp_est4,tmp_est2=tmp_est5,tmp_est3=tmp_est6,threesites = c("Inverness","Lancaster","Newcastle"),method="AGG",indeces=c(find_site_index(Inverness),find_site_index(Lancaster),find_site_index(Newcastle)))
 ```
 
