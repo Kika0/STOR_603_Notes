@@ -786,6 +786,11 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     facet_label <- levels(tmp_est$tau)
     nrow_facet <- 1
     legend_outside_size <- 0.1
+  } else if (facet_var=="q") {
+    Nfacet <- nrow(tmp_est)/445
+    facet_label <- levels(tmp_est$q)
+    nrow_facet <- 1
+    legend_outside_size <- 0.2 
   }
 
   tmp <- tmp_est %>% mutate(site_index = rep(1:445,Nfacet))
@@ -793,6 +798,9 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
   uk_temp_sf <- uk_temp_sf %>% mutate(site_index=1:445) %>% dplyr::select(site_index) %>% cbind(ukcp18[,1:8])
   uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index")) 
   uk_tmp1 <- st_as_sf(uk_tmp)
+  if (method=="q") {
+    pq <- tm_shape(uk_tmp1) + tm_dots(col="value",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+  }
   if (method=="AGG") {
   uk_tmp1 <- uk_tmp1 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
   }
@@ -843,6 +851,7 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,psigdiff,pdeltal,pdeltau,pdeltadiff)) 
     } else if (method=="Normal") {
     return(list(pa,pb,pmu,psig))
-  } else if (method=="max_tau") {return(list(pa,pa_tau))}
+    } else if (method=="max_tau") {return(list(pa,pa_tau))}
+  else if (method=="q") {return(pq)}
   else {return(list(pa,pmu,psig))}
 }

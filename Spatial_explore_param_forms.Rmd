@@ -649,3 +649,37 @@ ggplot(Y_given1extreme) + geom_point(aes(x=Y1,y=Y2))+ facet_wrap(~tau,ncol=7)
 
 ```
 
+Explore quantiles of the data (on the Laplace scale).
+
+```{r}
+cond_sites <- c("Birmingham","Inverness","Cromer")
+tmp <- est_all %>% filter(cond_site %in% cond_sites, tau %in% c("0"))
+q025 <- q075 <- numeric()
+for (i in 1:nrow(tmp)) {
+    # filter value of a and b
+  a <- as.numeric(tmp[i,5])
+  b <- as.numeric(tmp[i,6]) 
+  if (is.na(a)) {q025[i] <- q075[i] <- NA} else {
+  # find residual variable and cond.variable
+  cond_site <- find_site_index(as.numeric(df_sites[,tmp$cond_site[i]]))
+  res_site <- tmp$res[i]
+  # calculate Y1 and Yj
+  Y1_Y2 <- sims[,c(cond_site,res_site)] %>% filter(sims[,cond_site]>quantile(sims[,cond_site],v))
+  Y1 <- as.numeric(Y1_Y2[,1]) 
+  Y2 <- as.numeric(Y1_Y2[,2])
+  # calculate observed residuals
+  z <- (Y2-a*Y1)/(Y1^b)
+  # calculate q025 and q075
+  q025[i] <- a*Y1+Y1^b*quantile(z,0.25)
+  q075[i] <- a*Y1+Y1^b*quantile(z,0.75)
+  }
+}
+
+# join and map
+tmp <- tmp %>% mutate(q025,q075) %>%  pivot_longer(,cols=c(q025,q075),names_to = "q") %>% arrange(q) %>% mutate(q=factor(q)) 
+tmap_save(map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[1]),method = "q", facet_var = "q",title_map = cond_sites[1]),filename=paste0("../Documents/est_all_keef/q_",cond_sites[1],".png"),width=8,height=6)
+tmap_save(map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[2]),method = "q", facet_var = "q",title_map = cond_sites[2]),filename=paste0("../Documents/est_all_keef/q_",cond_sites[2],".png"),width=8,height=6)
+tmap_save(map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[3]),method = "q", facet_var = "q",title_map = cond_sites[3]),filename=paste0("../Documents/est_all_keef/q_",cond_sites[3],".png"),width=8,height=6)
+
+```
+
