@@ -87,6 +87,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         init_parb <- c(0.2,0,1)
         optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],control = list(fnscale=-1,maxit=2000))
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
+        Z2 <- (Y2-opta$par[1]*Y1)/(Y1^optb$par[1])
         mu_hat <- append(mu_hat,optb$par[length(optb$par)-1])
         sig_hat <- append(sig_hat,optb$par[length(optb$par)])         
         likb <- append(likb,-optb$value)
@@ -107,6 +108,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         #optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-Inf,0),upper = c(b_max,Inf,4),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
         optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_max=b_max,control = list(fnscale=-1,maxit=2000), method = "Nelder-Mead")
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
+        Z2 <- (Y2-opta$par[1]*Y1)/(Y1^optb$par[1])
         optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
         mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
         sig_hat <- append(sig_hat,optmusig$par[length(optmusig$par)])         
@@ -116,6 +118,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         init_parb <- c(0.2,0,1)
         optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=a_hat[i-1],control = list(fnscale=-1,maxit=2000))
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
+        Z2 <- (Y2-a_hat[i-1]*Y1)/(Y1^optb$par[1])
         optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=a_hat[i-1],b_hat=optb$par[2],control = list(fnscale=-1,maxit=2000))
         mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
         sig_hat <- append(sig_hat,optmusig$par[length(optmusig$par)])         
@@ -142,7 +145,6 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
       }
       
       if (margin=="GenGaus" & method!="one_step") {
-        Z2 <- (Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)])
         opt <- optim(fn=NLL_GenGaus,x=Z2,par=c(mean(Z2),sd(Z2),1.5),control=list(maxit=2000),method = "SANN")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
         sig_agg_hat <- append(sig_agg_hat,opt$par[2])
@@ -151,7 +153,6 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
       }
       
       if (margin=="AGG" & method!="one_step") {
-        Z2 <- (Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)])
         opt <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "SANN")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
         sig_agg_hat <- append(sig_agg_hat,opt$par[2])
@@ -161,7 +162,6 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
       }
       
       if (margin=="AGGsig" & method!="one_step") {
-        Z2 <- (Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)])
         opt <- optim(fn=NLL_AGGsig,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.5),control=list(maxit=2000),method = "SANN")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
         sigl_hat <- append(sigl_hat,opt$par[2])
@@ -170,8 +170,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         lik2 <- append(lik2,-opt$value)
       }
       if (margin=="AGGsigdelta" & method!="one_step") {
-        Z2 <- (Y2-a_hat[length(a_hat)]*Y1)/(Y1^b_hat[length(b_hat)])
-        opt <- optim(fn=NLL_AGGsigdelta,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "SANN")
+        opt <- optim(fn=NLL_AGGsigdelta,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
         sigl_hat <- append(sigl_hat,opt$par[2])
         sigu_hat <- append(sigu_hat,opt$par[3])
