@@ -87,20 +87,20 @@ Recall the plot of marginal estimates of $\alpha$ parameter against distance[m] 
 # use parameteric form for a ----
 # calculate distance from the 3 conditioning sites
 # transform dataframe to include a vector of x (temperature) and d (distance from the conditioning site)
-p <- list()
-x <- list()
-d <- list()
-for (i in 1:3) {
-  cond_var <- find_site_index(as.numeric(df_sites[,i]))
-x[[i]] <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
-d[[i]] <- (ukcp18)[-cond_var,] %>% select(6+i) %>% pull() %>% units::drop_units()
-opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x[[i]],d=d[[i]])
-# plot a function of alpha against distance
-a <- exp(-opt$par[1]*d[[i]])
-p[[i]] <- ggplot() + geom_line(data=data.frame(x=d[[i]],y=a),aes(x=x,y=y)) +
-  geom_point(data=data.frame(x=d[[i]],y=x[[i]]),aes(x=x,y=y)) +
-  ylab(TeX("$\\alpha$")) + xlab("Distance")
-}
+# p <- list()
+# x <- list()
+# d <- list()
+# for (i in 1:3) {
+#   cond_var <- find_site_index(as.numeric(df_sites[,i]))
+# x[[i]] <- par_est(sims,v=0.9,given=c(cond_var),margin = "AGG", method="sequential")$a
+# d[[i]] <- (ukcp18)[-cond_var,] %>% select(6+i) %>% pull() %>% units::drop_units()
+# opt <- optim(par=c(0.01,0.1),fn=NLL_exp_norm_noise,x=x[[i]],d=d[[i]])
+# # plot a function of alpha against distance
+# a <- exp(-opt$par[1]*d[[i]])
+# p[[i]] <- ggplot() + geom_line(data=data.frame(x=d[[i]],y=a),aes(x=x,y=y)) +
+#   geom_point(data=data.frame(x=d[[i]],y=x[[i]]),aes(x=x,y=y)) +
+#   ylab(TeX("$\\alpha$")) + xlab("Distance")
+# }
 save(p,x,d,file = "alphaspatial.RData")
 load("alphaspatial.RData")
 ```
@@ -156,6 +156,19 @@ Birmingham and London show a similar pattern, which suggest higher dependence de
 2.  Fix $\alpha=\hat{\alpha}$, estimate $\hat{\beta}$.
 3.  Fix $\alpha=\hat{\alpha}$ and $\beta=\hat{\beta}$, estimate $\hat{\mu}$ and $\hat{\sigma}$.
 4.  Calculate observed residuals, estimate $\hat{\mu}_{AGG}$, $\hat{\sigma}_{AGG}$, $\hat{\delta}_l$ and $\hat{\delta}_u$.
+```{r}
+est_all_nokeef <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
+                          "a" = numeric(), "b" = numeric(),
+                          "mu" = numeric(),"mu_agg" = numeric(),
+                          "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
+                          "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
+                          "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = character())
+for (i in 1:ncol(df_sites)) {
+    cond_site <- find_site_index(as.numeric(df_sites[,i]))
+    est_all_nokeef <- rbind(est_all,par_est(df=sims,v=v,given=cond_site,margin = "AGGsigdelta", method="sequential2",keef_constraints = c(0)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(0)))
+}
+
+```
 
 ```{r, include=FALSE}
 # function for plotting parameter estimates on a map and against distance
@@ -253,13 +266,14 @@ if (method!="AGG") {return(list(pa,pmu,psig))}
 ```
 
 ```{r, echo=FALSE}
-# v <- 0.9
-# cond_var <- 1
-# tmp_est1 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
-# cond_var <- 2
-# tmp_est2 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
-# cond_var <- 3
-# tmp_est3 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
+
+
+cond_var <- 1
+tmp_est1 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
+cond_var <- 2
+tmp_est2 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
+cond_var <- 3
+tmp_est3 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
 # save these objects for faster knitting
 # save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,file = "spatialobjects.RData")
 #plot_dist_param(site1=tmp_est1,site2=tmp_est2,site3=tmp_est3)
