@@ -775,20 +775,26 @@ find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::sele
 # function for plotting parameter estimates on a map and against distance
 map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="") {
   misscol <- "aquamarine"
-  if (facet_var == "cond_site") {
+  if (identical(facet_var,"cond_site")) {
     Nfacet <- length(unique(tmp_est$cond_site))
     facet_label <- levels(tmp_est$cond_site)
     nrow_facet <- round(length(unique(tmp_est$cond_site))/3)
     legend_outside_size <- 0.3
-  } else if (facet_var == "tau") {
+  } else if (identical(facet_var,"tau")) {
     Nfacet <- nrow(tmp_est)/445
     facet_label <- levels(tmp_est$tau)
     nrow_facet <- 1
     legend_outside_size <- 0.1
-  } else if (facet_var=="q") {
+  } else if (identical(facet_var,"q")) {
     Nfacet <- nrow(tmp_est)/445
     facet_label <- levels(tmp_est$q)
     nrow_facet <- 1
+    legend_outside_size <- 0.2 
+  } else if (identical(facet_var, c("q","tau"))) {
+    Nfacet <- nrow(tmp_est)/445
+    facet_label1 <- levels(tmp_est$q)   
+    facet_label2 <- levels(tmp_est$tau)
+#    nrow_facet <- 2
     legend_outside_size <- 0.2 
   }
 
@@ -798,8 +804,13 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
   uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index")) 
   uk_tmp1 <- st_as_sf(uk_tmp)
   if (method=="q") {
+    if (identical(facet_var,"q")) {
     pq <- tm_shape(uk_tmp1) + tm_dots(col="value",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
-  }
+    } else if (identical(facet_var, c("q","tau"))) {
+      pq <- tm_shape(uk_tmp1) + tm_dots(col="value",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    }
+    
+    }
   if (method=="AGG") {
   uk_tmp1 <- uk_tmp1 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
   }
