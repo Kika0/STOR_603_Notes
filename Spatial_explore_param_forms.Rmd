@@ -101,7 +101,7 @@ Recall the plot of marginal estimates of $\alpha$ parameter against distance[m] 
 #   geom_point(data=data.frame(x=d[[i]],y=x[[i]]),aes(x=x,y=y)) +
 #   ylab(TeX("$\\alpha$")) + xlab("Distance")
 # }
-save(p,x,d,file = "alphaspatial.RData")
+# save(p,x,d,est_all_nokeef,file = "alphaspatial.RData")
 load("alphaspatial.RData")
 ```
 
@@ -157,126 +157,21 @@ Birmingham and London show a similar pattern, which suggest higher dependence de
 3.  Fix $\alpha=\hat{\alpha}$ and $\beta=\hat{\beta}$, estimate $\hat{\mu}$ and $\hat{\sigma}$.
 4.  Calculate observed residuals, estimate $\hat{\mu}_{AGG}$, $\hat{\sigma}_{AGG}$, $\hat{\delta}_l$ and $\hat{\delta}_u$.
 ```{r}
-est_all_nokeef <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
-                          "a" = numeric(), "b" = numeric(),
-                          "mu" = numeric(),"mu_agg" = numeric(),
-                          "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
-                          "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
-                          "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = character())
-for (i in 1:ncol(df_sites)) {
-    cond_site <- find_site_index(as.numeric(df_sites[,i]))
-    est_all_nokeef <- rbind(est_all_nokeef,par_est(df=sims,v=v,given=cond_site,margin = "AGGsigdelta", method="sequential2",keef_constraints = c(0)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(0)))
-}
+# est_all_nokeef <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
+#                           "a" = numeric(), "b" = numeric(),
+#                           "mu" = numeric(),"mu_agg" = numeric(),
+#                           "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
+#                           "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
+#                           "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = character())
+# for (i in 1:ncol(df_sites)) {
+#     cond_site <- find_site_index(as.numeric(df_sites[,i]))
+#     est_all_nokeef <- rbind(est_all_nokeef,par_est(df=sims,v=v,given=cond_site,margin = "AGGsigdelta", method="sequential2",keef_constraints = c(0)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(0)))
+# }
+# est_all_nokeef <- est_all_nokeef %>% mutate(cond_site= factor(cond_site,levels=names(df_sites)))
 ```
 
-```{r, include=FALSE}
-# function for plotting parameter estimates on a map and against distance
-plot_map_param <- function(tmp_est1,tmp_est2,tmp_est3,method = "AGG",threesites=c("Birmingham","Glasgow","London"), indeces=1:3) {
-misscol <- "aquamarine"
-cond_var <- indeces[1]
-tmp <- tmp_est1 %>% mutate(given=factor(cond_var,levels = cond_var)) 
-tmp1 <- tmp %>% add_row(.before=cond_var)
-# match back to spatial locations and plot
-if (identical(indeces,1:3)) {
-uk_tmp1 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
-  arrange(is_location) %>% cbind(tmp1)
-}
-else {uk_tmp1 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8])  %>% cbind(tmp1) }
-if (method=="AGG") {
-uk_tmp1 <- uk_tmp1 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
-}
-
-cond_var <- indeces[2]
- tmp <- tmp_est2 %>% mutate(given=factor(cond_var,levels = cond_var))
-tmp1 <- tmp %>% add_row(.before=cond_var)
-# match back to spatial locations and plot
-if (identical(indeces,1:3)) {
-uk_tmp2 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
-  arrange(is_location) %>% cbind(tmp1)
-}
-else {uk_tmp2 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8])  %>% cbind(tmp1) }
-if (method=="AGG") {
-uk_tmp2 <- uk_tmp2 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
-}
-cond_var <- indeces[3]
- tmp <- tmp_est3 %>% mutate(given=factor(cond_var,levels = cond_var))
-tmp1 <- tmp %>% add_row(.before=cond_var)
-# match back to spatial locations and plot
-if (identical(indeces,1:3)) {
-uk_tmp3 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8]) %>% 
-  arrange(is_location) %>% cbind(tmp1)
-}
-else {uk_tmp3 <- uk_temp_sf %>% dplyr::select() %>% cbind(ukcp18[,1:8])  %>% cbind(tmp1) }
-if (method=="AGG") {
-uk_tmp3 <- uk_tmp3 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
-}
-
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$a),na.rm = TRUE),length.out=5)
-pa <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
- if (method=="AGG") {
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$b),na.rm = TRUE),length.out=6)
-pb <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
-}
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu),na.rm = TRUE),length.out=6)
-pmu <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3) 
-
-sigmax <- 3
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),min(max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sig),na.rm = TRUE),sigmax),length.out=6)
-psig <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter( is.na(sig) | sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
-if (method=="AGG") {
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),max(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$mu_agg),na.rm = TRUE),length.out=6)
-pmuagg <- tmap_arrange(tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
-
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigl),na.rm = TRUE),sigmax,length.out=6)
-psigl <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(sigl) | sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2 %>% filter(is.na(sigl) |sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(sigl) |sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
-
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigu),na.rm = TRUE),sigmax,length.out=6)
-psigu <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(sigu) | sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2 %>% filter(is.na(sigu) |sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(sigu) |sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
-
-lims <- seq(min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$sigdiff),na.rm = TRUE),sigmax,length.out=6)
-psigdiff <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(sigdiff) | sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",midpoint=0,colorNA=misscol,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2 %>% filter(is.na(sigdiff) |sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(sigdiff) |sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
-
-deltamax <- 5
-deltamin <- min(as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$deltal),as.numeric(rbind(uk_tmp1,uk_tmp2,uk_tmp3)$deltau),na.rm = TRUE)
-lims <- seq(deltamin,deltamax,length.out=6)
-pdeltal <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
-
-lims <- seq(deltamin,deltamax,length.out=6)
-pdeltau <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(deltau) | deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2 %>% filter(is.na(deltau) |deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(deltau) |deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
-
-deltamin <- -5
-lims <- seq(deltamin,deltamax,length.out=6)
-pdeltadiff <- tmap_arrange(tm_shape(uk_tmp1 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax&deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[1]),
-             tm_shape(uk_tmp2 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax&deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[2]),tm_shape(uk_tmp3 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax&deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims) + tm_layout(main.title=threesites[3]),ncol=3)
-return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,psigdiff,pdeltal,pdeltau,pdeltadiff)) 
-}
-if (method!="AGG") {return(list(pa,pmu,psig))}
-}
-```
 
 ```{r, echo=FALSE}
-
-
-cond_var <- 1
-tmp_est1 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
-cond_var <- 2
-tmp_est2 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
-cond_var <- 3
-tmp_est3 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
-# save these objects for faster knitting
-# save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,file = "spatialobjects.RData")
-#plot_dist_param(site1=tmp_est1,site2=tmp_est2,site3=tmp_est3)
-tmp <- rbind(tmp_est1 %>% add_row(.before=find_site_index(as.numeric(df_sites[,1]))) %>% mutate("cond_site"=names(df_sites)[1]),tmp_est2 %>% add_row(.before=find_site_index(as.numeric(df_sites[,2]))) %>% mutate("cond_site"=names(df_sites)[2]),tmp_est3 %>% add_row(.before=find_site_index(as.numeric(df_sites[,3]))) %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
 # separate spatial estimates (no Keef constraints)
 map_param(tmp_est = est_all_nokeef %>% filter(cond_site %in% names(df_sites)[1:3]),method = "AGG",facet_var = "cond_site")
 ```
@@ -358,13 +253,15 @@ plot_par_est_ite(newite = newite3)
 
 Plot also on a map.
 ```{r}
-index1 <- find_site_index(as.numeric(df_sites[,1]))
-index2 <- find_site_index(as.numeric(df_sites[,2]))
-index3 <- find_site_index(as.numeric(df_sites[,3]))
-                          
-tmp <- rbind(newite1 %>%  add_row(.before=index1) %>% mutate("cond_site"=names(df_sites)[1]), newite2 %>% add_row(.before=index2) %>% mutate("cond_site"=names(df_sites)[2]), newite3 %>% add_row(.before=index3) %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
+# index1 <- find_site_index(as.numeric(df_sites[,1]))
+# index2 <- find_site_index(as.numeric(df_sites[,2]))
+# index3 <- find_site_index(as.numeric(df_sites[,3]))
+#                           
+# tmp <- rbind(newite1 %>%  add_row(.before=index1) %>% mutate("cond_site"=names(df_sites)[1]), newite2 %>% add_row(.before=index2) %>% mutate("cond_site"=names(df_sites)[2]), newite3 %>% add_row(.before=index3) %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
 
 plot_map_param(tmp_est1 = newite1[[4]], tmp_est2 = newite2[[4]], tmp_est3 = newite3[[4]],method= "iterative_alpha",threesites = c("Bimingham","Glasgow","London"),indeces=c(find_site_index(Birmingham),find_site_index(Glasgow),find_site_index(London)))
+
+
 ```
 
 ## Conditioning on any random site
@@ -428,24 +325,6 @@ plot_map_param(tmp_est1 = newite4[[4]], tmp_est2 = newite5[[4]], tmp_est3 = newi
 ## Sequential parameter estimation: $3$ new sites
 
 ```{r, echo=FALSE}
-# v <- 0.9
-# cond_var <- find_site_index(Inverness)
-# tmp_est4 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
-# cond_var <- find_site_index(Lancaster)
-# tmp_est5 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
-# cond_var <- find_site_index(Newcastle)
-# tmp_est6 <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential2")
-#plot_dist_param(site1=tmp_est4,site2=tmp_est5,site3=tmp_est6)
-
-index1 <- find_site_index(as.numeric(df_sites[,4]))
-index2 <- find_site_index(as.numeric(df_sites[,5]))
-index3 <- find_site_index(as.numeric(df_sites[,6]))
-                          
-tmp <- rbind(tmp_est4 %>%  add_row(.before=index1) %>% mutate("cond_site"=names(df_sites)[4]),tmp_est5 %>% add_row(.before=index2) %>% mutate("cond_site"=names(df_sites)[5]),tmp_est6 %>% add_row(.before=index3) %>% mutate("cond_site"=names(df_sites)[6])) %>% mutate(cond_site=factor(cond_site))
-
-
-plot_map_param(tmp_est1=tmp_est4,tmp_est2=tmp_est5,tmp_est3=tmp_est6,threesites = c("Inverness","Lancaster","Newcastle"),method="AGG",indeces=c(find_site_index(Inverness),find_site_index(Lancaster),find_site_index(Newcastle)))
-
 map_param(tmp_est = est_all_nokeef %>% filter(cond_site %in% names(df_sites)[4:6]),method = "AGG",facet_var = "cond_site")
 ```
 
@@ -496,8 +375,6 @@ plot_map_param(tmp_est1 = newite7[[4]], tmp_est2 = newite8[[4]], tmp_est3 = newi
 ```{r}
 # # save these objects for faster knitting
 # save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,tmp_est4,tmp_est5,tmp_est6,tmp_est4a,tmp_est5a,tmp_est6a,tmp_est7,tmp_est8,tmp_est9,tmp_est10,tmp_est11,tmp_est12,newite1,newite2,newite3,newite4,newite5,newite6,newite7,newite8,newite9,file = "spatialobjects.RData")
-
-plot_map_param(tmp_est1=tmp_est7,tmp_est2=tmp_est8,tmp_est3=tmp_est9,threesites = c("Cromer","Hull","Lowestoft"),method="AGG",indeces=c(find_site_index(Cromer),find_site_index(Hull),find_site_index(Lowestoft)))
 
 map_param(tmp_est = est_all_nokeef %>% filter(cond_site %in% names(df_sites)[7:9]),method = "AGG",facet_var = "cond_site")
 ```
@@ -640,7 +517,7 @@ Explore quantiles of the data (on the Laplace scale).
 
 ```{r}
 cond_sites <- c("Birmingham","Inverness","Cromer")
-tmp <- est_all %>% filter(cond_site %in% cond_sites, tau %in% c("0"))
+tmp <- est_all %>% filter(cond_site %in% cond_sites)
 q025 <- q075 <- numeric()
 for (i in 1:nrow(tmp)) {
     # filter value of a and b
@@ -651,6 +528,9 @@ for (i in 1:nrow(tmp)) {
   cond_site <- find_site_index(as.numeric(df_sites[,tmp$cond_site[i]]))
   res_site <- tmp$res[i]
   # calculate Y1 and Yj
+  sims_tau <- shift_time(sims=sims,cond_site=cond_site1,tau=est_all$tau[i]) %>% select(all_of(c(cond_site1,res_site))) 
+names(sims_tau) <- c("Y1","Y2")
+
   Y1_Y2 <- sims[,c(cond_site,res_site)] %>% filter(sims[,cond_site]>quantile(sims[,cond_site],v))
   Y1 <- as.numeric(Y1_Y2[,1]) 
   Y2 <- as.numeric(Y1_Y2[,2])
@@ -667,6 +547,11 @@ tmp <- tmp %>% mutate(q025,q075) %>%  pivot_longer(,cols=c(q025,q075),names_to =
 tmap_save(map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[1]),method = "q", facet_var = "q",title_map = cond_sites[1]),filename=paste0("../Documents/est_all_keef/q_",cond_sites[1],".png"),width=8,height=6)
 tmap_save(map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[2]),method = "q", facet_var = "q",title_map = cond_sites[2]),filename=paste0("../Documents/est_all_keef/q_",cond_sites[2],".png"),width=8,height=6)
 tmap_save(map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[3]),method = "q", facet_var = "q",title_map = cond_sites[3]),filename=paste0("../Documents/est_all_keef/q_",cond_sites[3],".png"),width=8,height=6)
+```
+
+Explore also for different temporal lags $\tau$.
+
+```{r}
 
 ```
 
