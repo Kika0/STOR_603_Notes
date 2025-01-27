@@ -195,13 +195,13 @@ Now, the same approach with alpha values on the fitted exponential curve with di
 # tmp_est3a <- par_est(sims,v=v,given=c(cond_var),margin = "AGGsigdelta", method="sequential3",a=exp(-opt$par[1]*d[[cond_var]]))
 # # save these objects for faster knitting
 # save(uk,uk_temp_sf,tmp_est1,tmp_est2,tmp_est3,tmp_est1a,tmp_est2a,tmp_est3a,file = "spatialobjects.RData")
-index1 <- find_site_index(as.numeric(df_sites[,1]))
-index2 <- find_site_index(as.numeric(df_sites[,2]))
-index3 <- find_site_index(as.numeric(df_sites[,3]))
-                          
-tmp <- rbind(tmp_est1a %>%  add_row(.before=index1) %>% mutate("cond_site"=names(df_sites)[1]),tmp_est2a %>% add_row(.before=index2) %>% mutate("cond_site"=names(df_sites)[2]),tmp_est3a %>% add_row(.before=index3) %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
-# spatial sequantial estimates (parametric alpha, no Keef constraints)
-map_param(tmp_est = tmp,method = "AGG",facet_var = "cond_site")
+# index1 <- find_site_index(as.numeric(df_sites[,1]))
+# index2 <- find_site_index(as.numeric(df_sites[,2]))
+# index3 <- find_site_index(as.numeric(df_sites[,3]))
+#                           
+# tmp <- rbind(tmp_est1a %>%  add_row(.before=index1) %>% mutate("cond_site"=names(df_sites)[1]),tmp_est2a %>% add_row(.before=index2) %>% mutate("cond_site"=names(df_sites)[2]),tmp_est3a %>% add_row(.before=index3) %>% mutate("cond_site"=names(df_sites)[3])) %>% mutate(cond_site=factor(cond_site))
+# # spatial sequantial estimates (parametric alpha, no Keef constraints)
+# map_param(tmp_est = tmp,method = "AGG",facet_var = "cond_site")
 
 plot_map_param(tmp_est1=tmp_est1a,tmp_est2=tmp_est2a,tmp_est3=tmp_est3a)
 ```
@@ -483,6 +483,7 @@ res_site <- find_site_index(as.numeric(df_sites[,9])) #column 9 "Lowestoft"
 tmp <- est_all %>% filter(cond_site==names(df_sites)[10],res==res_site) %>% select(a,b,res,cond_site,tau)
 tmp
 ```
+
 Scatterplot of $(Y_{172},Y_{Truro}| Y_{Truro}>v$.
 
 ```{r}
@@ -495,6 +496,7 @@ Y_given1extreme <- sims_tau %>% filter(sims_tau[,1]>quantile(sims_tau[,1],v))
 ggplot(Y_given1extreme) + geom_point(aes(x=Y1,y=Y2)) # laplace margins look fine
 ggplot(sims_tau) + geom_density(aes(x=Y2)) # Y1 and Y2 have Laplace margins
 ```
+
 Explore how a scatterplot varies for different $\tau$.
 
 ```{r}
@@ -525,13 +527,12 @@ for (i in 1:nrow(tmp)) {
   b <- as.numeric(tmp[i,6]) 
   if (is.na(a)) {q025[i] <- q075[i] <- NA} else {
   # find residual variable and cond.variable
-  cond_site <- find_site_index(as.numeric(df_sites[,tmp$cond_site[i]]))
+  cond_site. <- find_site_index(as.numeric(df_sites[,tmp$cond_site[i]]))
   res_site <- tmp$res[i]
   # calculate Y1 and Yj
-  sims_tau <- shift_time(sims=sims,cond_site=cond_site1,tau=est_all$tau[i]) %>% select(all_of(c(cond_site1,res_site))) 
-names(sims_tau) <- c("Y1","Y2")
-
-  Y1_Y2 <- sims[,c(cond_site,res_site)] %>% filter(sims[,cond_site]>quantile(sims[,cond_site],v))
+  sims_tau <- shift_time(sims=sims,cond_site=cond_site.,tau=as.numeric(est_all$tau[i])) %>% select(all_of(c(cond_site.,res_site))) 
+  names(sims_tau) <- c("Y1","Y2")
+  Y1_Y2 <- sims_tau %>% filter(sims_tau[,1]>quantile(sims_tau[,1],v))
   Y1 <- as.numeric(Y1_Y2[,1]) 
   Y2 <- as.numeric(Y1_Y2[,2])
   # calculate observed residuals
@@ -543,7 +544,9 @@ names(sims_tau) <- c("Y1","Y2")
 }
 
 # join and map
-tmp <- tmp %>% mutate(q025,q075) %>%  pivot_longer(,cols=c(q025,q075),names_to = "q") %>% arrange(q) %>% mutate(q=factor(q)) 
+tmp <- tmp %>% mutate(q025,q075) %>%  pivot_longer(,cols=c(q025,q075),names_to = "q") %>% arrange(q) %>% mutate(q=factor(q)) %>% mutate(tau=factor(as.character(tau),levels=unique(as.character(tmp$tau))))
+map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[1]),method = "q", facet_var = c("q","tau"),title_map = cond_sites[1])
+
 tmap_save(map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[1]),method = "q", facet_var = "q",title_map = cond_sites[1]),filename=paste0("../Documents/est_all_keef/q_",cond_sites[1],".png"),width=8,height=6)
 tmap_save(map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[2]),method = "q", facet_var = "q",title_map = cond_sites[2]),filename=paste0("../Documents/est_all_keef/q_",cond_sites[2],".png"),width=8,height=6)
 tmap_save(map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[3]),method = "q", facet_var = "q",title_map = cond_sites[3]),filename=paste0("../Documents/est_all_keef/q_",cond_sites[3],".png"),width=8,height=6)
