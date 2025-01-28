@@ -170,7 +170,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         lik2 <- append(lik2,-opt$value)
       }
       if (margin=="AGGsigdelta" & method!="one_step") {
-        opt <- optim(fn=NLL_AGGsigdelta,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+        opt <- optim(fn=NLL_AGGsigdelta,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "SANN")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
         sigl_hat <- append(sigl_hat,opt$par[2])
         sigu_hat <- append(sigu_hat,opt$par[3])
@@ -792,8 +792,8 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     legend_outside_size <- 0.2 
   } else if (identical(facet_var[2], c("tau"))) {
     Nfacet <- nrow(tmp_est)/445
-    facet_label1 <- levels(tmp_est$q)   
-    facet_label2 <- levels(tmp_est$tau)
+#    facet_label1 <- levels(tmp_est$q)   
+#    facet_label2 <- levels(tmp_est$tau)
 #    nrow_facet <- 2
     legend_outside_size <- 0.2 
   }
@@ -807,12 +807,19 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     if (identical(facet_var,"q")) {
     pq <- tm_shape(uk_tmp1) + tm_dots(col="value",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     } else if (identical(facet_var, c("q","tau"))) {
-      pq <- tm_shape(uk_tmp1) + tm_dots(col="value",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+      pq <- tm_shape(uk_tmp1) + tm_dots(col="value",style="cont",size=0.3,palette="Blues",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     } else if (identical(facet_var, c("rl","tau"))) {
-      pq <- tm_shape(uk_tmp1) + tm_dots(col="rl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+      pq <- tm_shape(uk_tmp1) + tm_dots(col="rl",style="cont",size=0.3,palette="Blues",colorNA=misscol,title="Return level (days)", textNA = "Conditioning site") + tm_facets(by=c("q","tau")) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    } else if (identical(facet_var, c("cond_site","tau"))) {
+      pq <- tm_shape(uk_tmp1) + tm_dots(col="value",style="cont",size=0.3,palette="Blues",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     }
     
+  }
+  if (method=="rl") {
+    if (identical(facet_var, c("cond_site","tau"))) {
+      pq <- tm_shape(uk_tmp1) + tm_dots(col="rl",style="cont",size=0.3,palette="Blues",colorNA=misscol,title="Return level (days)", textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     }
+  }
   if (method=="AGG") {
   uk_tmp1 <- uk_tmp1 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
   }
@@ -866,6 +873,6 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     } else if (method=="Normal") {
     return(list(pa,pb,pmu,psig))
     } else if (method=="max_tau") {return(list(pa,pa_tau))}
-  else if (method=="q") {return(pq)}
+  else if (method %in% c("q","rl")) {return(pq)}
   else {return(list(pa,pmu,psig))}
 }
