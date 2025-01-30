@@ -411,19 +411,19 @@ return(sims_tau)
 Run for all the 12 sites.
 
 ```{r}
-# est_all <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
-#                           "a" = numeric(), "b" = numeric(),
-#                           "mu" = numeric(),"mu_agg" = numeric(),
-#                           "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
-#                           "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
-#                           "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
-# for (i in 1:ncol(df_sites)) {
-#   cond_site <- find_site_index(as.numeric(df_sites[,i]))
-#   for (j in 1:length(dayshift)) {
-#     sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[j])
-#     est_all <- rbind(est_all,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGGsigdelta", method="sequential2",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(dayshift[j])))
-#   }
-# }
+est_all <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
+                          "a" = numeric(), "b" = numeric(),
+                          "mu" = numeric(),"mu_agg" = numeric(),
+                          "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
+                          "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
+                          "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
+for (i in 1:ncol(df_sites)) {
+  cond_site <- find_site_index(as.numeric(df_sites[,i]))
+  for (j in 1:length(dayshift)) {
+    sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[j])
+    est_all <- rbind(est_all,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGGsigdelta", method="sequential2",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(dayshift[j])))
+  }
+}
 ```
 
 Map and save for all sites.
@@ -433,7 +433,7 @@ Map and save for all sites.
 # save(est_all,file="est_all.RData")
 
 load("est_all.RData")
-#condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
+# condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
 # condmodel_params <- c("a","b","mu","sig")
 # for (i in 1:ncol(df_sites)) {
 # tau_site_map <- map_param(tmp_est=est_all %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i])
@@ -520,54 +520,52 @@ ggplot(Y_given1extreme) + geom_point(aes(x=Y1,y=Y2))+ facet_wrap(~tau,ncol=7)
 Explore quantiles of the data (on the Laplace scale).
 
 ```{r}
-# cond_sites <- c("Birmingham","Inverness","Cromer")
-# tmp <- est_all %>% filter(cond_site %in% cond_sites)
-# x0999 <- unif_laplace_pit(0.999)
-# q025 <- q075 <- numeric()
-# for (i in 1:nrow(tmp)) {
-#     # filter value of a and b
-#   a <- as.numeric(tmp[i,5])
-#   b <- as.numeric(tmp[i,6]) 
-#   if (is.na(a)) {q025[i] <- q075[i] <- NA} else {
-#   # find residual variable and cond.variable
-#   cond_site. <- find_site_index(as.numeric(df_sites[,tmp$cond_site[i]]))
-#   res_site <- tmp$res[i]
-#   # calculate Y1 and Yj
-#   sims_tau <- shift_time(sims=sims,cond_site=cond_site.,tau=as.numeric(est_all$tau[i])) %>% select(all_of(c(cond_site.,res_site))) 
-#   names(sims_tau) <- c("Y1","Y2")
-#   Y1_Y2 <- sims_tau %>% filter(sims_tau[,1]>quantile(sims_tau[,1],v))
-#   Y1 <- as.numeric(Y1_Y2[,1]) 
-#   Y2 <- as.numeric(Y1_Y2[,2])
-#   # calculate observed residuals
-#   z <- (Y2-a*Y1)/(Y1^b)
-#   # calculate q025 and q075
-#   q025[i] <- a*x0999+x0999^b*quantile(z,0.25)
-#   q075[i] <- a*x0999+x0999^b*quantile(z,0.75)
-#   }
-# }
-# 
-# # join and map
-# tmp <- tmp %>% mutate(q025,q075) %>%  pivot_longer(,cols=c(q025,q075),names_to = "q") %>% arrange(q) %>% mutate(q=factor(q)) %>% mutate(tau=factor(as.character(tau),levels=unique(as.character(tmp$tau))))
-# 
-# map_param(tmp_est=tmp %>% filter(cond_site==cond_sites[1]),method = "q", facet_var = c("q","tau"),title_map = cond_sites[1])
-# 
-# rl025 <- sapply(1:length(q025),function(i){1/(1-pgnorm(q=q025[i]))}) 
-# rl075 <- sapply(1:length(q075),function(i){1/(1-pgnorm(q=q075[i]))}) 
-# tmp <- tmp %>% mutate(rl=c(rl025,rl075))
-# tmp025 <- tmp %>% filter(q=="q025")
-# tmp075 <- tmp %>% filter(q=="q075")
-# 
-# # save for all cond_sites
+cond_sites <- c("Birmingham","Inverness","Cromer")
+tmp <- est_all %>% filter(cond_site %in% cond_sites)
+x0999 <- unif_laplace_pit(0.999)
+q025 <- q075 <- numeric()
+for (i in 1:nrow(tmp)) {
+    # filter value of a and b
+  a <- as.numeric(tmp[i,5])
+  b <- as.numeric(tmp[i,6])
+  if (is.na(a)) {q025[i] <- q075[i] <- NA} else {
+  # find residual variable and cond.variable
+  cond_site. <- find_site_index(as.numeric(df_sites[,tmp$cond_site[i]]))
+  res_site <- tmp$res[i]
+  # calculate Y1 and Yj
+  sims_tau <- shift_time(sims=sims,cond_site=cond_site.,tau=as.numeric(as.character(est_all$tau[i]))) %>% select(all_of(c(cond_site.,res_site)))
+  names(sims_tau) <- c("Y1","Y2")
+  Y1_Y2 <- sims_tau %>% filter(sims_tau[,1]>quantile(sims_tau[,1],v))
+  Y1 <- as.numeric(Y1_Y2[,1])
+  Y2 <- as.numeric(Y1_Y2[,2])
+  # calculate observed residuals
+  z <- (Y2-a*Y1)/(Y1^b)
+  # calculate q025 and q075
+  q025[i] <- a*x0999+x0999^b*quantile(z,0.25)
+  q075[i] <- a*x0999+x0999^b*quantile(z,0.75)
+  }
+}
+
+# join and map
+tmp <- tmp %>% mutate(q025,q075) %>%  pivot_longer(,cols=c(q025,q075),names_to = "q") %>% arrange(q) %>% mutate(q=factor(q)) %>% mutate(tau=factor(as.character(tau),levels=unique(as.character(tmp$tau))))
+
+rl025 <- sapply(1:length(q025),function(i){1/(1-pgnorm(q=q025[i]))})
+rl075 <- sapply(1:length(q075),function(i){1/(1-pgnorm(q=q075[i]))})
+tmp <- tmp %>% mutate(rl=c(rl025,rl075))
+tmp025 <- tmp %>% filter(q=="q025")
+tmp075 <- tmp %>% filter(q=="q075")
+
+# save for all cond_sites
 # for (i in 1:length(cond_sites)) {
 # tmap_save(map_param(tmp_est=tmp025 %>% filter(cond_site==cond_sites[i]),method = "q", facet_var = c("q","tau"),title_map = cond_sites[i]),filename=paste0("../Documents/est_all_keef/q025_tau_",cond_sites[i],".png"),width=12,height=4.5)
-#   tmap_save(map_param(tmp_est=tmp075 %>% filter(cond_site==cond_sites[i]),method = "q", facet_var = c("q","tau"),title_map = cond_sites[i]),filename=paste0("../Documents/est_all_keef/q075_tau_",cond_sites[i],".png"),width=12,height=4.5)
+# tmap_save(map_param(tmp_est=tmp075 %>% filter(cond_site==cond_sites[i]),method = "q", facet_var = c("q","tau"),title_map = cond_sites[i]),filename=paste0("../Documents/est_all_keef/q075_tau_",cond_sites[i],".png"),width=12,height=4.5)
 # }
 
-# tmap_save(map_param(tmp_est=tmp025,method = "q", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.25$")),filename=paste0("../Documents/est_all_keef/q025_tau.png"),width=12,height=9.5)
-# tmap_save(map_param(tmp_est=tmp025,method = "rl", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.25$")),filename=paste0("../Documents/est_all_keef/rl025_tau.png"),width=12,height=9.5)
-# 
-# tmap_save(map_param(tmp_est=tmp075,method = "q", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.75$")),filename=paste0("../Documents/est_all_keef/q075_tau.png"),width=12,height=9.5)
-# tmap_save(map_param(tmp_est=tmp075,method = "rl", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.75$")),filename=paste0("../Documents/est_all_keef/rl075_tau.png"),width=12,height=9.5)
+tmap_save(map_param(tmp_est=tmp025,method = "q", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.25$")),filename=paste0("../Documents/est_all_keef/q025_tau.png"),width=12,height=9.5)
+tmap_save(map_param(tmp_est=tmp025,method = "rl", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.25$")),filename=paste0("../Documents/est_all_keef/rl025_tau.png"),width=12,height=9.5)
+
+tmap_save(map_param(tmp_est=tmp075,method = "q", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.75$")),filename=paste0("../Documents/est_all_keef/q075_tau.png"),width=12,height=9.5)
+tmap_save(map_param(tmp_est=tmp075,method = "rl", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.75$")),filename=paste0("../Documents/est_all_keef/rl075_tau.png"),width=12,height=9.5)
 
 # for (i in 1:length(cond_sites)) {
 # tmap_save(map_param(tmp_est=tmp025 %>% filter(cond_site==cond_sites[i]),method = "q", facet_var = c("rl","tau"),title_map = cond_sites[i]),filename=paste0("../Documents/est_all_keef/rl025_tau_",cond_sites[i],".png"),width=12,height=4.5)
