@@ -816,6 +816,12 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
       pq <- tm_shape(uk_tmp1) + tm_dots(col="rl",n=8,style="quantile",size=0.3,palette="Blues",colorNA=misscol,title="Return level (days)", textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     }
   }
+  if (method=="rldiff") {
+    if (identical(facet_var, c("cond_site","tau"))) {
+      pq <- tm_shape(uk_tmp1) + tm_dots(col="rldiff",n=8,style="quantile",size=0.3,palette="Blues",colorNA=misscol,title="Return level difference (days)", textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    }
+  }
+  
   if (method=="AGG") {
   uk_tmp1 <- uk_tmp1 %>% mutate(sigdiff=sigu-sigl) %>% mutate(deltadiff=deltau-deltal)
   }
@@ -869,6 +875,6 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     } else if (method=="Normal") {
     return(list(pa,pb,pmu,psig))
     } else if (method=="max_tau") {return(list(pa,pa_tau))}
-  else if (method %in% c("q","rl")) {return(pq)}
+  else if (method %in% c("q","rl","rldiff")) {return(pq)}
   else {return(list(pa,pmu,psig))}
 }

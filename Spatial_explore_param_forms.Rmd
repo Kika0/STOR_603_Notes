@@ -554,7 +554,7 @@ rl075 <- sapply(1:length(q075),function(i){1/(1-pgnorm(q=q075[i]))})
 tmp <- tmp %>% mutate(rl=c(rl025,rl075))
 tmp025 <- tmp %>% filter(q=="q025")
 tmp075 <- tmp %>% filter(q=="q075")
-
+tmpdiff <- tmp %>% filter(q=="q025") %>% mutate(rldiff=(rl075-rl025)) %>% select(cond_site,tau,rldiff)
 # save for all cond_sites
 # for (i in 1:length(cond_sites)) {
 # tmap_save(map_param(tmp_est=tmp025 %>% filter(cond_site==cond_sites[i]),method = "q", facet_var = c("q","tau"),title_map = cond_sites[i]),filename=paste0("../Documents/est_all_keef/q025_tau_",cond_sites[i],".png"),width=12,height=4.5)
@@ -566,6 +566,10 @@ tmap_save(map_param(tmp_est=tmp025,method = "rl", facet_var = c("cond_site","tau
 
 tmap_save(map_param(tmp_est=tmp075,method = "q", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.75$")),filename=paste0("../Documents/est_all_keef/q075_tau.png"),width=12,height=9.5)
 tmap_save(map_param(tmp_est=tmp075,method = "rl", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.75$")),filename=paste0("../Documents/est_all_keef/rl075_tau.png"),width=12,height=9.5)
+
+# plot return level difference
+tmap_save(map_param(tmp_est=tmpdiff,method = "rldiff", facet_var = c("cond_site","tau"),title_map = TeX("")),filename=paste0("../Documents/est_all_keef/rldiff_tau.png"),width=12,height=9.5)
+
 
 # for (i in 1:length(cond_sites)) {
 # tmap_save(map_param(tmp_est=tmp025 %>% filter(cond_site==cond_sites[i]),method = "q", facet_var = c("rl","tau"),title_map = cond_sites[i]),filename=paste0("../Documents/est_all_keef/rl025_tau_",cond_sites[i],".png"),width=12,height=4.5)
