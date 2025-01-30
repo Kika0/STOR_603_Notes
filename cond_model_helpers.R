@@ -510,10 +510,10 @@ simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
   par_sum <- data.frame(matrix(nrow=5,ncol=0))
   
   # Y_not_1_extreme <- df %>% filter(Y_1<quantile(Y_1,v))
-  Z_2 <- c()
-  Z_3 <- c()
-  Z_N_2 <- c()
-  Z_N_3 <- c()
+  Z2 <- c()
+  Z3 <- c()
+  ZN2 <- c()
+  ZN3 <- c()
   j <- given
   cond_colours <- c("#C11432","#66A64F","#009ADA")
   d <- ncol(df)
@@ -534,54 +534,54 @@ simulated <- function(sims=sims,v=0.9,sim_threshold=0.999,given=1) {
   sig_hat <- c(opt[[1]]$par[4],opt[[2]]$par[4])
   
   # generate residual Z ----
-  Y_1 <- Y_given1extreme[,j]
-  Y_2 <- Y_given1extreme[,res[1]]
-  Y_3 <- Y_given1extreme[,res[2]]
+  Y1 <- Y_given1extreme[,j]
+  Y2 <- Y_given1extreme[,res[1]]
+  Y3 <- Y_given1extreme[,res[2]]
   
-  tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
-  tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
+  tmp_z2 <- (Y2-a_hat[1]*Y1)/(Y1^b_hat[1])
+  tmp_z3 <- (Y_3-a_hat[2]*Y1)/(Y1^b_hat[2])
   
-  Z_2 <- append(Z_2,tmp_z2)
-  Z_3 <- append(Z_3,tmp_z3)
+  Z2 <- append(Z2,tmp_z2)
+  Z3 <- append(Z3,tmp_z3)
   given <- append(given,rep(j,500))
   
   # calculate the normal using the PIT
-  Z_N_2 <- append(Z_N_2,qnorm(F_smooth_Z(tmp_z2)))
-  Z_N_3 <- append(Z_N_3,qnorm(F_smooth_Z(tmp_z3)))
+  ZN2 <- append(ZN2,qnorm(F_smooth_Z(tmp_z2)))
+  ZN3 <- append(ZN3,qnorm(F_smooth_Z(tmp_z3)))
   
-  rho_hat <- cor(Z_N_2,Z_N_3)
+  rho_hat <- cor(ZN2,ZN3)
   # generate from normal
   
-  Z_N <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
-  Z <- data.frame(Z_2,Z_3)
+  ZN <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
+  Z <- data.frame(Z2,Z3)
   
   # transform back to original margins
-  Z_star <- norm_to_orig(Z_N=Z_N,emp_res = Z)
+  Z_star <- norm_to_orig(ZN=ZN,emp_res = Z)
   
   U <- runif(1000)
-  Y_1_gen <- -log(2*(1-0.999)) + rexp(1000)
-  Gen_Y_1 <- data.frame(Y_1=Y_1_gen)
+  Y1_gen <- -log(2*(1-0.999)) + rexp(1000)
+  Gen_Y1 <- data.frame(Y1=Y1_gen)
   
   # for each Y, generate a residual and calculate Y_2
-  Y_1 <- Y_given1extreme[,j]
+  Y1 <- Y_given1extreme[,j]
   # Y_2 <- a_hat*Y_1 + Y_1^b_hat *x
   # Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
-  Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,1]
-  Y_3 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,2]
-  Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2,Y_3=Y_3) %>% mutate(sim=rep("conditional_model",1000))
+  Y2 <- a_hat*Y1 + Y1^b_hat *Z_star[,1]
+  Y3 <-  a_hat*Y1 + Y1^b_hat *Z_star[,2]
+  Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2,Y3=Y3) %>% mutate(sim=rep("conditional_model",1000))
   # generate Y_1 (extrapolate so above largest observed value)
   
   #plot
-  Y_2 <- Y_given1extreme[,res[1]]
-  Y_3 <- Y_given1extreme[,res[2]]
+  Y2 <- Y_given1extreme[,res[1]]
+  Y3 <- Y_given1extreme[,res[2]]
   thres <- frechet_laplace_pit( qfrechet(0.999))
   
-  Gen_orig <- rbind(Gen_Y_1,data.frame(Y_1,Y_2,Y_3) %>% mutate(sim=rep("original_laplace",500)))
-  p1 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_2,col=sim),alpha=0.5) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
+  Gen_orig <- rbind(Gen_Y1,data.frame(Y1,Y2,Y3) %>% mutate(sim=rep("original_laplace",500)))
+  p1 <- ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
     scale_color_manual(values = c("original_laplace"="black","conditional_model" = cond_colours[j])) 
-  p2 <- ggplot(Gen_orig) + geom_point(aes(x=Y_2,y=Y_3,col=sim),alpha=0.5) + 
+  p2 <- ggplot(Gen_orig) + geom_point(aes(x=Y2,y=Y3,col=sim),alpha=0.5) + 
     scale_color_manual(values = c("original_laplace"="black","conditional_model" = cond_colours[j]))  + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed")
-  p3 <- ggplot(Gen_orig) + geom_point(aes(x=Y_1,y=Y_3,col=sim),alpha=0.5) + 
+  p3 <- ggplot(Gen_orig) + geom_point(aes(x=Y1,y=Y3,col=sim),alpha=0.5) + 
     scale_color_manual(values = c("original_laplace"="black","conditional_model" = cond_colours[j]))  + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed")
   p <- grid.arrange(p1,p2,p3,ncol=3)
   # par_sum <- cbind(par_sum,data.frame(matrix(round(c(a_hat,b_hat,mu_hat,sig_hat,rep(rho_hat,2)),3),nrow=5,ncol=2,byrow=TRUE)))
@@ -594,9 +594,9 @@ plot_cond_quantile <- function(sims=sims,v=0.99) {
 df <- sims %>% dplyr::select(starts_with("Y"))
 par_sum <- data.frame(matrix(nrow=6,ncol=0))
 par_sum_init <- data.frame(matrix(nrow=5,ncol=0))
-# Y_not_1_extreme <- df %>% filter(Y_1<quantile(Y_1,v))
-Z_2 <- c()
-Z_3 <- c()
+# Y_not_1_extreme <- df %>% filter(Y1<quantile(Y1,v))
+Z2 <- c()
+Z3 <- c()
 
 given <- c()
 d <- ncol(df)
@@ -626,26 +626,22 @@ for (j in 1:ncol(df)) {
   sig_hat_init <- c(init_par[[1]][4],init_par[[2]][4])
   
   # generate residual Z ----
-  Y_1 <- Y_given1extreme[,j]
-  Y_2 <- Y_given1extreme[,res[1]]
-  Y_3 <- Y_given1extreme[,res[2]]
+  Y1 <- Y_given1extreme[,j]
+  Y2 <- Y_given1extreme[,res[1]]
+  Y3 <- Y_given1extreme[,res[2]]
   
-  tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
-  tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
+  tmp_z2 <- (Y2-a_hat[1]*Y1)/(Y1^b_hat[1])
+  tmp_z3 <- (Y3-a_hat[2]*Y1)/(Y1^b_hat[2])
   
-  Z_2 <- append(Z_2,tmp_z2)
-  Z_3 <- append(Z_3,tmp_z3)
+  Z2 <- append(Z2,tmp_z2)
+  Z3 <- append(Z3,tmp_z3)
   given <- append(given,rep(j,50))
-  
-
   
   rho_hat <- cor(tmp_zn2,tmp_zn3)
   par_sum <- cbind(par_sum,data.frame(matrix(round(c(lik,a_hat,b_hat,mu_hat,sig_hat,rep(rho_hat,2)),3),nrow=6,ncol=2,byrow=TRUE)))
   par_sum_init <- cbind(par_sum_init,data.frame(matrix(round(c(init_lik,a_hat_init,b_hat_init,mu_hat_init,sig_hat_init),3),nrow=5,ncol=2,byrow=TRUE)))
-
-  
 }
-p <- ggplot() + geom_point(data=Y_given1extreme,aes(x=Y_1,y=Y_2),alpha=0.5) + 
+p <- ggplot() + geom_point(data=Y_given1extreme,aes(x=Y1,y=Y2),alpha=0.5) + 
   geom_line(data=data.frame(x=x,y=yl),aes(x=x,y=y),linetype="dashed",col="#C11432") +
   geom_line(data=data.frame(x=x,y=ym),aes(x=x,y=y),linetype="dashed",col="#C11432") +
   geom_line(data=data.frame(x=x,y=yp),aes(x=x,y=y),linetype="dashed",col="#C11432") +
@@ -811,13 +807,13 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     } else if (identical(facet_var, c("rl","tau"))) {
       pq <- tm_shape(uk_tmp1) + tm_dots(col="rl",style="cont",size=0.3,palette="Blues",colorNA=misscol,title="Return level (days)", textNA = "Conditioning site") + tm_facets(by=c("q","tau")) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     } else if (identical(facet_var, c("cond_site","tau"))) {
-      pq <- tm_shape(uk_tmp1) + tm_dots(col="value",style="cont",size=0.3,palette="Blues",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+      pq <- tm_shape(uk_tmp1) + tm_dots(col="value",n=8,style="quantile",size=0.3,palette="Blues",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     }
     
   }
   if (method=="rl") {
     if (identical(facet_var, c("cond_site","tau"))) {
-      pq <- tm_shape(uk_tmp1) + tm_dots(col="rl",style="cont",size=0.3,palette="Blues",colorNA=misscol,title="Return level (days)", textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+      pq <- tm_shape(uk_tmp1) + tm_dots(col="rl",n=8,style="quantile",size=0.3,palette="Blues",colorNA=misscol,title="Return level (days)", textNA = "Conditioning site") + tm_facets(by=facet_var) +  tm_layout(legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     }
   }
   if (method=="AGG") {
