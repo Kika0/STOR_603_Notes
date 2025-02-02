@@ -568,7 +568,7 @@ tmap_save(map_param(tmp_est=tmp075,method = "q", facet_var = c("cond_site","tau"
 tmap_save(map_param(tmp_est=tmp075,method = "rl", facet_var = c("cond_site","tau"),title_map = TeX("$p=0.75$")),filename=paste0("../Documents/est_all_keef/rl075_tau.png"),width=12,height=9.5)
 
 # plot return level difference
-tmap_save(map_param(tmp_est=tmpdiff,method = "rldiff", facet_var = c("cond_site","tau"),title_map = TeX("")),filename=paste0("../Documents/est_all_keef/rldiff_tau.png"),width=12,height=9.5)
+tmap_save(map_param(tmp_est=tmpdiff,method = "rlreldiff", facet_var = c("cond_site","tau"),title_map = TeX("")),filename=paste0("../Documents/est_all_keef/rlreldiff_tau.png"),width=12,height=9.5)
 
 # plot also relative difference
 # plot return level difference
