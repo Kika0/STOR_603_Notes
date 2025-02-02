@@ -111,12 +111,21 @@ Y_likelihood_constrained <- function(theta,df=Y_given_1_extreme,given=1,sim=2,v=
   return(log_lik)
 }
 
+#' NLL for generalized Gaussian
+#'
+#' @param x A numerical vector of data.
+#' @param theta A vector of parameters c(mu,sig,delta).
+#'
+#' @return A number of negative log-likelihood.
+#' @export
+#'
+#' @examples NLL_GenGaus(x=rnorm(50),theta=c(0,1,2))
 NLL_GenGaus <- function(x,theta) {
   mu <- theta[1]
   sig <- theta[2]
   delta <- theta[3]
   if(sig<=0 | delta<=0){return(10e10)}
-  -sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=TRUE))
+  return(-sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=TRUE)))
 }
 
 dgnormsk <- function(x,mu,sig,deltal,deltau) {
@@ -148,8 +157,16 @@ dgnormsksig <- function(x,theta) {
   return(z)
 }
 
-# density with different shape for lower and upper tail
-NLL_AGG <- function(x,theta) {
+#' NLL for AGG with different shape for lower and upper tail
+#'
+#' @param x A numerical vector of data.
+#' @param theta A vector of parameters c(mu,sig,deltal,deltau).
+#'
+#' @return A number of negative log-likelihood.
+#' @export
+#'
+#' @examples NLL_AGGdelta(x=rnorm(50),theta=c(0,1,2,2))
+NLL_AGGdelta <- function(x,theta) {
   mu <- theta[1]
   sig <- theta[2]
   deltal <- theta[3]
@@ -168,8 +185,17 @@ NLL_AGG <- function(x,theta) {
   }
   return(-sum(z))
 }
-# density with different both scale and shape for lower and upper tail
-NLL_AGGsigdelta <- function(x,theta) {
+
+#' NLL for AGG with different both scale and shape for lower and upper tail
+#'
+#' @param x A numerical vector of data.
+#' @param theta A vector of parameters c(mu,sigl,sigu,deltal,deltau).
+#'
+#' @return A number of negative log-likelihood.
+#' @export
+#'
+#' @examples NLL_AGG(x=rnorm(50),theta=c(0,1,1,2,2))
+NLL_AGG <- function(x,theta) {
   mu <- theta[1]
   sigl <- theta[2]
   sigu <- theta[3]
@@ -190,7 +216,15 @@ NLL_AGGsigdelta <- function(x,theta) {
   return(-sum(z))
 }
 
-# density with different both scale for lower and upper tail
+#' NLL for AGG with different scale for lower and upper tail
+#'
+#' @param x A numerical vector of data.
+#' @param theta A vector of parameters c(mu,sigl,sigu,delta).
+#'
+#' @return A number of negative log-likelihood.
+#' @export
+#'
+#' @examples NLL_AGGsig(x=rnorm(50),theta=c(0,1,1,2))
 NLL_AGGsig <- function(x,theta) {
   mu <- theta[1]
   sigl <- theta[2]
