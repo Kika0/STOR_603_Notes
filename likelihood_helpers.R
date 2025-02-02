@@ -125,7 +125,7 @@ NLL_GenGaus <- function(x,theta) {
   sig <- theta[2]
   delta <- theta[3]
   if(sig<=0 | delta<=0){return(10e10)}
-  return(-sum(dgnorm(x,mu=mu,alpha=sig,beta=delta,log=TRUE)))
+  return(-sum(gnorm::dgnorm(x,mu=mu,alpha=sig,beta=delta,log=TRUE)))
 }
 
 dgnormsk <- function(x,mu,sig,deltal,deltau) {
@@ -186,36 +186,6 @@ NLL_AGGdelta <- function(x,theta) {
   return(-sum(z))
 }
 
-#' NLL for AGG with different both scale and shape for lower and upper tail
-#'
-#' @param x A numerical vector of data.
-#' @param theta A vector of parameters c(mu,sigl,sigu,deltal,deltau).
-#'
-#' @return A number of negative log-likelihood.
-#' @export
-#'
-#' @examples NLL_AGG(x=rnorm(50),theta=c(0,1,1,2,2))
-NLL_AGG <- function(x,theta) {
-  mu <- theta[1]
-  sigl <- theta[2]
-  sigu <- theta[3]
-  deltal <- theta[4]
-  deltau <- theta[5]
-  z <- c()
-  if(sigl<=0 | sigu<=0 | deltal<=0 |deltau<=0 ){return(10e10)}
-  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
-  for (i in 1:length(x)) {
-    if (x[i]<mu) {
-   #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigl)^deltal)
-   z[i] <- log(C_AGG)-((mu-x[i])/sigl)^deltal 
-    }
-    else 
- #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigu)^deltau)
-    {z[i] <- log(C_AGG)-((x[i]-mu)/sigu)^deltau }
-  }
-  return(-sum(z))
-}
-
 #' NLL for AGG with different scale for lower and upper tail
 #'
 #' @param x A numerical vector of data.
@@ -241,6 +211,36 @@ NLL_AGGsig <- function(x,theta) {
     else 
       #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigu)^deltau)
       z[i] <- log(C_AGG)-((x[i]-mu)/sigu)^delta
+  }
+  return(-sum(z))
+}
+
+#' NLL for AGG with different both scale and shape for lower and upper tail
+#'
+#' @param x A numerical vector of data.
+#' @param theta A vector of parameters c(mu,sigl,sigu,deltal,deltau).
+#'
+#' @return A number of negative log-likelihood.
+#' @export
+#'
+#' @examples NLL_AGG(x=rnorm(50),theta=c(0,1,1,2,2))
+NLL_AGG <- function(x,theta) {
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  deltal <- theta[4]
+  deltau <- theta[5]
+  z <- c()
+  if(sigl<=0 | sigu<=0 | deltal<=0 |deltau<=0 ){return(10e10)}
+  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  for (i in 1:length(x)) {
+    if (x[i]<mu) {
+      #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigl)^deltal)
+      z[i] <- log(C_AGG)-((mu-x[i])/sigl)^deltal 
+    }
+    else 
+      #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigu)^deltau)
+    {z[i] <- log(C_AGG)-((x[i]-mu)/sigu)^deltau }
   }
   return(-sum(z))
 }
@@ -273,23 +273,7 @@ DLLLsk <- function(x,theta,a_hat=NULL,b_hat=NULL) {
   return(-sum(z))
 }
 
-#' Calculate negative log-likelihood for AGG distribution
-#'
-#' @param x A vector of observed values.
-#' @param theta A vector of 3 parameters: mu,sig,delta.
-#'
-#' @return A negative log-likelihood.
-#' @export
-#'
-#' @examples 
-#' DLLL2step(x=rgnorm(50),theta=c(0,1,1))
-DLLL2step <- function(x,theta) {
-  mu <- theta[1]
-  sig <- theta[2]
-  delta <- theta[3]
-  if(sig<=0 | delta<=0 ){return(10e10)}
-  return(-sum(gnorm::dgnorm(x,mu=mu,alpha=sig,beta=delta,log=T)))
-}
+
 
 NLL_exp_norm_noise <- function(d,x,theta) {
   phi <- theta[1]
