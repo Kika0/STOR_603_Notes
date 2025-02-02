@@ -285,4 +285,31 @@ NLL_expalpha_twophi <- function(theta,df = Y_given1extreme, d1j. = d1j,SN.=SN,mu
   return(log_lik)
 }
 
+NLL_AGGdelta_onestep <- function(x,theta,a_hat=NULL,b_hat=NULL) {
+  if (is.null(a_hat)==FALSE) {
+    a <- a_hat
+  } else {a <- theta[5]}
+  if (is.null(b_hat)==FALSE) {
+    b <- b_hat
+  } else {b <- theta[6]}
+  mu <- theta[1]
+  sig <- theta[2]
+  deltal <- theta[3]
+  deltau <- theta[4]
+  Y1 <- x[,1]
+  Y2 <- x[,2]
+  obs_res <- (Y2-a*Y1)/(Y1^b)
+  if(sig<=0 | deltal<=0 |deltau<=0 | a<(-1) | a>1 | b<0 | b>=1){return(10e10)}
+  z <- c()
+  C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )
+  for (i in 1:length(obs_res)) {
+    if (obs_res[i]<mu) {
+      z[i] <- -log(C)-log(sig)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sig)^deltal
+    }
+    else {
+      z[i] <- -log(C)-log(sig)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sig)^deltau
+    }
+  }
+  return(-sum(z))
+}
 
