@@ -63,15 +63,6 @@ L2 <- par_est(df=sims,v=v,given=c(1:5),margin = "GenGaus", method = "sequential2
 L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGdelta", method = "sequential2",keef_constraints = c(1,2))
 L4 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsig", method = "sequential2",keef_constraints = c(1,2))
 L5 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
-
-sum(2*((L2$lik2)-(L1$lik2))>pchisq(0.95,1))/nrow(L1)
-sum(2*((L3$lik2)-(L1$lik2))>pchisq(0.99,1))/nrow(L1)
-sum(2*((L4$lik2)-(L1$lik2))>pchisq(0.99,2))/nrow(L1)
-
-2*((L4$lik2)-(L1$lik2))>pchisq(0.95,2)
-2*((L3$lik2)-(L2$lik2))
-2*((L3$lik2)-(L1$lik2))
-
 ```
 
 Compare the likelihood values for each conditioning variable and for each conditioning site.
@@ -83,9 +74,7 @@ L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
 L4 <- L4 %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
 L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
 
-tmp <- rbind(L1,L2,L2,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
-
-ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1)
+tmp <- rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
 ```
 
 Add 99 more iterations in a loop.
@@ -109,9 +98,12 @@ L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
 L4 <- L4 %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
 L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
 
-tmp <- rbind(tmp,rbind(L1,L2,L2,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res))))
+tmp <- rbind(tmp,rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res))))
 
 }
+
+#ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#66A64F","GenGaus"="#C11432","AGGdelta"="#009ADA"))
+#ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1)
 ```
 
 ## Likelihood ratio test
