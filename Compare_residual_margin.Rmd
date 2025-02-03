@@ -102,8 +102,23 @@ tmp <- rbind(tmp,rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=fa
 
 }
 
-#ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#66A64F","GenGaus"="#C11432","AGGdelta"="#009ADA"))
-#ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1)
+pAIC <- ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"))
+pNLL <- ggplot(tmp) + geom_boxplot(aes(y=lik2,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylab("Negative log-likelihood")
+pa <- ggplot(tmp) + geom_boxplot(aes(y=a,x=res)) + facet_wrap(~given,nrow=1)
+pb <- ggplot(tmp) + geom_boxplot(aes(y=b,x=res)) + facet_wrap(~given,nrow=1)
+psig <- ggplot(tmp %>% filter(given=="1")) + geom_boxplot(aes(y=sig_agg,x=res,col=method)) + facet_wrap(~given,nrow=1)
+
+ggsave(filename = "../Documents/AGG/AIC099.png",plot=pAIC,height=5,width=20)
+ggsave(filename = "../Documents/AGG/NLL099.png",plot=pNLL,height=5,width=20)
+```
+
+Calculate also overall minimum AIC. In this metric, AGGsig has lowest mean AIC. However,we may
+
+```{r}
+tmpsum <- tmp %>% filter(given=="1") %>% mutate(ite=rep(1:100,each=20))%>% mutate(dependence=factor(abs(as.numeric(given)-as.numeric(res)))) %>% group_by(given,res,ite) %>% slice(which.min(AIC)) %>% group_by(method,dependence) %>% summarise(count=n()) %>% arrange(-count) 
+
+ggplot(tmpsum) + geom_bar(aes(x=reorder(method,-count),y=count,fill=dependence),position="stack",stat="identity") + scale_fill_manual(values=c("1"="#070707","2"="#C11432","3"="#009ADA","4"="#66A64F","5"="#FDD10A")) + xlab("Method for residual margins")
+
 ```
 
 ## Likelihood ratio test
