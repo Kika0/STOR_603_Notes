@@ -145,7 +145,7 @@ M <- 100
 # L4[[i]] <- par_est(df=sims,v=v,given=c(1),margin = "AGGsigdelta", method = "sequential2")
 # }
 
-#save(L1,L2,L3,L4)
+#save(L1,L2,L3,L4,tmp,file="paramest.rda")
 load("paramest.rda")
 # plot boxplots for likelihood
 ablik <- c()
@@ -161,17 +161,6 @@ for (i in 1:length(L1)) {
   AGGdelta <- append(AGGdelta,as.numeric(unlist(L3[[i]]$lik2)))
   AGGsigdelta <- append(AGGsigdelta,as.numeric(unlist(L4[[i]]$lik2)))
 }
-lims <- c(min(AGGdelta,AGGsig,AGGsigdelta,GenGaus),max(AGGdelta,AGGsig,AGGsigdelta,GenGaus))
-p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=GenGaus),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta})$"))+ ylim(lims)
-p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsig),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta})$")) + ylim(lims)
-p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGdelta),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}_l,\\hat{\\delta}_u)$"))+ ylim(lims)
-p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=AGGsigdelta),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Residuals") + ylab(TeX("$l(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_l,\\hat{\\delta}_u)$")) + ylim(lims)
-
-grid.arrange(p1,p2,p3,p4,ncol=2)
 
 # compare with the new data with Keef constraints (hence can be slightly different)
 ggplot(tmp %>% filter(given=="1"))+ geom_boxplot(aes(x=res,y=lik2,col=method)) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylab("Negative log-likelihood")
