@@ -177,30 +177,32 @@ grid.arrange(p1,p2,p3,p4,ncol=2)
 ggplot(tmp %>% filter(given=="1"))+ geom_boxplot(aes(x=res,y=lik2,col=method)) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylab("Negative log-likelihood")
 ```
 
-Now, plot likelihood ratio test values instead with $\chi$
+Now, plot likelihood ratio test values instead with $\chi^2$ distribution for critical values.
 
 ```{r}
-p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsigdelta-GenGaus)),aes(x=x,y=y))+
+AGG_GG <- 2*((tmp %>% filter(method=="GenGaus",given=="1") %>% pull(lik2))-(tmp %>% filter(method=="AGG",given=="1") %>% pull(lik2)) )
+tmpagg <- data.frame(AGG_GG=AGG_GG,res=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(res),given=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(given))
+p1 <- ggplot(tmpagg,aes(x=res,y=AGG_GG))+
   geom_boxplot() + xlab("Residuals") +
   # ylab("Different scale vs shape")
   ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_l,\\hat{\\delta}_u)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
    geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A")
-p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-GenGaus)),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Residuals") +
-  # ylab("No difference in shape")
-  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_c,\\hat{\\delta}_c)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) +
-ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
-  geom_hline(yintercept = qchisq(0.95,1),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,1),linetype="dashed", col= "#FDD10A")
-p3 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGdelta-GenGaus)),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Residuals") +
-  # ylab("Different scale vs shape") +
-  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_c,\\hat{\\sigma}_c,\\hat{\\delta}_l,\\hat{\\delta}_u)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
-  geom_hline(yintercept = qchisq(0.95,1),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,1),linetype="dashed", col= "#FDD10A")
-p4 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=2*(AGGsig-AGGdelta)),aes(x=x,y=y))+
-  geom_boxplot() + xlab("Residuals") +
-  # ylab("Different scale vs shape") +
-  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_c,\\hat{\\delta}_c)-l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_c,\\hat{\\sigma}_c,\\hat{\\delta}_l,\\hat{\\delta}_u))$")) 
 
+AGGsig_GG <- 2*((tmp %>% filter(method=="GenGaus",given=="1") %>% pull(lik2))-(tmp %>% filter(method=="AGGsig",given=="1") %>% pull(lik2)) )
+tmpagg <- data.frame(AGG_GG=AGGsig_GG,res=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(res),given=tmp %>% filter(method=="AGGsig",given=="1") %>% pull(given))
+p2 <- ggplot(tmpagg,aes(x=res,y=AGG_GG))+ 
+  geom_boxplot() + xlab("Residuals") +
+  # ylab("Different scale vs shape")
+    ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_c,\\hat{\\delta}_c)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$"))  + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+   geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A")
+
+AGGdelta_GG <- 2*((tmp %>% filter(method=="GenGaus",given=="1") %>% pull(lik2))-(tmp %>% filter(method=="AGGdelta",given=="1") %>% pull(lik2)) )
+tmpagg <- data.frame(AGG_GG=AGGdelta_GG,res=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(res),given=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(given))
+p3 <- ggplot(tmpagg,aes(x=res,y=AGG_GG))+
+  geom_boxplot() + xlab("Residuals") +
+  # ylab("Different scale vs shape")
+    ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_c,\\hat{\\sigma}_c,\\hat{\\delta}_l,\\hat{\\delta}_u)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$"))+ ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+   geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A")
 grid.arrange(p1,p2,p3,ncol=3)
 ```
 Now plot shape parameter estimates to see improvement over no difference in the shape parameter for the lower and upper tail.
