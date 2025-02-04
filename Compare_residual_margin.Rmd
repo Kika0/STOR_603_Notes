@@ -20,6 +20,7 @@ theme_replace(
   panel.border = element_rect(colour = "black", fill = NA) )
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
+load("paramest.rda")
 ```
 
 ## Simulate data
@@ -27,12 +28,12 @@ sapply(file.sources,source,.GlobalEnv)
 Simulate from trivariate Markov chain with logistic copula links and Laplace margins.
 
 ```{r }
-set.seed(11)
-N <- 500
+# set.seed(11)
+# N <- 500
 v <- 0.99 # threshold for conditioning variable
-sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
-  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
-  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+# sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+#   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+#   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 ```
 
 ## Motivate the problem
@@ -40,15 +41,15 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
 Simulate a $n=50000$ sample from a logistic distribution.
 
 ```{r}
-set.seed(12)
-N <- 50000
-v <- 0.99 # threshold for conditioning variable
-sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
-  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
-  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-obsr <- observed_residuals(df=sims,given=1,v=v)
-df <- data.frame(y=g_laplace(z=seq(-7.5,5,0.01),a=1/2),x=seq(-7.5,5,0.01))
-ggplot(obsr) + geom_density(mapping = aes(x=Z2)) + geom_line(data=df,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX("$Z_2$")) + ylab("Residual density function")
+# set.seed(12)
+# N <- 50000
+# v <- 0.99 # threshold for conditioning variable
+# sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+#   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+#   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+# obsr <- observed_residuals(df=sims,given=1,v=v)
+# df <- data.frame(y=g_laplace(z=seq(-7.5,5,0.01),a=1/2),x=seq(-7.5,5,0.01))
+# ggplot(obsr) + geom_density(mapping = aes(x=Z2)) + geom_line(data=df,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX("$Z_2$")) + ylab("Residual density function")
 ```
 
 ## Calculate MLE for different methods
@@ -58,49 +59,49 @@ All of the methods use use sequential estimates for $\alpha$ and then $\beta$ wi
 Likelihood ratio test compares two models with confidence levels obtained from $\chi^2$ distribution. This restricts the analysis to a pairwise comparison. We use AIC and NLLH (no penalty for the number of parameters) as metrics for each of the models.
 
 ```{r}
-L1 <- par_est(df=sims,v=v,given=c(1:5),margin = "Normal", method = "sequential2",keef_constraints = c(1,2))
-L2 <- par_est(df=sims,v=v,given=c(1:5),margin = "GenGaus", method = "sequential2",keef_constraints = c(1,2))
-L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGdelta", method = "sequential2",keef_constraints = c(1,2))
-L4 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsig", method = "sequential2",keef_constraints = c(1,2))
-L5 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
+# L1 <- par_est(df=sims,v=v,given=c(1:5),margin = "Normal", method = "sequential2",keef_constraints = c(1,2))
+# L2 <- par_est(df=sims,v=v,given=c(1:5),margin = "GenGaus", method = "sequential2",keef_constraints = c(1,2))
+# L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGdelta", method = "sequential2",keef_constraints = c(1,2))
+# L4 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsig", method = "sequential2",keef_constraints = c(1,2))
+# L5 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
 ```
 
 Compare the likelihood values for each conditioning variable and for each conditioning site.
 
 ```{r}
-L1 <- L1 %>% mutate(method="Normal",AIC=2*lik2+2*2)
-L2 <- L2 %>% mutate(method="GenGaus",AIC=2*lik2+2*3)
-L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
-L4 <- L4 %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
-L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
-
-tmp <- rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
+# L1 <- L1 %>% mutate(method="Normal",AIC=2*lik2+2*2)
+# L2 <- L2 %>% mutate(method="GenGaus",AIC=2*lik2+2*3)
+# L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
+# L4 <- L4 %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
+# L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
+# 
+# tmp <- rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
 ```
 
 Add 99 more iterations in a loop.
 
 ```{r}
-for (i in 2:100) {
-set.seed(12*i)
-N <- 50000
-v <- 0.99 # threshold for conditioning variable
-sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
-  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
-  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-L1 <- par_est(df=sims,v=v,given=c(1:5),margin = "Normal", method = "sequential2",keef_constraints = c(1,2))
-L2 <- par_est(df=sims,v=v,given=c(1:5),margin = "GenGaus", method = "sequential2",keef_constraints = c(1,2))
-L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGdelta", method = "sequential2",keef_constraints = c(1,2))
-L4 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsig", method = "sequential2",keef_constraints = c(1,2))
-L5 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
-L1 <- L1 %>% mutate(method="Normal",AIC=2*lik2+2*2)
-L2 <- L2 %>% mutate(method="GenGaus",AIC=2*lik2+2*3)
-L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
-L4 <- L4 %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
-L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
-
-tmp <- rbind(tmp,rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res))))
-
-}
+# for (i in 2:100) {
+# set.seed(12*i)
+# N <- 50000
+# v <- 0.99 # threshold for conditioning variable
+# sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+#   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+#   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+# L1 <- par_est(df=sims,v=v,given=c(1:5),margin = "Normal", method = "sequential2",keef_constraints = c(1,2))
+# L2 <- par_est(df=sims,v=v,given=c(1:5),margin = "GenGaus", method = "sequential2",keef_constraints = c(1,2))
+# L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGdelta", method = "sequential2",keef_constraints = c(1,2))
+# L4 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsig", method = "sequential2",keef_constraints = c(1,2))
+# L5 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
+# L1 <- L1 %>% mutate(method="Normal",AIC=2*lik2+2*2)
+# L2 <- L2 %>% mutate(method="GenGaus",AIC=2*lik2+2*3)
+# L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
+# L4 <- L4 %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
+# L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
+# 
+# tmp <- rbind(tmp,rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res))))
+# 
+# }
 
 pAIC <- ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"))
 pNLL <- ggplot(tmp) + geom_boxplot(aes(y=lik2,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylab("Negative log-likelihood")
@@ -146,7 +147,6 @@ M <- 100
 # }
 
 #save(L1,L2,L3,L4,tmp,file="paramest.rda")
-load("paramest.rda")
 # plot boxplots for likelihood
 ablik <- c()
 GenGaus <- c()
