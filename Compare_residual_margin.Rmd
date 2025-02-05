@@ -9,6 +9,10 @@ library(tidyverse)
 library(latex2exp)
 library(gridExtra)
 library(gnorm)
+library(VineCopula)
+library(pracma) # incomplete gamma function, will be used later in cond.ext.model for modelling the residual margins
+library(texmex) # air pollution data
+
 knitr::opts_chunk$set(echo = TRUE)
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
@@ -248,5 +252,76 @@ p1 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=a),aes(x=x
 p2 <- ggplot(data.frame(x=factor(res,levels=c("Z2","Z3","Z4","Z5")),y=b),aes(x=x,y=y))+
   geom_boxplot() + xlab("Residuals") + ylab(TeX("$\\hat{\\beta}$")) 
 grid.arrange(p5,p1,p2,ncol=3)
+```
+
+## Pollution dataset application
+
+```{r}
+v <- 0.7
+# transform to Laplace margins
+winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+```
+
+Start with winter.
+
+```{r}
+L1 <- par_est(df=winter_lap,v=v,given=c(1:5),margin = "Normal", method = "sequential2",keef_constraints = c(1,2))
+L2 <- par_est(df=winter_lap,v=v,given=c(1:5),margin = "GenGaus", method = "sequential2",keef_constraints = c(1,2))
+L3 <- par_est(df=winter_lap,v=v,given=c(1:5),margin = "AGGdelta", method = "sequential2",keef_constraints = c(1,2))
+L4 <- par_est(df=winter_lap,v=v,given=c(1:5),margin = "AGGsig", method = "sequential2",keef_constraints = c(1,2))
+L5 <- par_est(df=winter_lap,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
+
+L1 <- L1 %>% mutate(method="Normal",AIC=2*lik2+2*2)
+L2 <- L2 %>% mutate(method="GenGaus",AIC=2*lik2+2*3)
+L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
+L4 <- L4 %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
+L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
+
+tmp <- rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=recode(factor(as.character(given)),"1"="O3","2"="NO2","3"="NO","4"="SO2","5"="PM10"),res=factor(as.character(res)))
+
+pAIC <- ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"))
+
+ggsave(filename = "../Documents/AGG/AICwinter.png",plot=pAIC,height=5,width=20)
+
+tmpsum <- tmp  %>% group_by(given,res) %>% slice(which.min(AIC)) %>% group_by(method) %>% summarise(count=n()) %>% arrange(-count) 
+
+# pAICcount <- ggplot(tmpsum) + geom_bar(aes(x=reorder(method,-count),y=count),position="stack",stat="identity")  + xlab("Distribution for residual margin")
+# 
+# ggsave(filename = paste0("../Documents/AGG/AICcount",v*100,".png"),plot=pAICcount,height=5,width=7)
+tmpsum
+```
+
+And then summer.
+
+```{r}
+L1s <- par_est(df=summer_lap,v=v,given=c(1:5),margin = "Normal", method = "sequential2",keef_constraints = c(1,2))
+L2s <- par_est(df=summer_lap,v=v,given=c(1:5),margin = "GenGaus", method = "sequential2",keef_constraints = c(1,2))
+L3s <- par_est(df=summer_lap,v=v,given=c(1:5),margin = "AGGdelta", method = "sequential2",keef_constraints = c(1,2))
+L4s <- par_est(df=summer_lap,v=v,given=c(1:5),margin = "AGGsig", method = "sequential2",keef_constraints = c(1,2))
+L5s <- par_est(df=summer_lap,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
+```
+
+Examine the AIC.
+
+```{r}
+L1s <- L1s %>% mutate(method="Normal",AIC=2*lik2+2*2)
+L2s <- L2s %>% mutate(method="GenGaus",AIC=2*lik2+2*3)
+L3s <- L3s %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
+L4s <- L4s %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
+L5s <- L5s %>% mutate(method="AGG",AIC=2*lik2+2*5)
+
+tmp <- rbind(L1s,L2s,L3s,L4s,L5s) %>% mutate(method=factor(method),given=recode(factor(as.character(given)),"1"="O3","2"="NO2","3"="NO","4"="SO2","5"="PM10"),res=factor(as.character(res)))
+
+pAIC <- ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"))
+
+ggsave(filename = "../Documents/AGG/AICsummer.png",plot=pAIC,height=5,width=20)
+
+tmpsum <- tmp  %>% group_by(given,res) %>% slice(which.min(AIC)) %>% group_by(method) %>% summarise(count=n()) %>% arrange(-count) 
+
+# pAICcount <- ggplot(tmpsum) + geom_bar(aes(x=reorder(method,-count),y=count),position="stack",stat="identity")  + xlab("Distribution for residual margin")
+# 
+# ggsave(filename = paste0("../Documents/AGG/AICcount",v*100,".png"),plot=pAICcount,height=5,width=7)
+tmpsum
 ```
 
