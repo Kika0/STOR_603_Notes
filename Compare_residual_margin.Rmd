@@ -46,14 +46,14 @@ Simulate a $n=50000$ sample from a logistic distribution.
 
 ```{r}
 # set.seed(12)
-# N <- 50000
-# v <- 0.99 # threshold for conditioning variable
-# sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
-#   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
-#   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-# obsr <- observed_residuals(df=sims,given=1,v=v)
-# df <- data.frame(y=g_laplace(z=seq(-7.5,5,0.01),a=1/2),x=seq(-7.5,5,0.01))
-# ggplot(obsr) + geom_density(mapping = aes(x=Z2)) + geom_line(data=df,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX("$Z_2$")) + ylab("Residual density function")
+N <- 50000
+v <- 0.99 # threshold for conditioning variable
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+obsr <- observed_residuals(df=sims,given=1,v=v)
+df <- data.frame(y=g_laplace(z=seq(-7.5,5,0.01),a=1/2),x=seq(-7.5,5,0.01))
+ggplot(obsr) + geom_density(mapping = aes(x=Z2)) + geom_line(data=df,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX("$Z_2$")) + ylab("Residual density function")
 ```
 
 ## Calculate MLE for different methods
@@ -80,6 +80,47 @@ Compare the likelihood values for each conditioning variable and for each condit
 # L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
 # 
 # tmp <- rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
+
+# explore fits in the first iteration
+tmp1giv2 <- tmp %>% filter(given=="1",res=="2")
+methods <- unique(tmp$method)
+tr1 <- data.frame(y=as.numeric(),x=as.numeric(),Method=as.character())
+nllv <- c()
+method_par <- data.frame("Normal" = c(as.numeric(tmp1giv2[1,7]),as.numeric(tmp1giv2[1,9]),as.numeric(tmp1giv2[1,9]),2,2),"GenGaus" = c(as.numeric(tmp1giv2[2,8]),as.numeric(tmp1giv2[2,10]),as.numeric(tmp1giv2[2,10]),as.numeric(tmp1giv2[2,13]),as.numeric(tmp1giv2[2,13])),"AGGdelta" = c(as.numeric(tmp1giv2[3,8]),as.numeric(tmp1giv2[3,10]),as.numeric(tmp1giv2[3,10]),as.numeric(tmp1giv2[3,14]),as.numeric(tmp1giv2[3,15])),"AGGsig" = c(as.numeric(tmp1giv2[4,8]),as.numeric(tmp1giv2[4,11]),as.numeric(tmp1giv2[4,12]),as.numeric(tmp1giv2[4,13]),as.numeric(tmp1giv2[4,13])),"AGG" = c(as.numeric(tmp1giv2[5,8]),as.numeric(tmp1giv2[5,11]),as.numeric(tmp1giv2[5,12]),as.numeric(tmp1giv2[5,14]),as.numeric(tmp1giv2[5,15])))
+
+for (i in 1:5) {
+  methodpar <- as.numeric(method_par[,i])
+  tr1 <- rbind(tr1,data.frame(y=AGG_density(x=x,theta = methodpar),x=x,Method=names(method_par[i])))
+}
+a <- as.numeric(tmp1giv2[1,5])
+b <- as.numeric(tmp1giv2[1,6])
+Y_given1extreme <- sims %>% filter(sims[,1]>quantile(sims[,1],v))
+Y1 <- Y_given1extreme[,1]
+Y2 <- Y_given1extreme[,2]
+Z2 <- (Y2-a*Y1)/(Y1^b)
+
+pl <- ggplot(data.frame(x=Z2)) + geom_density(aes(x=x),linetype="dashed")
+pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)),aes(x=x,y=y,col=Method)) +
+  xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
+ggsave(filename = "../Documents/AGG/density0.png",plot=pl1,height=5,width=8)
+
+%>% filter(res %in% c("2"))
+pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)) %>% filter(Method %in% c()),aes(x=x,y=y,col=Method)) +
+  xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
+ggsave(filename = "../Documents/AGG/density1.png",plot=pl1,height=5,width=8)
+
+pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)),aes(x=x,y=y,col=Method)) +
+  xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
+ggsave(filename = "../Documents/AGG/density2.png",plot=pl1,height=5,width=8)
+
+pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)),aes(x=x,y=y,col=Method)) +
+  xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
+ggsave(filename = "../Documents/AGG/density3.png",plot=pl1,height=5,width=8)
+
+pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)),aes(x=x,y=y,col=Method)) +
+  xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
+ggsave(filename = "../Documents/AGG/density4.png",plot=pl1,height=5,width=8)
+
 ```
 
 Add 99 more iterations in a loop.
