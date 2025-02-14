@@ -33,7 +33,7 @@ xcoord_o         <- xcoord_m
 ycoord_o         <- ycoord_m + obs_cpm_offset_y
 
 ### OBS 5km
-setwd("../../")
+setwd("../../../z/")
 obs_example  <- '../../../../z/kristina/UKgrid5km/tasmax_rcp85_land-cpm_uk_5km_01_ann_206012-208011.nc'
 nc1      <- nc_open(obs_example)
 vlist    <- nc1$var

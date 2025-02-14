@@ -131,7 +131,9 @@ ggsave(filename = "../Documents/AGG/NLL099.png",plot=pNLL,height=5,width=20)
 Calculate also overall minimum AIC. In this metric, AGGsig has lowest mean AIC. However,we may
 
 ```{r}
-tmpsum <- tmp %>% filter(given=="1") %>% mutate(ite=rep(1:100,each=20))%>% mutate(dependence=factor(abs(as.numeric(given)-as.numeric(res)))) %>% group_by(given,res,ite) %>% slice(which.min(AIC)) %>% group_by(method,dependence) %>% summarise(count=n()) %>% arrange(-count) 
+tmpsum <- tmp %>% filter(given=="1") %>% mutate(ite=rep(1:100,each=20))%>% mutate(dependence=factor(abs(as.numeric(given)-as.numeric(res)))) %>% group_by(given,res,ite) %>% slice(which.min(AIC)) %>% group_by(method,dependence) %>% summarise(count=n()) %>% arrange(-count)
+
+tmp %>% filter(given=="1") %>% group_by(method,res) %>% summarise(sum=sum(AIC)) %>% arrange(sum)
 
 pAICcount <- ggplot(tmpsum) + geom_bar(aes(x=reorder(method,-count),y=count,fill=dependence),position="stack",stat="identity") + scale_fill_manual(values=c("1"="#070707","2"="#C11432","3"="#009ADA","4"="#66A64F","5"="#FDD10A")) + xlab("Distribution for residual margin")
 
