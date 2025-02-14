@@ -113,6 +113,17 @@ pa <- ggplot(tmp) + geom_boxplot(aes(y=a,x=res)) + facet_wrap(~given,nrow=1)
 pb <- ggplot(tmp) + geom_boxplot(aes(y=b,x=res)) + facet_wrap(~given,nrow=1)
 psig <- ggplot(tmp %>% filter(given=="1")) + geom_boxplot(aes(y=sig_agg,x=res,col=method)) + facet_wrap(~given,nrow=1)
 
+# do a series of plots for the presentation
+# pAIC1 <- ggplot(tmp %>% filter(given=="1") %>% filter(res %in% c("2"))) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + xlab("Residuals") + ggtitle(TeX("Conditioning on $Y_1> F^{-1}_{Y_1} (0.99)$")) + scale_x_discrete(labels=c(TeX("$Z_1$"),TeX("$Z_2$"),TeX("$Z_3$"),TeX("$Z_4$"),TeX("$Z_5$")),drop=FALSE) + ylim(c(1200,2200))
+# pAIC2 <- ggplot(tmp %>% filter(given=="1") %>% filter(res %in% c("2","3"))) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + xlab("Residuals") + ggtitle(TeX("Conditioning on $Y_1> F^{-1}_{Y_1} (0.99)$")) + scale_x_discrete(labels=c(TeX("$Z_1$"),TeX("$Z_2$"),TeX("$Z_3$"),TeX("$Z_4$"),TeX("$Z_5$")),drop=FALSE) + ylim(c(1200,2200))
+# pAIC3 <- ggplot(tmp %>% filter(given=="1") %>% filter(res%in% c("2","3","4"))) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + xlab("Residuals") + ggtitle(TeX("Conditioning on $Y_1> F^{-1}_{Y_1} (0.99)$")) + scale_x_discrete(labels=c(TeX("$Z_1$"),TeX("$Z_2$"),TeX("$Z_3$"),TeX("$Z_4$"),TeX("$Z_5$")),drop=FALSE) + ylim(c(1200,2200))
+# pAIC4 <- ggplot(tmp %>% filter(given=="1")) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + xlab("Residuals") + ggtitle(TeX("Conditioning on $Y_1> F^{-1}_{Y_1} (0.99)$")) + scale_x_discrete(labels=c(TeX("$Z_1$"),TeX("$Z_2$"),TeX("$Z_3$"),TeX("$Z_4$"),TeX("$Z_5$"))) + ylim(c(1200,2200))
+# ggsave(filename = "../Documents/AGG/AICZ2.png",plot=pAIC1,height=5,width=6)
+# ggsave(filename = "../Documents/AGG/AICZ3.png",plot=pAIC2,height=5,width=6)
+# ggsave(filename = "../Documents/AGG/AICZ4.png",plot=pAIC3,height=5,width=6)
+# ggsave(filename = "../Documents/AGG/AICZ5.png",plot=pAIC4,height=5,width=6)
+
+
 ggsave(filename = "../Documents/AGG/AIC099.png",plot=pAIC,height=5,width=20)
 ggsave(filename = "../Documents/AGG/NLL099.png",plot=pNLL,height=5,width=20)
 ```
