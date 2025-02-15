@@ -1,5 +1,8 @@
+library(tidyverse)
+library(ncdf4)
+library(fields)
 # load the data
-load("../kristina/ukgd_cpm85_5k_x100y23_MSdata01.RData")
+load("../luna/kristina/MSdata_CPM5km_member1/ukgd_cpm85_5k_x100y23_MSdata01.RData")
 data01.std.param # not much info here
 data01 <- data01 %>% mutate(year=floor(time))
 dim(data01)
@@ -12,13 +15,8 @@ str(gpdpar)
 summary(chosen.MSgpd)
 
 # load the Gpd parameters
-load("../kristina/MSGpdParam/ukgd_cpm85_5k_x100y23.MSGpdParam.2024-10-22-064747.RData")
+load("../luna/kristina/MSGpdParam/ukgd_cpm85_5k_x100y23.MSGpdParam.2024-10-22-064747.RData")
 glimpse(gpdpar) # dataframe for columns for scale, shape and threshold
-
-# source("grid-info-5km.R")
-
-library(ncdf4)
-library(fields)
 
 ###############################################################################
 # 5km
@@ -33,8 +31,7 @@ xcoord_o         <- xcoord_m
 ycoord_o         <- ycoord_m + obs_cpm_offset_y
 
 ### OBS 5km
-setwd("../../../z/")
-obs_example  <- '../../../../z/kristina/UKgrid5km/tasmax_rcp85_land-cpm_uk_5km_01_ann_206012-208011.nc'
+obs_example  <- '../luna/kristina/UKgrid5km/tasmax_rcp85_land-cpm_uk_5km_01_ann_206012-208011.nc'
 nc1      <- nc_open(obs_example)
 vlist    <- nc1$var
 shape.o  <- vlist$tasmax$size
@@ -43,9 +40,8 @@ lon5.o   <- ncvar_get(nc1, "longitude")
 lat5.o   <- ncvar_get(nc1, "latitude")
 nc_close(nc1)
 
-
 ### CPM 5km
-cpm2k_example <- "/project/ukcp/land-cpm/uk/5km/rcp85/01/tasmax/day/v20210615/tasmax_rcp85_land-cpm_uk_5km_01_day_19901201-20001130.nc"
+cpm2k_example <- "//tasmax_rcp85_land-cpm_uk_5km_01_day_19901201-20001130.nc"
 nc1      <- nc_open(cpm2k_example)
 vlist    <- nc1$var
 shape.m  <- vlist$tasmax$size
@@ -53,7 +49,6 @@ tas5.m   <- ncvar_get(nc1, "tasmax")
 lon5.m   <- ncvar_get(nc1, "longitude")
 lat5.m   <- ncvar_get(nc1, "latitude")
 nc_close(nc1)
-
 
 par(mfcol=c(2,2))
 
@@ -72,3 +67,7 @@ image.plot(tas5.m[,,180], main='CPM 5km')
 #  str(lat5.m) num [1:180, 1:244] 49.3 49.3 49.3 49.3 49.3 ...
 
 save(file="grid-info-5km.RData", lon5.o, lat5.o, lon5.m, lat5.m, obs_example, cpm2k_example)
+
+# load all non-stationary data
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
