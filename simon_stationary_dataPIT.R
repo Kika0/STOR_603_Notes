@@ -39,24 +39,11 @@ tas5.o   <- ncvar_get(nc1, "tasmax")
 lon5.o   <- ncvar_get(nc1, "longitude")
 lat5.o   <- ncvar_get(nc1, "latitude")
 nc_close(nc1)
-
-### CPM 5km
-cpm2k_example <- "//tasmax_rcp85_land-cpm_uk_5km_01_day_19901201-20001130.nc"
-nc1      <- nc_open(cpm2k_example)
-vlist    <- nc1$var
-shape.m  <- vlist$tasmax$size
-tas5.m   <- ncvar_get(nc1, "tasmax")
-lon5.m   <- ncvar_get(nc1, "longitude")
-lat5.m   <- ncvar_get(nc1, "latitude")
-nc_close(nc1)
-
-par(mfcol=c(2,2))
+par(mfcol=c(1,2))
 
 quilt.plot(as.vector(lon5.o), as.vector(lat5.o), tas5.o[,,10],  nx=shape.o[1], ny=shape.o[2], main='OBS 5km')
-quilt.plot(as.vector(lon5.m), as.vector(lat5.m), tas5.m[,,180], nx=shape.m[1], ny=shape.m[2], main='CPM 5km')
 
 image.plot(tas5.o[,,10],  main='OBS 5km')
-image.plot(tas5.m[,,180], main='CPM 5km')
 
 #  str(tas5.o) num [1:180, 1:290, 1:31] NA NA NA NA NA NA NA NA NA NA ...
 #  str(lon5.o) num [1:180, 1:290] -9.99 -9.92 -9.86 -9.79 -9.72 ...
@@ -69,5 +56,24 @@ image.plot(tas5.m[,,180], main='CPM 5km')
 save(file="grid-info-5km.RData", lon5.o, lat5.o, lon5.m, lat5.m, obs_example, cpm2k_example)
 
 # load all non-stationary data
-file.sources = list.files(pattern="*helpers.R")
-sapply(file.sources,source,.GlobalEnv)
+#get list of files from a folder
+files <- list.files("../luna/kristina/MSdata_CPM5km_member1/")
+list_of_files <- list() #create empty list
+
+#loop through the files
+# could take only x and y divisible by 4 to subset and speed up data loading
+for (i in 1:length(files)) {
+  print(files[i])
+  load(paste0("../luna/kristina/MSdata_CPM5km_member1/", files[i]))
+  list_of_files[[i]] <- data01 #add files to list position
+}
+
+# NOTE: only need to work with files that overlap with mainland UK
+# find a subset of x and y that overlap with mainland UK
+gridlon5.o
+summary(as.vector(lon5.o))
+summary(as.vector(lat5.o))
+# create a dataframe with also x (row) and y (column) indeces
+# as.vector does column by column
+xy_df <- data.frame("lon"=as.vector(lon5.o),"lat"=as.vector(lat5.o),"x"= rep(1:dim(lon5.o)[1],n=dim(lon5.o)[2]), "y" = rep(1:dim(lon5.o)[2],each=dim(lon5.o)[1]))
+xy_sf <- 
