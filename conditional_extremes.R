@@ -850,15 +850,8 @@ rAGG <- function(theta) {
   AGG_sample <- c()
   for (i in 1:length(s)) {
   U <- runif(1)
-  to_opt <- function(x) {
-  if (x<0) {
-   ( C*sigl/deltal*pracma::gammainc((-x/sigl)^deltal,1/deltal)[2] - U)^2
-  }
-  else {
-   ( C*sigl/deltal*gamma(1/deltal) + C*sigu/deltau*pracma::gammainc((x/sigu)^deltau,1/deltau)[1] - U)^2
-  }
-  }
   AGG_sample[i] <- optim(par=0,fn=to_opt)$par
+  
   }
   return(AGG_sample)
 } 
