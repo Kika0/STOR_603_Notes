@@ -786,7 +786,9 @@ plot_map_param <- function(tmp_est,method = "AGG",threesites=c("Birmingham","Gla
 find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::select()) {
   # convert site coordinates
   site_sf <- st_sfc(st_point(site),crs=4326) 
+  if (grid_uk == (uk_sf_rot %>% dplyr::select())) {
   site_sf <- st_transform(site_sf, crs=27700) # set BNG crs
+  }
   x <- which.min(as.numeric(st_distance(site_sf,grid_uk)))
   # check it works
   #return(tm_shape(uk_sf_rot) + tm_dots() + tm_shape(site_sf) + tm_dots(col="#C11432") + tm_shape(uk_sf_rot[x,])+ tm_dots(col="#009ADA"))
