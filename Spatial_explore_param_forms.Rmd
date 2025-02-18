@@ -424,6 +424,15 @@ for (i in 1:ncol(df_sites)) {
     est_all <- rbind(est_all,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGGsigdelta", method="sequential2",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(dayshift[j])))
   }
 }
+
+find_site_index1 <- function(site = Inverness,grid_uk = xyUK20_sf) {
+  # convert site coordinates
+  site_sf <- st_sfc(st_point(site),crs=4326) 
+  x <- which.min(as.numeric(st_distance(site_sf,grid_uk)))
+  # check it works
+  #return(tm_shape(uk_sf_rot) + tm_dots() + tm_shape(site_sf) + tm_dots(col="#C11432") + tm_shape(uk_sf_rot[x,])+ tm_dots(col="#009ADA"))
+  return(x)
+}
 ```
 
 Map and save for all sites.
