@@ -58,8 +58,11 @@ fits2
 Compare the two fits using the Vuong test.
 
 ```{r}
-RVineVuongTest(data= as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)),RVM1 = fits1, RVM2 = fits2)
+Vuong <- RVineVuongTest(data= as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)),RVM1 = fits1, RVM2 = fits2)
+data.frame("statistic"=Vuong[[1]],"p.value"=Vuong[[4]])
 ```
+
+$p$-value is very small, hence we reject the NULL hypothesis. The statistic value is positive, hence we prefer RVM1 without the imposed tree structure.
 
 Do the same the other way around, i.e., start by fitting vine copula to summer pollution data.
 
@@ -71,14 +74,20 @@ fits1
 # with imposed tree structure
 fitw2 <- RVineCopSelect(data = as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)), Matrix = fits1$Matrix,
                      trunclevel = 3, indeptest = FALSE)
-fitw
-fitw2
+fitw # no imposed structure
+fitw2 # imposed tree structure
 ```
  Compare the two fits for winter pollution data.
+ 
 ```{r}
-RVineVuongTest(data= as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)),RVM1 = fitw, RVM2 = fitw2)
+Vuong <- RVineVuongTest(data= as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)),RVM1 = fitw, RVM2 = fitw2)
+data.frame("statistic"=Vuong[[1]],"p.value"=Vuong[[4]])
 ```
+
+In this case, $p$-value is high and $\nu$ statistic is close to zero, hence there is no difference between the model. Therefore, we conclude that we can impose summer tree structure to winter data but not the other way.
+
 # Try combining the data on Uniform margins
+
 ```{r}
 sw <- rbind(as.data.frame(summer %>% apply(c(2),FUN=row_number)/(nrow(summer)+1)),as.data.frame(winter %>% apply(c(2),FUN=row_number)/(nrow(winter)+1)))
 
@@ -89,7 +98,7 @@ fitsw
 
 ## Fitting a vine copula to the observed residuals
 
-`fitress` is a matrix of observed residuals on the uniform margins for the summer pollution dataset conditioning on $O_3$ being extreme.
+`obsress` ia a matrix of observed residuals on the uniform margins for the summer pollution dataset conditioning on $O_3$ being extreme.
 
 ```{r}
 v <- 0.7
@@ -138,14 +147,16 @@ fitrw2
 
 ### Try Vuong test on observed residuals vine copulas.
 
-Summer
+Summer: no significant difference, can impose winter tree structure.
 ```{r}
-RVineVuongTest(data= obsress,RVM1 = fitrs, RVM2 = fitrs2)
+Vuong <- RVineVuongTest(data= obsress,RVM1 = fitrs, RVM2 = fitrs2)
+data.frame("statistic"=Vuong[[1]],"p.value"=Vuong[[4]])
 ```
-and winter
+and winter: again no significant difference.
 
 ```{r}
-RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)
+Vuong <- RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)
+data.frame("statistic"=Vuong[[1]],"p.value"=Vuong[[4]])
 ```
 
 Vuong test compares whether model $2$ is an improvement to model $1$. Since p values are not below significance level $0.05$, we accept a model with imposed structure?
@@ -201,6 +212,8 @@ x <- fn(j=5)
 x
 ```
 
+# Combining summer and winter data
+
 ```{r}
 sw1 <- sw
 fnsw <- function(j) {
@@ -218,3 +231,4 @@ return(list(fitrw,fitrs))
 }
 fnsw(j=1)
 ```
+We can perform the above comparison again for the observed residuals of joint summer and winter data conditional on each of the pollutants.

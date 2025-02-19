@@ -444,24 +444,13 @@ fits2 &lt;- RVineCopSelect(data = as.data.frame(summer %&gt;% apply(c(2),FUN=row
 ## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO2,   3 &lt;-&gt; NO,
 ## 4 &lt;-&gt; SO2,   5 &lt;-&gt; PM10</code></pre>
 <p>Compare the two fits using the Vuong test.</p>
-<pre class="r"><code>RVineVuongTest(data= as.data.frame(summer %&gt;% apply(c(2),FUN=row_number)/(nrow(summer)+1)),RVM1 = fits1, RVM2 = fits2)</code></pre>
-<pre><code>## $statistic
-## [1] 3.340154
-## 
-## $statistic.Akaike
-## [1] 3.15848
-## 
-## $statistic.Schwarz
-## [1] 2.76247
-## 
-## $p.value
-## [1] 0.0008373182
-## 
-## $p.value.Akaike
-## [1] 0.00158594
-## 
-## $p.value.Schwarz
-## [1] 0.005736586</code></pre>
+<pre class="r"><code>Vuong &lt;- RVineVuongTest(data= as.data.frame(summer %&gt;% apply(c(2),FUN=row_number)/(nrow(summer)+1)),RVM1 = fits1, RVM2 = fits2)
+data.frame(&quot;statistic&quot;=Vuong[[1]],&quot;p.value&quot;=Vuong[[4]])</code></pre>
+<pre><code>##   statistic      p.value
+## 1  3.340154 0.0008373182</code></pre>
+<p><span class="math inline">\(p\)</span>-value is very small, hence we
+reject the NULL hypothesis. The statistic value is positive, hence we
+prefer RVM1 without the imposed tree structure.</p>
 <p>Do the same the other way around, i.e., start by fitting vine copula
 to summer pollution data.</p>
 <pre class="r"><code>fits1</code></pre>
@@ -490,7 +479,7 @@ to summer pollution data.</p>
 <pre class="r"><code># with imposed tree structure
 fitw2 &lt;- RVineCopSelect(data = as.data.frame(winter %&gt;% apply(c(2),FUN=row_number)/(nrow(winter)+1)), Matrix = fits1$Matrix,
                      trunclevel = 3, indeptest = FALSE)
-fitw</code></pre>
+fitw # no imposed structure</code></pre>
 <pre><code>## D-vine copula with the following pair-copulas:
 ## Tree 1:
 ## 3,2  BB1 (par = 0.51, par2 = 1.74, tau = 0.54) 
@@ -513,7 +502,7 @@ fitw</code></pre>
 ## ---
 ## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO2,   3 &lt;-&gt; NO,
 ## 4 &lt;-&gt; SO2,   5 &lt;-&gt; PM10</code></pre>
-<pre class="r"><code>fitw2</code></pre>
+<pre class="r"><code>fitw2 # imposed tree structure</code></pre>
 <pre><code>## D-vine copula with the following pair-copulas:
 ## Tree 1:
 ## 3,1  Gaussian (par = -0.4, tau = -0.26) 
@@ -537,24 +526,15 @@ fitw</code></pre>
 ## 1 &lt;-&gt; O3,   2 &lt;-&gt; NO2,   3 &lt;-&gt; NO,
 ## 4 &lt;-&gt; SO2,   5 &lt;-&gt; PM10</code></pre>
 <p>Compare the two fits for winter pollution data.</p>
-<pre class="r"><code>RVineVuongTest(data= as.data.frame(winter %&gt;% apply(c(2),FUN=row_number)/(nrow(winter)+1)),RVM1 = fitw, RVM2 = fitw2)</code></pre>
-<pre><code>## $statistic
-## [1] -0.08910338
-## 
-## $statistic.Akaike
-## [1] -0.08910338
-## 
-## $statistic.Schwarz
-## [1] -0.08910338
-## 
-## $p.value
-## [1] 0.9289998
-## 
-## $p.value.Akaike
-## [1] 0.9289998
-## 
-## $p.value.Schwarz
-## [1] 0.9289998</code></pre>
+<pre class="r"><code>Vuong &lt;- RVineVuongTest(data= as.data.frame(winter %&gt;% apply(c(2),FUN=row_number)/(nrow(winter)+1)),RVM1 = fitw, RVM2 = fitw2)
+data.frame(&quot;statistic&quot;=Vuong[[1]],&quot;p.value&quot;=Vuong[[4]])</code></pre>
+<pre><code>##     statistic   p.value
+## 1 -0.08910338 0.9289998</code></pre>
+<p>In this case, <span class="math inline">\(p\)</span>-value is high
+and <span class="math inline">\(\nu\)</span> statistic is close to zero,
+hence there is no difference between the model. Therefore, we conclude
+that we can impose summer tree structure to winter data but not the
+other way.</p>
 </div>
 <div id="try-combining-the-data-on-uniform-margins" class="section level1">
 <h1>Try combining the data on Uniform margins</h1>
@@ -586,7 +566,7 @@ fitsw</code></pre>
 ## 4 &lt;-&gt; SO2,   5 &lt;-&gt; PM10</code></pre>
 <div id="fitting-a-vine-copula-to-the-observed-residuals" class="section level2">
 <h2>Fitting a vine copula to the observed residuals</h2>
-<p><code>fitress</code> is a matrix of observed residuals on the uniform
+<p><code>obsress</code> ia a matrix of observed residuals on the uniform
 margins for the summer pollution dataset conditioning on <span class="math inline">\(O_3\)</span> being extreme.</p>
 <pre class="r"><code>v &lt;- 0.7
 # transform to Laplace margins
@@ -680,44 +660,17 @@ copula structure.</p>
 ## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,   4 &lt;-&gt; PM10</code></pre>
 <div id="try-vuong-test-on-observed-residuals-vine-copulas." class="section level3">
 <h3>Try Vuong test on observed residuals vine copulas.</h3>
-<p>Summer</p>
-<pre class="r"><code>RVineVuongTest(data= obsress,RVM1 = fitrs, RVM2 = fitrs2)</code></pre>
-<pre><code>## $statistic
-## [1] -1.410064
-## 
-## $statistic.Akaike
-## [1] -0.8810053
-## 
-## $statistic.Schwarz
-## [1] -0.04534292
-## 
-## $p.value
-## [1] 0.1585209
-## 
-## $p.value.Akaike
-## [1] 0.378315
-## 
-## $p.value.Schwarz
-## [1] 0.963834</code></pre>
-<p>and winter</p>
-<pre class="r"><code>RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)</code></pre>
-<pre><code>## $statistic
-## [1] 0.08930114
-## 
-## $statistic.Akaike
-## [1] 0.4045028
-## 
-## $statistic.Schwarz
-## [1] 0.8891528
-## 
-## $p.value
-## [1] 0.9288426
-## 
-## $p.value.Akaike
-## [1] 0.685843
-## 
-## $p.value.Schwarz
-## [1] 0.373921</code></pre>
+<p>Summer: no significant difference, can impose winter tree
+structure.</p>
+<pre class="r"><code>Vuong &lt;- RVineVuongTest(data= obsress,RVM1 = fitrs, RVM2 = fitrs2)
+data.frame(&quot;statistic&quot;=Vuong[[1]],&quot;p.value&quot;=Vuong[[4]])</code></pre>
+<pre><code>##   statistic   p.value
+## 1 -1.410064 0.1585209</code></pre>
+<p>and winter: again no significant difference.</p>
+<pre class="r"><code>Vuong &lt;- RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)
+data.frame(&quot;statistic&quot;=Vuong[[1]],&quot;p.value&quot;=Vuong[[4]])</code></pre>
+<pre><code>##    statistic   p.value
+## 1 0.08930114 0.9288426</code></pre>
 <p>Vuong test compares whether model <span class="math inline">\(2\)</span> is an improvement to model <span class="math inline">\(1\)</span>. Since p values are not below
 significance level <span class="math inline">\(0.05\)</span>, we accept
 a model with imposed structure?</p>
@@ -1148,6 +1101,11 @@ x</code></pre>
 ## 
 ## [[6]]$p.value.Schwarz
 ## [1] 0.9952818</code></pre>
+</div>
+</div>
+</div>
+<div id="combining-summer-and-winter-data" class="section level1">
+<h1>Combining summer and winter data</h1>
 <pre class="r"><code>sw1 &lt;- sw
 fnsw &lt;- function(j) {
   sw &lt;- as.data.frame((sw %&gt;% apply(c(2),FUN=row_number))/(nrow(sw)+1)) %&gt;% apply(c(1,2),FUN=unif_laplace_pit) %&gt;% as.data.frame()
@@ -1197,8 +1155,9 @@ fnsw(j=1)</code></pre>
 ## ---
 ## 1 &lt;-&gt; NO2,   2 &lt;-&gt; NO,   3 &lt;-&gt; SO2,
 ## 4 &lt;-&gt; PM10</code></pre>
-</div>
-</div>
+<p>We can perform the above comparison again for the observed residuals
+of joint summer and winter data conditional on each of the
+pollutants.</p>
 </div>
 
 
