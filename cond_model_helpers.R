@@ -786,7 +786,9 @@ plot_map_param <- function(tmp_est,method = "AGG",threesites=c("Birmingham","Gla
 find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::select()) {
   # convert site coordinates
   site_sf <- st_sfc(st_point(site),crs=4326) 
+  if (nrow(grid_uk)==445) {
   site_sf <- st_transform(site_sf, crs=27700) # set BNG crs
+  }
   x <- which.min(as.numeric(st_distance(site_sf,grid_uk)))
   # check it works
   #return(tm_shape(uk_sf_rot) + tm_dots() + tm_shape(site_sf) + tm_dots(col="#C11432") + tm_shape(uk_sf_rot[x,])+ tm_dots(col="#009ADA"))
@@ -794,35 +796,41 @@ find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::sele
 }
 
 # function for plotting parameter estimates on a map and against distance
-map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="") {
+map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="", grid_uk=uk_temp_sf) {
   misscol <- "aquamarine"
+  Nsites <- length(unique(tmp_est$res))
   if (identical(facet_var,"cond_site")) {
     Nfacet <- length(unique(tmp_est$cond_site))
     facet_label <- unique(tmp_est$cond_site)
     nrow_facet <- round(length(unique(tmp_est$cond_site))/3)
     legend_outside_size <- 0.3
   } else if (identical(facet_var,"tau")) {
-    Nfacet <- nrow(tmp_est)/445
+    Nfacet <- nrow(tmp_est)/Nsites
     facet_label <- levels(tmp_est$tau)
     nrow_facet <- 1
     legend_outside_size <- 0.1
   } else if (identical(facet_var,"q")) {
-    Nfacet <- nrow(tmp_est)/445
+    Nfacet <- nrow(tmp_est)/Nsites
     facet_label <- levels(tmp_est$q)
     nrow_facet <- 1
     legend_outside_size <- 0.2 
   } else if (identical(facet_var[2], c("tau"))) {
-    Nfacet <- nrow(tmp_est)/445
+    Nfacet <- nrow(tmp_est)/Nsites
 #    facet_label1 <- levels(tmp_est$q)   
 #    facet_label2 <- levels(tmp_est$tau)
 #    nrow_facet <- 2
     legend_outside_size <- 0.2 
   }
 
-  tmp <- tmp_est %>% mutate(site_index = rep(1:445,Nfacet))
+  tmp <- tmp_est %>% mutate(site_index = rep(1:Nsites,Nfacet))
   # match back to spatial locations and plot
-  uk_temp_sf <- uk_temp_sf %>% mutate(site_index=1:445) %>% dplyr::select(site_index) %>% cbind(ukcp18[,1:8])
+  if (nrow(grid_uk)==445) {
+  uk_temp_sf <- grid_uk %>% mutate(site_index=1:Nsites) %>% dplyr::select(site_index) %>% cbind(ukcp18[,1:8])
   uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index")) 
+  } else {
+    uk_temp_sf <- grid_uk %>% mutate(site_index=1:Nsites)
+    uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index"))
+  }
   uk_tmp1 <- st_as_sf(uk_tmp)
   if (method=="q") {
     if (identical(facet_var,"q")) {
