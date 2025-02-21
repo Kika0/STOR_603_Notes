@@ -188,11 +188,14 @@ for (i in 1:Nrep) {
   fit2 <- RVineStructureSelect(Y2,trunclevel = 3, indeptest = FALSE)
   # calculate Vuong test statistic
   statistic[i] <- RVineVuongTest(data=obsresw,RVM1 = fit1,RVM2 = fit2)$statistic
+  }
+return(statistic)
 }
-}
+statistic <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=1000)
 Vuong_statistic <- statistic
-hist(Vuong_statistic,n=20)
+hist(Vuong_statistic,n=10)
 abline(v=Vuong[[1]], col="#C11432",lty= "dashed")
+ ggplot(data.frame(Vuong_statistic=statistic)) + geom_histogram(aes(x=Vuong_statistic)) + geom_vline(xintercept = Vuong[[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic")
 ```
 
 
