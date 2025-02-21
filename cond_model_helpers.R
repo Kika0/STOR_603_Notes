@@ -802,7 +802,7 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
   if (identical(facet_var,"cond_site")) {
     Nfacet <- length(unique(tmp_est$cond_site))
     facet_label <- unique(tmp_est$cond_site)
-    nrow_facet <- round(length(unique(tmp_est$cond_site))/3)
+    nrow_facet <- ceiling(length(unique(tmp_est$cond_site))/3)
     legend_outside_size <- 0.3
   } else if (identical(facet_var,"tau")) {
     Nfacet <- nrow(tmp_est)/Nsites

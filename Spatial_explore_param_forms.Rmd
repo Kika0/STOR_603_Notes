@@ -424,7 +424,7 @@ for (i in 1:ncol(df_sites)) {
     est_all <- rbind(est_all,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGG", method="sequential2",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(dayshift[j])))
   }
 }
-
+dayshift <- 0
 for (i in 1:1) {
   cond_site <- find_site_index(as.numeric(df_sites[,i]),grid_uk = xyUK20_sf)
   for (j in 1:length(dayshift)) {
@@ -450,8 +450,16 @@ Map and save for all sites.
 #     tmap_save(tau_site_map[[j]],filename=paste0("../Documents/est_all_keef/tau_",names(df_sites[i]),"_map_",j,"_",condmodel_params[j],".png"),width=15,height=4.5)
 #   }
 # }
-est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
-map_param(tmp_est=est_all %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
+est_all <- est_all %>% filter(tau==0) %>% mutate(cond_site=factor(cond_site))
+#est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(0)))
+mp <- map_param(tmp_est=est_all %>% filter(cond_site==names(df_sites)[i]),method="AGG",title_map = "",grid_uk = xyUK20_sf)
+tmap_save(mp[[1]],filename="../Documents/a20km.png",width=2.5,height=5)
+tmap_save(mp[[2]],filename="../Documents/b20km.png",width=2.5,height=5)
+
+  uk_temp_sf <- xyUK20_sf %>% mutate(site_index=1:322)
+    uk_tmp <- cbind(uk_temp_sf,est_all)
+    tm_shape(uk_tmp) + tm_dots(col="a")
+
 ```
 
 Save max over the time period and which day it is.

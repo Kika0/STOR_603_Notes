@@ -113,7 +113,7 @@ for (i in 1: length(list_of_files)) {
   xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="obs",doy>=152,doy<=243, year<=1999) %>% pull(x) 
 }
 # link back to spatial
-tm_shape(cbind(xyUK20_sf,xyUK20)) + tm_dots(col="X155_1970")
+tm_shape(cbind(xyUK20_sf,xyUK20)) + tm_dots(col="X155_1990")
 # save as R object for further analysis
 
 # explore NA values
