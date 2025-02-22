@@ -798,7 +798,7 @@ find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::sele
 # function for plotting parameter estimates on a map and against distance
 map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="", grid_uk=uk_temp_sf) {
   misscol <- "aquamarine"
-  Nsites <- length(unique(tmp_est$res))
+  Nsites <- max(tmp_est$res, tmp_est$given,na.rm=TRUE)
   if (identical(facet_var,"cond_site")) {
     Nfacet <- length(unique(tmp_est$cond_site))
     facet_label <- unique(tmp_est$cond_site)
