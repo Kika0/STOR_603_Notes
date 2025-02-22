@@ -604,6 +604,7 @@ tmap_save(map_param(tmp_est=tmpdiff,method = "rldiff", facet_var = c("cond_site"
 
 ```{r}
 sites_index_diagonal <- c(161,144,128,110,92,77,78) # first is Birmingham and last is London
+site_name_diagonal <- c("Birmingham", paste0("diagonal",1:5),"London")
 # plot these points on a map
 uk_sf_rot <- uk_sf_rot %>% mutate(sites_index_diagonal=factor(case_match(ind,c(161) ~ "Birmingham",c(78)~"London",sites_index_diagonal[2:6]~"diagonal_sites")))
 tm_shape(uk_sf_rot) + tm_dots("sites_index_diagonal",size=0.1, palette = c("Birmingham"="#C11432","London" = "#009ADA", "diagonal_sites" = "#FDD10A"))
@@ -611,6 +612,19 @@ tm_shape(uk_sf_rot) + tm_dots("sites_index_diagonal",size=0.1, palette = c("Birm
 Estimate all parameters for the sites in colour (including Birmingham and London for testing).
 
 ```{r}
-
+dayshift <- c(-3:3)
+est_all_diag <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
+                          "a" = numeric(), "b" = numeric(),
+                          "mu" = numeric(),"mu_agg" = numeric(),
+                          "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
+                          "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
+                          "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
+for (i in 1:length(sites_index_diagonal)) {
+  cond_site <- sites_index_diagonal[i]
+  for (j in 1:length(dayshift)) {
+    sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[j])
+    est_all_diag <- rbind(est_all_diag,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGG", method="sequential2",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=sites_index_diagonal[i],tau=as.character(dayshift[j])))
+  }
+}
 ```
 
