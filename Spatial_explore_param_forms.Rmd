@@ -623,8 +623,43 @@ for (i in 1:length(sites_index_diagonal)) {
   cond_site <- sites_index_diagonal[i]
   for (j in 1:length(dayshift)) {
     sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[j])
-    est_all_diag <- rbind(est_all_diag,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGG", method="sequential2",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=sites_index_diagonal[i],tau=as.character(dayshift[j])))
+    est_all_diag <- rbind(est_all_diag,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGG", method="sequential2",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=sites_name_diagonal[i],tau=as.character(dayshift[j])))
   }
 }
+```
+
+Plot summary of parameters for the sites on the diagonal.
+
+```{r}
+est_all_diag1 <- est_all_diag %>% mutate(cond_site = factor(cond_site,levels=sites_index_diagonal), tau = factor(tau,levels=as.character(dayshift)))
+est_all_diag1 %>% ggplot() + geom_boxplot(aes(x=cond_site, y=a))
+est_all_diag1 %>% ggplot() + geom_boxplot(aes(x=cond_site, y=b))
+```
+There is a decrease in both $\hat{\boldsymbol{\alpha}}$ and $\hat{\boldsymbol{\beta}}$.
+
+```{r}
+est_all_diag1 %>% group_by(cond_site) %>% summarise(mean_a=mean(a,na.rm = TRUE),mean_b = mean(b, na.rm = TRUE),median_a=median(a,na.rm = TRUE),median_b = median(b, na.rm = TRUE))
+```
+This decrease is non-linear and can be observed in both mean and median values of $\hat{\boldsymbol{\alpha}}$ and $\hat{\boldsymbol{\beta}}$.
+
+### Map parameter estimates 
+
+```{r}
+condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
+for (i in 1:length(sites_index_diagonal)) {
+tau_site_map <- map_param(tmp_est=est_all_diag1 %>% filter(cond_site== sites_index_diagonal[i]), method = "AGG", facet_var = "tau", title_map = site_name_diagonal[i],grid_uk = uk_temp_sf)
+  for (j in 1:length(condmodel_params)) {
+    tmap_save(tau_site_map[[j]],filename=paste0("../Documents/est_all_diag/tau_",site_name_diagonal[i],"_map_",j,"_",condmodel_params[j],".png"),width=15,height=4.5)
+  }
+}
+
+# map also a grid of alpha and beta estimates
+est_all_diag1 <- est_all_diag1 %>% mutate(cond_site = factor(as.character(cond_site),levels=as.character(sites_index_diagonal)))
+tau_map <- map_param(tmp_est=est_all_diag1, method = "AGG", facet_var = c("cond_site","tau"), title_map = "Diagonal sites",grid_uk = uk_temp_sf)
+tau_map[[1]]
+tau_map[[2]]
+  for (j in 1:length(condmodel_params)) {
+    tmap_save(tau_map[[j]],filename=paste0("../Documents/est_all_diag/allsites_tau_map_",j,"_",condmodel_params[j],".png"),width=6,height=10)
+  }
 ```
 
