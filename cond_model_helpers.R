@@ -815,10 +815,9 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     nrow_facet <- 1
     legend_outside_size <- 0.2 
   } else if (identical(facet_var[2], c("tau"))) {
-    Nfacet <- nrow(tmp_est)/Nsites
-#    facet_label1 <- levels(tmp_est$q)   
-#    facet_label2 <- levels(tmp_est$tau)
-#    nrow_facet <- 2
+    Nfacet <- length(unique(tmp_est$cond_site))*length(unique(tmp_est$tau))
+    facet_label <- list(levels(tmp_est %>% dplyr::select(facet_var[1]) %>% pull()),levels(tmp_est %>% dplyr::select(facet_var[2]) %>% pull()))   
+     nrow_facet <- length(unique(tmp_est$cond_site))
     legend_outside_size <- 0.2 
   }
 
