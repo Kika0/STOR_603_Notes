@@ -916,3 +916,22 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
   else if (method %in% c("q","rl","rldiff","rlreldiff")) {return(pq)}
   else {return(list(pa,pmu,psig))}
 }
+
+shift_time <- function(sims=sims,cond_site=cond_site,tau=0, Ndays_season = 90) {
+  if (tau==0) {
+    return(sims)
+  }
+  dayshift <- c(-3:3)
+  dayremove <- c(rep(Ndays_season,3),0,1,2,3)-c(2,1,rep(0,5))
+  dayremove[dayshift %in% (0:tau)[-1]]
+  
+  daysremove_condsite <- daysremove_othersites <-  c()
+  daysremove_condsite <- as.numeric(sapply(1:19,function(i){append(daysremove_condsite,dayremove[dayshift %in% (0:-tau)[-1]]+Ndays_season*(i-1))}))
+  daysremove_othersites <- as.numeric(sapply(1:19,function(i){append(daysremove_othersites,dayremove[dayshift %in% (0:tau)[-1]]+Ndays_season*(i-1))}))
+  
+  sims_tau <-  data.frame(matrix(ncol=ncol(sims),nrow=nrow(sims)-abs(tau)*19))
+  names(sims_tau) <- names(sims)
+  sims_tau[,cond_site] <- sims[-daysremove_condsite,cond_site]
+  sims_tau[,-cond_site] <- sims[-daysremove_othersites,-cond_site]
+  return(sims_tau)
+}
