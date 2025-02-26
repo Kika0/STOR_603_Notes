@@ -7,6 +7,15 @@ library(tmap)
 load("../luna/kristina/MSdata_CPM5km_member1/ukgd_cpm85_5k_x100y23_MSdata01.RData")
 data01.std.param # not much info here
 data01 <- data01 %>% mutate(year=floor(time))
+# NA in uqgam may mean high value of u
+data01 %>% filter(is.na(uqgam)) %>% view()
+summary(data01 %>% filter(is.na(uqgam)) )
+# is it right to replace these with low temperature? maybe replace with an average of neighbouring temperatures?
+
+# when u is NA, uqgam is also NA
+data01 %>% filter(is.na(u)) %>% view()
+summary(data01 %>% filter(is.na(u)))
+
 dim(data01)
 summary(data01)
 glimpse(data01)
@@ -87,12 +96,24 @@ tm_shape(xyUK_sf) + tm_dots(col="temp")
 x20 <- seq(from=4,to=dim(lon5.o)[1],by=4)
 y20 <- seq(from=4,to=dim(lon5.o)[2],by=4)
 xyUK20_sf <-xyUK_sf %>% filter(x %in% x20,y %in% y20)
+# save sf object
+save(xyUK20_sf,file="xyUK20_sf")
+
 tm_shape(xyUK20_sf) + tm_dots(col="temp")
 # great, now load only files that overlap this grid or perhaps delete all other files?
 files <- list.files("../luna/kristina/MSdata_CPM5km_member1/")
 list_of_files <- list() #create empty list
 # only subset for x in x20 and y in y20
 files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSdata01.RData")})
+# explore an example of a missing file
+head(sort(files_subset),n=50)
+head(sort(files_subset1),n=50)
+
+# what are the missing files?
+files_missing <- files_subset[!(files_subset %in% files_subset1)]
+# pick the first one
+files_missing[1]
+
 #loop through the files
 files_subset1 <- files_subset[files_subset %in% files]
 # could take only x and y divisible by 4 to subset and speed up data loading
