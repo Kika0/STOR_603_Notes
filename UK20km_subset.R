@@ -1,5 +1,6 @@
 # libraries
-
+library(ncdf4)
+library(sf)
 # load sf object of UK mainland polygon
 
 
@@ -31,3 +32,4 @@ lad <- st_read("data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 # take mainland UK (Great Britain)
 uk <- (lad %>% st_union() %>% st_cast( "MULTIPOLYGON" ) %>% st_cast("POLYGON"))[1531]
 uk <- st_simplify(uk,dTolerance = 2000) %>% st_transform(crs = 4326)  
+save(uk,"uk.RData")
