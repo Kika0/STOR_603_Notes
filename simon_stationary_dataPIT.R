@@ -96,12 +96,12 @@ tm_shape(xyUK_sf) + tm_dots(col="temp")
 x20 <- seq(from=4,to=dim(lon5.o)[1],by=4)
 y20 <- seq(from=4,to=dim(lon5.o)[2],by=4)
 xyUK20_sf <-xyUK_sf %>% filter(x %in% x20,y %in% y20)
-# save sf object
-save(xyUK20_sf,file="xyUK20_sf")
+# save sf objects used for spatial analysis
+save(uk,xyUK20_sf,files_subset1,file="/data_processed/spatial_helper.RData")
 
 tm_shape(xyUK20_sf) + tm_dots(col="temp")
 # great, now load only files that overlap this grid or perhaps delete all other files?
-files <- list.files("../luna/kristina/MSdata_CPM5km_member1/")
+files <- list.files("../luna/kristina/MSdata01/")
 list_of_files <- list() #create empty list
 # only subset for x in x20 and y in y20
 files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSdata01.RData")})
@@ -109,17 +109,16 @@ files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xy
 head(sort(files_subset),n=50)
 head(sort(files_subset1),n=50)
 
-# what are the missing files?
-files_missing <- files_subset[!(files_subset %in% files_subset1)]
-# pick the first one
-files_missing[1]
+# what is the one missing files?
+files_missing <- files_subset[!(files_subset %in% files)]
+files_missing[1] # it is over Heysham in the sea, a mistake due to a simplified UK polygon
 
 #loop through the files
 files_subset1 <- files_subset[files_subset %in% files]
 # could take only x and y divisible by 4 to subset and speed up data loading
 for (i in 1:length(files_subset1)) {
   print(files_subset1[i])
-  load(paste0("../luna/kristina/MSdata_CPM5km_member1/", files_subset1[i]))
+  load(paste0("../luna/kristina/MSdata01/", files_subset1[i]))
   list_of_files[[i]] <- data01 #add files to list position
 }
 xyUK20_sf <- xyUK20_sf[files_subset %in% files_subset1,]
