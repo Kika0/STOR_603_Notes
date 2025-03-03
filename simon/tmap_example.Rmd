@@ -1,0 +1,31 @@
+---
+title: "tmap_example"
+output: html_document
+date: "2025-03-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sf)
+library(tmap)
+load("../data_processed/spatial_helper.RData")
+```
+
+## Example tmap
+
+By default, `tmap_mode` is set to `"plot"`.
+
+```{r cars}
+tm_shape(uk_notsimplified) + tm_polygons()
+```
+
+## Including points and polygons
+
+Below is a UK mainland polygon and the points on a 20km grid. Set `tmap_mode("view")` for interactive mode.
+
+```{r pressure, echo=FALSE}
+tmap_mode("view")
+tm_basemap("OpenStreetMap") + # set OSM map background for easier reading
+tm_shape(uk_notsimplified) + tm_polygons(alpha=0.5) + tm_shape(xyUK20_sf) + tm_dots("temp")
+```
+
