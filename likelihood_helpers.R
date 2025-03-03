@@ -22,7 +22,7 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_h
   Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
   Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
   if (a<(-1) | a>1 | b<0 | b>=b_max) {
-    log_lik <- (-10^6) # low log-likelihood outside bounds
+    log_lik <- (-10^6) # low log-likelihood outside Keef bounds
   }
   else {
     log_lik <- sum(-log(Y1^b *sig*sqrt(2*pi)) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
@@ -30,86 +30,6 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_h
   return(log_lik)
 }
 
-#' Calculate initial negative log-likelihood of Normal regression
-#' 
-#' Fixing b=0, calculate the initial values for other 3 parameters
-#'
-#' @param theta A set of 3 parameters: a,mu,sig
-#' @param df A dataset with column names of paste0("Y",number).
-#' @param given A numeric specifying column name of cond. variable Y1.
-#' @param sim A numeric specifying column name of other variable Y2.#'
-#' @return A numeric of negative log-likelihood.
-#' @export
-#'
-#' @examples
-Y_likelihood_initial <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
-  a <- theta[1]
-  b <- 0
-  mu <- theta[2]
-  sig <- theta[3]
-  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
-  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
-  if (a<(-1) | a>1 | b<0 | b>=1) {
-    log_lik <- (-10^6) # low log-likelihood outside bounds
-  }
-  else {
-    log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
-  }
-  return(log_lik)
-}
-
-Y_likelihood_fix_ab <- function(theta,a=1,b=0,df=Y_given_1_extreme,given=1,sim=2) {
-  mu <- theta[1]
-  sig <- theta[2]
-  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
-  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
-  log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
-  return(log_lik)
-}
-
-#' Calculate negative log-likelihood for Normal regression with Keef constraints
-#' 
-#' Currently under development of including constraints of Keef et al. (2013) on a,b.
-#'
-#' @param theta A set of 4 parameters: a,b,mu,sig.
-#' @param df A dataset with column names of paste0("Y",number).
-#' @param given A numeric specifying column name of cond. variable Y1.
-#' @param sim A numeric specifying column name of other variable Y2.
-#' @param v A numeric quantile threshold.
-#'
-#' @return Anumeric negative log-likelihood.
-#' @export
-#'
-#' @examples
-Y_likelihood_constrained <- function(theta,df=Y_given_1_extreme,given=1,sim=2,v=0.99) {
-  a <- theta[1]
-  b <- theta[2]
-  mu <- theta[3]
-  sig <- theta[4]
-  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
-  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
-  # positive residual quantile
-  q <- 0.9
-  # zp <- quantile(Y2-Y1,q)
-  zp <- max(Y2-Y1)
-  # residual quantile
-  # z <- quantile( (Y1-a*Y1)/(Y1^b),q)
-  z <- max((Y1-a*Y1)/(Y1^b))
-  # negative residual quantile
-  # zn <- quantile(Y2+Y1,q)
-  zn <- max(Y2+Y1)
-  
-  if (  ( (a<=min(1,1-b*z*v^(b-1),1-v^(b-1)*z+v^(-1)*zp) )|(  ((1-b*z*v^(b-1))<a & a<=1) & (( (1-b^(-1))*(b*z)^(1/(1-b)) *(1-a)^(-b/(1-b)) +zp)>0  ) ) )&
-        ( (a<=min(1,1+b*z*v^(b-1),1+v^(b-1)*z-v^(-1)*zn) )|(  ((1+b*z*v^(b-1))<(-a) & (-a)<=1) & (( (1-b^(-1))*(-b*z)^(1/(1-b)) *(1+a)^(-b/(1-b)) -zn)>0  ) ) ) 
-  ) {
-    
-    log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
-  }
-  else {
-    log_lik <- (-10^6)
-  }
-  return(log_lik)
-}
 
 #' NLL for generalized Gaussian
 #'
@@ -126,35 +46,6 @@ NLL_GenGaus <- function(x,theta) {
   delta <- theta[3]
   if(sig<=0 | delta<=0){return(10e10)}
   return(-sum(gnorm::dgnorm(x,mu=mu,alpha=sig,beta=delta,log=TRUE)))
-}
-
-dgnormsk <- function(x,mu,sig,deltal,deltau) {
-  z <- c()
-  C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )^(-1)
-  for (i in 1:length(x)) {
-    if (x[i]<0) {
-      z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltal)
-    }
-    z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltau)
-  }
-  return(z)
-}
-
-# density function for AGG with different scale for lower and upper tail
-dgnormsksig <- function(x,theta) {
-  mu <- theta[1]
-  sigl <- theta[2]
-  sigu <- theta[3]
-  delta <- theta[4]
-  z <- c()
-  C_AGG <-  (sigl/delta*gamma(1/delta) + sigu/delta*gamma(1/delta)  )^(-1)
-  for (i in 1:length(x)) {
-    if (x[i]<mu) {
-      z[i] <- C/sigl*exp(-abs((x[i]-mu)/sigl)^delta)
-    }
-    z[i] <- C/sigu*exp(-abs((x[i]-mu)/sigu)^delta)
-  }
-  return(z)
 }
 
 #' NLL for AGG with different shape for lower and upper tail
@@ -246,6 +137,7 @@ NLL_AGG <- function(x,theta) {
 }
 
 
+# More likelihood functions (mostly not relevant)--------------------------------------------
 NLL_exp_norm_noise <- function(d,x,theta) {
   phi <- theta[1]
   sd <- theta[2]
@@ -313,3 +205,113 @@ NLL_AGGdelta_onestep <- function(x,theta,a_hat=NULL,b_hat=NULL) {
   return(-sum(z))
 }
 
+# density function for AGG with different shape for lower and upper tail
+dgnormsk <- function(x,mu,sig,deltal,deltau) {
+  z <- c()
+  C <- (1/deltal*gamma(1/deltal) +1/deltau*gamma(1/deltau) )^(-1)
+  for (i in 1:length(x)) {
+    if (x[i]<0) {
+      z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltal)
+    }
+    z[i] <- C/sig*exp(-abs((x[i]-mu)/sig)^deltau)
+  }
+  return(z)
+}
+
+# density function for AGG with different scale for lower and upper tail
+dgnormsksig <- function(x,theta) {
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  delta <- theta[4]
+  z <- c()
+  C_AGG <-  (sigl/delta*gamma(1/delta) + sigu/delta*gamma(1/delta)  )^(-1)
+  for (i in 1:length(x)) {
+    if (x[i]<mu) {
+      z[i] <- C/sigl*exp(-abs((x[i]-mu)/sigl)^delta)
+    }
+    z[i] <- C/sigu*exp(-abs((x[i]-mu)/sigu)^delta)
+  }
+  return(z)
+}
+
+#' Calculate initial negative log-likelihood of Normal regression
+#' 
+#' Fixing b=0, calculate the initial values for other 3 parameters
+#'
+#' @param theta A set of 3 parameters: a,mu,sig
+#' @param df A dataset with column names of paste0("Y",number).
+#' @param given A numeric specifying column name of cond. variable Y1.
+#' @param sim A numeric specifying column name of other variable Y2.#'
+#' @return A numeric of negative log-likelihood.
+#' @export
+#'
+#' @examples
+Y_likelihood_initial <- function(theta,df=Y_given_1_extreme,given=1,sim=2) {
+  a <- theta[1]
+  b <- 0
+  mu <- theta[2]
+  sig <- theta[3]
+  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
+  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
+  if (a<(-1) | a>1 | b<0 | b>=1) {
+    log_lik <- (-10^6) # low log-likelihood outside bounds
+  }
+  else {
+    log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+  }
+  return(log_lik)
+}
+
+Y_likelihood_fix_ab <- function(theta,a=1,b=0,df=Y_given_1_extreme,given=1,sim=2) {
+  mu <- theta[1]
+  sig <- theta[2]
+  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
+  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
+  log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+  return(log_lik)
+}
+
+#' Calculate negative log-likelihood for Normal regression with Keef constraints
+#' 
+#' Currently under development of including constraints of Keef et al. (2013) on a,b.
+#'
+#' @param theta A set of 4 parameters: a,b,mu,sig.
+#' @param df A dataset with column names of paste0("Y",number).
+#' @param given A numeric specifying column name of cond. variable Y1.
+#' @param sim A numeric specifying column name of other variable Y2.
+#' @param v A numeric quantile threshold.
+#'
+#' @return Anumeric negative log-likelihood.
+#' @export
+#'
+#' @examples
+Y_likelihood_constrained <- function(theta,df=Y_given_1_extreme,given=1,sim=2,v=0.99) {
+  a <- theta[1]
+  b <- theta[2]
+  mu <- theta[3]
+  sig <- theta[4]
+  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
+  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
+  # positive residual quantile
+  q <- 0.9
+  # zp <- quantile(Y2-Y1,q)
+  zp <- max(Y2-Y1)
+  # residual quantile
+  # z <- quantile( (Y1-a*Y1)/(Y1^b),q)
+  z <- max((Y1-a*Y1)/(Y1^b))
+  # negative residual quantile
+  # zn <- quantile(Y2+Y1,q)
+  zn <- max(Y2+Y1)
+  
+  if (  ( (a<=min(1,1-b*z*v^(b-1),1-v^(b-1)*z+v^(-1)*zp) )|(  ((1-b*z*v^(b-1))<a & a<=1) & (( (1-b^(-1))*(b*z)^(1/(1-b)) *(1-a)^(-b/(1-b)) +zp)>0  ) ) )&
+        ( (a<=min(1,1+b*z*v^(b-1),1+v^(b-1)*z-v^(-1)*zn) )|(  ((1+b*z*v^(b-1))<(-a) & (-a)<=1) & (( (1-b^(-1))*(-b*z)^(1/(1-b)) *(1+a)^(-b/(1-b)) -zn)>0  ) ) ) 
+  ) {
+    
+    log_lik <- sum(-log(Y1^b *sig) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+  }
+  else {
+    log_lik <- (-10^6)
+  }
+  return(log_lik)
+}
