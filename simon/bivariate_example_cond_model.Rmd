@@ -1,0 +1,53 @@
+---
+title: "bivariate_model_example"
+output: html_document
+date: "2025-03-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(pracma) # incomplete gamma function, will be used later in cond.ext.model for modelling the residual margins
+library(here)
+# set theme defaults to be black rectangle
+theme_set(theme_bw())
+theme_replace(
+  panel.spacing = unit(2, "lines"),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.background = element_blank(),
+  panel.border = element_rect(colour = "black", fill = NA) )
+
+source("../sample_distribution_helpers.R")
+source("../likelihood_helpers.R")
+source("../cond_model_helpers.R")
+```
+
+## Bivariate example of conditional extreme value model
+
+This example uses a sample from a bivariate logistic extreme value distribution with Fréchet margins (then transformed to Laplace for modelling).
+
+```{r}
+set.seed(11)
+N <- 5000
+v <- 0.9 # threshold for conditioning variable
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+   apply(c(1,2),FUN=frechet_laplace_pit) %>% # transform to Laplace margins
+  as.data.frame()
+```
+
+## Estimating parameters
+
+`margin="AGG"` means Normal distribution is used for the residual margin (estimates are columns `mu_agg`, `sig_l`, `sig_u`, `delta_l` and `delta_u`).
+
+`method=sequential2` mean that we fix $\beta=0$ and estimate $\hat{\alpha}$ (column `a` and `lika` for NLL (negative log-likelihood)), then fix $\alpha=\hat{\alpha}$ and estimate $\hat{\beta}$ (column `b` and `likb` for LL).
+
+`keef_constraints=c(1,2)` means we use both Keef constraints as upper bound on $\beta$, i.e. $\beta_{max} = \min \left\{ \beta_{constraint1},\beta_{constraint2}  \right\}$.
+
+`par_est()` function is from `cond_model_helpers.R` (a bit messy atm).
+
+```{r}
+par_est(df=sims,v=v,given=c(1),margin = "Normal", method = "sequential2", keef_constraints = c(1,2))
+```
+
+
