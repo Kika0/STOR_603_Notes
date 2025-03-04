@@ -34,6 +34,7 @@ v <- 0.9 # threshold for conditioning variable
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
    apply(c(1,2),FUN=frechet_laplace_pit) %>% # transform to Laplace margins
   as.data.frame()
+as_tibble(sims)
 ```
 
 ## Estimating parameters

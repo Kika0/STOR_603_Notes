@@ -365,7 +365,22 @@ N &lt;- 5000
 v &lt;- 0.9 # threshold for conditioning variable
 sims &lt;- generate_Y(N=N) %&gt;% link_log(dep=1/2) %&gt;%
    apply(c(1,2),FUN=frechet_laplace_pit) %&gt;% # transform to Laplace margins
-  as.data.frame()</code></pre>
+  as.data.frame()
+as_tibble(sims)</code></pre>
+<pre><code>## # A tibble: 5,000 × 2
+##         Y1       Y2
+##      &lt;dbl&gt;    &lt;dbl&gt;
+##  1 -0.590  -3.04   
+##  2 -6.87   -2.94   
+##  3  0.0214  0.843  
+##  4 -3.57   -1.18   
+##  5 -2.05   -0.262  
+##  6  2.40    1.68   
+##  7 -1.75    0.526  
+##  8 -0.545  -0.00369
+##  9  1.43    1.72   
+## 10 -1.40   -0.755  
+## # ℹ 4,990 more rows</code></pre>
 </div>
 <div id="estimating-parameters" class="section level2">
 <h2>Estimating parameters</h2>
@@ -382,8 +397,9 @@ constraints as upper bound on <span class="math inline">\(\beta\)</span>, i.e. 
 <p><code>par_est()</code> function is from
 <code>cond_model_helpers.R</code> (a bit messy atm).</p>
 <pre class="r"><code>par_est(df=sims,v=v,given=c(1),margin = &quot;Normal&quot;, method = &quot;sequential2&quot;, keef_constraints = c(1,2))</code></pre>
-<pre><code>##   lik     lika      likb     lik2         a         b         mu mu_agg
-## 1  NA 732.9798 -732.0193 732.0193 0.9197428 0.1154856 -0.2414197     NA
+<pre><code>## [[1]]
+##   lik     lika     likb     lik2         a         b         mu mu_agg
+## 1  NA 732.9798 732.0193 732.0193 0.9197428 0.1154856 -0.2414197     NA
 ##         sig sig_agg sigl sigu delta deltal deltau given res
 ## 1 0.9439742      NA   NA   NA    NA     NA     NA     1   2</code></pre>
 </div>
