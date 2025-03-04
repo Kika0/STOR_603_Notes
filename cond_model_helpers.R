@@ -113,7 +113,33 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
          mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
         sig_hat <- append(sig_hat,optmusig$par[length(optmusig$par)])  
         lik <- append(lik,-optmusig$value)
-        likb <- append(likb,optb$value)
+        likb <- append(likb,-optb$value)
+      }
+      
+      if (method=="sequentialGG") {
+        init_para <- c(0.8,0,1,2)
+        opta <- optim(par=init_para,fn = Y_likelihoodGG,df=Y_given1extreme,given=j,sim=res[i-1],b_hat=0,control = list(fnscale=-1,maxit=2000))
+        a_hat <- append(a_hat,opta$par[1])
+        lika <- append(lika,-opta$value)
+        if (1 %in% keef_constraints) {
+          b_max1 <- optim(par=0.8,fn = keef_constraint1,a=a_hat[length(a_hat)],Y1=Y1,Y2=Y2,control = list(maxit=2000),lower=0,upper=1, method = "Brent")$par
+        } else {b_max1 <- 1}
+        if (2 %in% keef_constraints) {
+          b_max2 <- optim(par=0.8,fn = keef_constraint2,a=a_hat[length(a_hat)],Y1=Y1,Y2=Y2,control = list(maxit=2000),lower=0, upper=1, method = "Brent")$par
+        } else {b_max2 <- 1} 
+        b_max <- min(b_max1,b_max2)
+        init_parb <- c(b_max/2,0,1,2)
+        #optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-Inf,0),upper = c(b_max,Inf,4),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
+        optb <- optim(par=init_parb,fn = Y_likelihoodGG,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_max=b_max,control = list(fnscale=-1,maxit=2000), method = "Nelder-Mead")
+        b_hat <- append(b_hat,optb$par[length(optb$par)-3])
+        Z2 <- (Y2-opta$par[1]*Y1)/(Y1^optb$par[1])
+        init_parGG <- c(0,1,2)
+        opt3 <- optim(par=init_parGG,fn = Y_likelihoodGG,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_hat=optb$par[1],control = list(fnscale=-1,maxit=2000))
+        mu_hat <- append(mu_hat,opt3$par[length(opt3$par)-2])
+        sig_hat <- append(sig_hat,opt3$par[length(opt3$par)-1]) 
+        delta_hat <- append(delta_hat,opt3$par[length(opt3$par)])        
+        lik <- append(lik,-opt3$value)
+        likb <- append(likb,-optb$value)
       }
       if (method=="sequential3") {
         init_parb <- c(0.2,0,1)
@@ -243,6 +269,15 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
   
+  if (margin=="AGG" & method=="sequentialGG") {
+    par_sum <- data.frame("lik" = lik, "lika"=lika,"likb"=likb,"lik2"=lik2,
+                          "a" = a_hat, "b" = b_hat,
+                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
+                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
+                          "delta"=delta_hat,"deltal" = deltal_hat, "deltau" = deltau_hat,
+                          "given" = rep(given,each=(d-1)), "res" = res_var)
+  }
+  
   if (margin=="AGG" & method %in% c("sequential","sequential2")) {
     par_sum <- data.frame("lik" = nas, "lika"= lika,"likb"= likb,"lik2"=lik2,
                           "a" = a_hat, "b" = b_hat,
@@ -294,7 +329,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
   
-  return(par_sum)
+  return(list(par_sum))
 }
 
 par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,b_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
