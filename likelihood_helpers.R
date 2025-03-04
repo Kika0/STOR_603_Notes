@@ -21,11 +21,45 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_h
   sig <- theta[length(theta)]
   Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
   Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
-  if (a<(-1) | a>1 | b<0 | b>=b_max) {
+  if (a<(-1) | a>1 | b<0 | b>=b_max | sig<0) {
     log_lik <- (-10^6) # low log-likelihood outside Keef bounds
   }
   else {
     log_lik <- sum(-log(Y1^b *sig*sqrt(2*pi)) + (-(Y2-a*Y1-mu*Y1^b)^2/(2*(Y1^b*sig)^2))  )
+  }
+  return(log_lik)
+}
+
+#' Calculate negative log-likelihood of Normal regression
+#' 
+#' Conditioning on Y_1 being extreme to model Y_2 (conditional model in bivariate case)
+#'
+#' @param theta A set of 4 parameters: a,b,mu,sig,delta.
+#' @param df A dataset with column names of paste0("Y",number).
+#' @param given A numeric specifying column name of cond. variable Y1.
+#' @param sim A numeric specifying column name of other variable Y2.
+#' @return A numeric negative log-likelihood.
+#' @export
+#'
+#' @examples
+Y_likelihoodGG <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_hat=NULL,b_max=1) {
+  if (is.null(a_hat)==FALSE) {
+    a <- a_hat
+  } else {a <- theta[1]}
+  if (is.null(b_hat)==FALSE) {
+    b <- b_hat
+  } else {b <- theta[length(theta)-3]}
+  mu <- theta[length(theta)-2]
+  sig <- theta[length(theta)-1]
+  delta <- theta[length(theta)]
+  Y1 <- df %>% dplyr::select(paste0("Y",given)) %>% pull()
+  Y2 <- df %>% dplyr::select(paste0("Y",sim)) %>% pull()
+  if (a<(-1) | a>1 | b<0 | b>=b_max | sig<0 | delta<0) {
+    log_lik <- (-10^6) # low log-likelihood outside Keef bounds
+  }
+  else {
+    #log_lik <- sum(-log(Y1^b *sig*sqrt(2*pi)) + (-(Y2-a*Y1-mu*Y1^b)^delta/((sqrt(2)*Y1^b*sig)^delta))  )
+    log_lik <- sum(dgnorm(x=(Y2-a*Y1)/(Y1^b),mu=mu,alpha=sig,beta=delta,log = TRUE))
   }
   return(log_lik)
 }
