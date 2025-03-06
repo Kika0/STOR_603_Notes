@@ -329,7 +329,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
   
-  return(list(par_sum))
+  return(par_sum)
 }
 
 par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,b_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
