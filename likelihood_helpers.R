@@ -41,8 +41,8 @@ Y_likelihood <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_h
 #' @return A numeric negative log-likelihood.
 #' @export
 #'
-#' @examples
-Y_likelihoodGG <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b_hat=NULL,b_max=1) {
+#' @examples Y_likelihoodGG(theta=c(0.8,0.2,0.1,2),df=data.frame(Y1=rnorm(5000),Y2=rnorm(5000)) %>% filter(Y1>1))
+Y_likelihoodGG <- function(theta,df=Y_given1extreme,given=1,sim=2,a_hat=NULL,b_hat=NULL,b_max=1) {
   if (is.null(a_hat)==FALSE) {
     a <- a_hat
   } else {a <- theta[1]}
@@ -58,7 +58,7 @@ Y_likelihoodGG <- function(theta,df=Y_given_1_extreme,given=1,sim=2,a_hat=NULL,b
     log_lik <- (-10^6) # low log-likelihood outside Keef bounds
   }
   else {
-    #log_lik <- sum(-log(Y1^b *sig*sqrt(2*pi)) + (-(Y2-a*Y1-mu*Y1^b)^delta/((sqrt(2)*Y1^b*sig)^delta))  )
+    #log_lik <- sum(log(delta)-log(Y1^b *sig*gamma(1/delta)) + (-abs(Y2-a*Y1-mu*Y1^b)^delta/(Y1^b*sig)^delta))  )
     log_lik <- sum(dgnorm(x=(Y2-a*Y1)/(Y1^b),mu=mu,alpha=sig,beta=delta,log = TRUE))
   }
   return(log_lik)
