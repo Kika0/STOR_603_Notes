@@ -3,6 +3,7 @@ library(ncdf4)
 library(fields)
 library(sf)
 library(tmap)
+load("data_processed/spatial_helper.RData")
 # load the data
 load("../luna/kristina/MSdata_CPM5km_member1/ukgd_cpm85_5k_x100y23_MSdata01.RData")
 data01.std.param # not much info here
@@ -85,10 +86,10 @@ tm_shape(xy_sf) + tm_dots(col="temp")
 lad <- st_read("data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 # UK is comprised of many polygons (islands), simplify to only
 # take mainland UK (Great Britain)
-uk <- (lad %>% st_union() %>% st_cast( "MULTIPOLYGON" ) %>% st_cast("POLYGON"))[1531]
-uk <- st_simplify(uk,dTolerance = 2000) %>% st_transform(crs = 4326)  
+uk_notsimplified <- (lad %>% st_union() %>% st_cast( "MULTIPOLYGON" ) %>% st_cast("POLYGON"))[1531]
+uk <- st_simplify(uk_notsimplified,dTolerance = 2000) %>% st_transform(crs = 4326)  
 # check
-# tm_shape(uk) + tm_polygons()
+# tm_shape(uk_notsimplified) + tm_polygons()
 # great, now subset
 xyUK_sf <- st_filter(xy_sf,uk)
 tm_shape(xyUK_sf) + tm_dots(col="temp")
@@ -97,7 +98,7 @@ x20 <- seq(from=4,to=dim(lon5.o)[1],by=4)
 y20 <- seq(from=4,to=dim(lon5.o)[2],by=4)
 xyUK20_sf <-xyUK_sf %>% filter(x %in% x20,y %in% y20)
 # save sf objects used for spatial analysis
-save(uk,xyUK20_sf,files_subset1,file="/data_processed/spatial_helper.RData")
+save(uk,uk_notsimplified,xyUK20_sf,files_subset1,file="data_processed/spatial_helper.RData")
 
 tm_shape(xyUK20_sf) + tm_dots(col="temp")
 # great, now load only files that overlap this grid or perhaps delete all other files?
