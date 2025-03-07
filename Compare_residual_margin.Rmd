@@ -24,7 +24,7 @@ theme_replace(
   panel.border = element_rect(colour = "black", fill = NA) )
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
-load("paramest.rda")
+load("data_processed/paramest.rda")
 ```
 
 ## Simulate data
@@ -382,5 +382,69 @@ tmpsum <- tmp  %>% group_by(given,res) %>% slice(which.min(AIC)) %>% group_by(me
 # 
 # ggsave(filename = paste0("../Documents/AGG/AICcount",v*100,".png"),plot=pAICcount,height=5,width=7)
 tmpsum
+```
+
+# Using generalised Gaussian as working assumption instead of a Normal
+
+We repeat the above parameter estimates with residuals assuming generalised Gaussian instead of a previously used Normal distribution.
+
+```{r}
+L5g <- par_est(df=winter_lap,v=v,given=c(1:5),margin = "AGG", method = "sequentialGG",keef_constraints = c(1,2))
+
+L5sg <- par_est(df=summer_lap,v=v,given=c(1:5),margin = "AGG", method = "sequentialGG",keef_constraints = c(1,2))
+```
+
+Compare parameter estimates.
+
+```{r}
+summary(L5sg$a-L5s$a)
+summary(L5sg$b-L5s$b)
+
+summary(L5g$a-L5$a)
+summary(L5g$b-L5$b)
+```
+
+Plot $\alpha$ and $\beta$ estimates for summer and winter pollution data.
+
+```{r}
+L5 <- L5 %>% mutate(res_assumption="Normal") %>% mutate(ite=1:20)
+L5s <- L5s %>% mutate(res_assumption="Normal") %>% mutate(ite=1:20)
+L5g <- L5g %>% mutate(res_assumption="GenGaus") %>% mutate(ite=1:20)
+L5sg <- L5sg %>% mutate(res_assumption="GenGaus") %>% mutate(ite=1:20)
+pw <- ggplot(rbind(L5,L5g) %>% mutate(res_assumption=factor(res_assumption))) + geom_point(aes(x=a,y=b,col=res_assumption)) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432")) + xlim(c(-1,1)) + ylim(c(0,1)) + geom_line(aes(x=a,y=b,group=ite)) +   xlab(TeX("${\\alpha}$")) +
+  ylab(TeX("$\\beta$")) + ggtitle("Winter pollution data") + coord_fixed()
+ps <- ggplot(rbind(L5s,L5sg) %>% mutate(res_assumption=factor(res_assumption))) + geom_point(aes(x=a,y=b,col=res_assumption)) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432")) + xlim(c(-1,1)) + ylim(c(0,1)) + geom_line(aes(x=a,y=b,group=ite)) +   xlab(TeX("${\\alpha}$")) +
+  ylab(TeX("${\\beta}$")) + ggtitle("Summer pollution data") + coord_fixed()
+ggsave(grid.arrange(pw,ps,ncol=2),filename="../Documents/AGG/Res_assumption_Normal_GenGaus_pollution_data.png",width=15,height=5)
+```
+Compare also for simulation data.
+
+```{r}
+L5 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
+L5 <- L5 %>% mutate(method="Normal",AICa=2*lika+2*5,AICb=2*likb+2*5)
+L5gg <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequentialGG",keef_constraints = c(1,2))
+L5gg <- L5gg %>% mutate(method="Gen_Gaus",AICa=2*lika+2*5,AICb=2*likb+2*5)
+tmp <- rbind(L5,L5gg) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
+summary(L5gg$b-L5$b)
+for (i in 2:100) {
+set.seed(12*i)
+N <- 50000
+v <- 0.99 # threshold for conditioning variable
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+L5 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
+L5 <- L5 %>% mutate(method="Normal",AICa=2*lika+2*5,AICb=2*likb+2*5)
+L5gg <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequentialGG",keef_constraints = c(1,2))
+L5gg <- L5gg %>% mutate(method="Gen_Gaus",AICa=2*lika+2*5,AICb=2*likb+2*5)
+
+tmp <- rbind(tmp,rbind(L5,L5gg) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res))))
+}
+
+# compare a and b values
+pa <- ggplot(tmp) + geom_boxplot(aes(y=a,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","Gen_Gaus"="#C11432")) + ylab(TeX("$\\alpha$"))
+pb <- ggplot(tmp) + geom_boxplot(aes(y=b,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","Gen_Gaus"="#C11432"))+ ylab(TeX("$\\beta$"))
+ggsave(filename = "../Documents/AGG/a_compareGG.png",plot=pa,height=5,width=20)
+ggsave(filename = "../Documents/AGG/b_compareGG.png",plot=pb,height=5,width=20)
 ```
 
