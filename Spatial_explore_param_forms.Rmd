@@ -649,6 +649,20 @@ for (i in 1:4) {
 ```
 
 ```{r}
+save(est_all20GG,file="data_processed/est_all20GG.RData")
 
+# plot everything
+est_all20GG <- est_all20GG %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
+# save(est_all,est_all_diag,tmp025,tmp075,tmpdiff,file="est_all.RData")
+
+#load("est_all20.RData")
+condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
+# condmodel_params <- c("a","b","mu","sig")
+for (i in 1:4) {
+ tau_site_map <- map_param(tmp_est=est_all20GG %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
+   for (j in 1:length(condmodel_params)) {
+     tmap_save(tau_site_map[[j]],filename=paste0("../Documents/obs20km_nonstationary/GG_tau_",names(df_sites[i]),"_map_",j,"_",condmodel_params[j],".png"),width=15,height=4.5)
+   }
+}
 ```
 
