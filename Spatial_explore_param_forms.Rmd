@@ -600,7 +600,7 @@ est_all20 <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"
                           "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
                           "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
 for (i in 1:ncol(df_sites)) {
-  cond_site <- find_site_index(as.numeric(df_sites[,i]))
+  cond_site <- find_site_index(as.numeric(df_sites[,i]),grid_uk = xyUK20_sf)
   for (j in 1:length(dayshift)) {
     sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[j])
     est_all20 <- rbind(est_all20,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGG", method="sequential2",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(dayshift[j])))
@@ -637,7 +637,7 @@ est_all20GG <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric()
                           "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
                           "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
                           "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
-for (i in 1:4) {
+for (i in 1:ncol(df_sites)) {
   cond_site <- find_site_index(as.numeric(df_sites[,i]))
   for (j in 1:length(dayshift)) {
     sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[j])
