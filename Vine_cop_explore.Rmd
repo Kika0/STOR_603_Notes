@@ -46,10 +46,13 @@ fits2 <- RVineCopSelect(data = as.data.frame(summer %>% apply(c(2),FUN=row_numbe
                      trunclevel = 3, indeptest = FALSE)
 
 ```
+
 First, the model as previously done.
+
 ```{r}
 fits1
 ```
+
 Second, our new model with imposed tree structure.
 
 ```{r}
@@ -162,19 +165,13 @@ Vuong <- RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)
 data.frame("statistic"=Vuong[[1]],"p.value"=Vuong[[4]])
 ```
 
-Vuong test compares whether model $2$ is an improvement to model $1$. Since p values are not below significance level $0.05$, we accept a model with imposed structure?
+Vuong test compares whether model $2$ is an improvement to model $1$. Since $p$ values are not below significance level $0.05$, we accept a model with imposed structure?
 
 ## Model comparison without normality assumption
 
 We run this for the observed residuals of the winter pollution dataset conditioning on $O_3$ above $0.7$ quantile threshold.
 
 ```{r}
-# simulate from a vine copula the ranks of the data
-N_sim <- dim(obsresw)[1]
-
-# find the simulated values for each of the models
-Zsim1 <- RVineSim(N=N_sim,RVM=fitrw)
-Zsim2 <- RVineSim(N=N_sim,RVM=fitrw2)
 Vuongstat <- function(Zsim1,Zsim2,Nrep) {
 Zsim <- rbind(Zsim1,Zsim2)
 statistic <- c()
@@ -191,11 +188,6 @@ for (i in 1:Nrep) {
   }
 return(statistic)
 }
-statistic <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=1000)
-Vuong_statistic <- statistic
-hist(Vuong_statistic,n=10)
-abline(v=Vuong[[1]], col="#C11432",lty= "dashed")
- ggplot(data.frame(Vuong_statistic=statistic)) + geom_histogram(aes(x=Vuong_statistic)) + geom_vline(xintercept = Vuong[[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic")
 ```
 
 
@@ -234,6 +226,18 @@ Conditioning on $NO$.
 ```{r}
 x <- fn(j=3)
 x
+Zsim1 <- RVineSim(N=N_sim,RVM=x[[1]])
+Zsim2 <- RVineSim(N=N_sim,RVM=x[[2]])
+statisticNOw <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=500)
+ggplot(data.frame(statisticNOw)) +
+geom_histogram(aes(x=statisticNOw)) + geom_vline(xintercept = x[[5]][[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
+
+Zsim1 <- RVineSim(N=N_sim,RVM=x[[3]])
+Zsim2 <- RVineSim(N=N_sim,RVM=x[[4]])
+statisticNOs <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=500)
+ggplot(data.frame(statisticNOs)) +
+geom_histogram(aes(x=statisticNOs)) + geom_vline(xintercept = x[[6]][[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
+
 ```
 
 Conditioning on $SO_2$.
@@ -269,4 +273,44 @@ return(list(fitrw,fitrs))
 }
 fnsw(j=1)
 ```
+
 We can perform the above comparison again for the observed residuals of joint summer and winter data conditional on each of the pollutants.
+
+## Vuong test statistic study
+
+```{r}
+N_rep <- 10
+# winter pollution cond on O3
+# simulate from a vine copula the ranks of the data
+N_sim <- dim(obsresw)[1]
+
+# find the simulated values for each of the models
+Zsim1 <- RVineSim(N=N_sim,RVM=fitrw)
+Zsim2 <- RVineSim(N=N_sim,RVM=fitrw2)
+
+statisticO3w <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
+ggplot(data.frame(statisticO3w)) +
+geom_histogram(aes(x=statisticO3w)) + geom_vline(xintercept = RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)[[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
+
+x <- fn(j=3)
+x
+Zsim1 <- RVineSim(N=N_sim,RVM=x[[1]])
+Zsim2 <- RVineSim(N=N_sim,RVM=x[[2]])
+statisticNOw <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
+ggplot(data.frame(statisticNOw)) +
+geom_histogram(aes(x=statisticNOw)) + geom_vline(xintercept = x[[5]][[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
+
+Zsim1 <- RVineSim(N=N_sim,RVM=x[[3]])
+Zsim2 <- RVineSim(N=N_sim,RVM=x[[4]])
+statisticNOs <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
+ggplot(data.frame(statisticNOs)) +
+geom_histogram(aes(x=statisticNOs)) + geom_vline(xintercept = x[[6]][[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic")
+
+# control
+Zsim1 <- Zsim2 <-  RVineSim(N=N_sim,RVM=x[[1]])
+statisticO3control <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
+ggplot(data.frame(statisticO3control)) +
+geom_histogram(aes(x=statisticO3control)) + geom_vline(xintercept = 0,linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
+
+```
+
