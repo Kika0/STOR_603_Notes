@@ -585,7 +585,11 @@ fitrs &lt;- RVineStructureSelect(obsress,
 fitrs2 &lt;- RVineCopSelect(data = obsress, Matrix = fitrw$Matrix,
                      trunclevel = 3, indeptest = FALSE)
 fitrw2 &lt;- RVineCopSelect(data = obsresw, Matrix = fitrs$Matrix,
-                     trunclevel = 3, indeptest = FALSE)</code></pre>
+                     trunclevel = 3, indeptest = FALSE)
+fitrw1 &lt;- rvinecopulib::vinecop(data=obsresw)
+fitrw1</code></pre>
+<pre><code>## 4-dimensional vine copula fit (&#39;vinecop&#39;)
+## nobs = 160   logLik = 126.73   npars = 12   AIC = -229.45   BIC = -192.55</code></pre>
 <p>Summer observed residual vine copula structure.</p>
 <pre class="r"><code>fitrs</code></pre>
 <pre><code>## D-vine copula with the following pair-copulas:
@@ -671,9 +675,43 @@ data.frame(&quot;statistic&quot;=Vuong[[1]],&quot;p.value&quot;=Vuong[[4]])</cod
 data.frame(&quot;statistic&quot;=Vuong[[1]],&quot;p.value&quot;=Vuong[[4]])</code></pre>
 <pre><code>##    statistic   p.value
 ## 1 0.08930114 0.9288426</code></pre>
-<p>Vuong test compares whether model <span class="math inline">\(2\)</span> is an improvement to model <span class="math inline">\(1\)</span>. Since p values are not below
-significance level <span class="math inline">\(0.05\)</span>, we accept
-a model with imposed structure?</p>
+<p>Vuong test compares whether model <span class="math inline">\(2\)</span> is an improvement to model <span class="math inline">\(1\)</span>. Since <span class="math inline">\(p\)</span> values are not below significance level
+<span class="math inline">\(0.05\)</span>, we accept a model with
+imposed structure?</p>
+</div>
+</div>
+<div id="model-comparison-without-normality-assumption" class="section level2">
+<h2>Model comparison without normality assumption</h2>
+<p>We run this for the observed residuals of the winter pollution
+dataset conditioning on <span class="math inline">\(O_3\)</span> above
+<span class="math inline">\(0.7\)</span> quantile threshold.</p>
+<pre class="r"><code># simulate from a vine copula the ranks of the data
+N_sim &lt;- dim(obsresw)[1]
+
+# find the simulated values for each of the models
+Zsim1 &lt;- RVineSim(N=N_sim,RVM=fitrw)
+Zsim2 &lt;- RVineSim(N=N_sim,RVM=fitrw2)
+Vuongstat &lt;- function(Zsim1,Zsim2,Nrep) {
+Zsim &lt;- rbind(Zsim1,Zsim2)
+statistic &lt;- c()
+for (i in 1:Nrep) {
+  # randomly sample with replacement
+  row_sample &lt;- sample(1:(2*N_sim), size=N_sim,replace=FALSE)
+  Y1 &lt;- Zsim[row_sample,]
+  Y2 &lt;- Zsim[-row_sample,]
+  # fit model for each
+  fit1 &lt;- RVineStructureSelect(Y1,trunclevel = 3, indeptest = FALSE)
+  fit2 &lt;- RVineStructureSelect(Y2,trunclevel = 3, indeptest = FALSE)
+  # calculate Vuong test statistic
+  statistic[i] &lt;- RVineVuongTest(data=obsresw,RVM1 = fit1,RVM2 = fit2)$statistic
+  }
+return(statistic)
+}
+# statistic &lt;- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=100)
+# Vuong_statistic &lt;- statistic
+# hist(Vuong_statistic,n=10)
+# abline(v=Vuong[[1]], col=&quot;#C11432&quot;,lty= &quot;dashed&quot;)
+#  ggplot(data.frame(Vuong_statistic=statistic)) + geom_histogram(aes(x=Vuong_statistic)) + geom_vline(xintercept = Vuong[[1]],linetype=&quot;dashed&quot;,col= &quot;#C11432&quot;) + xlab(&quot;Vuong statistic&quot;) + ggtitle(&quot;Histogram of Vuong test statistic&quot;)</code></pre>
 <p>Conditioning on <span class="math inline">\(NO_2\)</span>.</p>
 <pre class="r"><code>x &lt;- fn(j=2)
 x</code></pre>
@@ -1101,7 +1139,6 @@ x</code></pre>
 ## 
 ## [[6]]$p.value.Schwarz
 ## [1] 0.9952818</code></pre>
-</div>
 </div>
 </div>
 <div id="combining-summer-and-winter-data" class="section level1">

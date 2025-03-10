@@ -1,0 +1,64 @@
+---
+title: "Explore rvinecopulib"
+output: html_document
+date: "2025-03-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# libraries and functions ----
+#library(VineCopula)
+library(rvinecopulib)
+#library(evd)
+#library(ismev)
+library(tidyverse)
+#library(MASS) # use dplyr::select to avoid function conflict
+library(pracma) # incomplete gamma function, will be used later in cond.ext.model for modelling the residual margins
+library(texmex) # air pollution data
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
+
+# set theme defaults to be black rectangle
+theme_set(theme_bw())
+theme_replace(
+  panel.spacing = unit(2, "lines"),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.background = element_blank(),
+  panel.border = element_rect(colour = "black", fill = NA) )
+```
+
+## Exploring `rvinecopulib` package
+
+```{r}
+v <- 0.7
+# transform to Laplace margins
+winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+
+obsresw <- (observed_residuals(df = winter_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
+
+obsress <- (observed_residuals(df = summer_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+
+```
+
+## Estimate copula conditional on $O_3$
+
+
+```{r}
+vc1 <- rvinecopulib::vinecop(data=obsresw)
+vc1
+summary(vc1)
+# compare with VineCopula fit
+
+```
+
+Winter pollution data, cond on $O_3$ with imposed summer pollution observed residuals tree structure.
+
+```{r}
+vc1 <- rvinecopulib::vinecop(data=obsresw,)
+vc1
+summary(vc1)
+```
+
+
