@@ -775,9 +775,9 @@ p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab(TeX
   geom_hline(yintercept=vL,color="#009ADA",linetype="dashed") 
 pY2 <- grid.arrange(p1,p2,ncol=2)
 
-ggsave(pY0,filename = "../Documents/illustrations/AD_AI_Laplacemargin0.png",width=10,height=5)
-ggsave(pY1,filename = "../Documents/illustrations/AD_AI_Laplacemargin1.png",width=10,height=5)
-ggsave(pY2,filename = "../Documents/illustrations/AD_AI_Laplacemargin2.png",width=10,height=5)
+ggsave(pY0,filename = "../Documents/illustrations/AD_AI_Laplacemargin0.png",width=6,height=3)
+ggsave(pY1,filename = "../Documents/illustrations/AD_AI_Laplacemargin1.png",width=6,height=3)
+ggsave(pY2,filename = "../Documents/illustrations/AD_AI_Laplacemargin2.png",width=6,height=3)
 
 # simulation study for different margin methods ----
 set.seed(12)
