@@ -957,14 +957,15 @@ shift_time <- function(sims=sims,cond_site=cond_site,tau=0, Ndays_season = 90) {
     return(sims)
   }
   dayshift <- c(-3:3)
+  Nyears <- nrow(sims)/Ndays_season
   dayremove <- c(rep(Ndays_season,3),0,1,2,3)-c(2,1,rep(0,5))
   dayremove[dayshift %in% (0:tau)[-1]]
   
   daysremove_condsite <- daysremove_othersites <-  c()
-  daysremove_condsite <- as.numeric(sapply(1:19,function(i){append(daysremove_condsite,dayremove[dayshift %in% (0:-tau)[-1]]+Ndays_season*(i-1))}))
-  daysremove_othersites <- as.numeric(sapply(1:19,function(i){append(daysremove_othersites,dayremove[dayshift %in% (0:tau)[-1]]+Ndays_season*(i-1))}))
+  daysremove_condsite <- as.numeric(sapply(1:Nyears,function(i){append(daysremove_condsite,dayremove[dayshift %in% (0:-tau)[-1]]+Ndays_season*(i-1))}))
+  daysremove_othersites <- as.numeric(sapply(1:Nyears,function(i){append(daysremove_othersites,dayremove[dayshift %in% (0:tau)[-1]]+Ndays_season*(i-1))}))
   
-  sims_tau <-  data.frame(matrix(ncol=ncol(sims),nrow=nrow(sims)-abs(tau)*19))
+  sims_tau <-  data.frame(matrix(ncol=ncol(sims),nrow=nrow(sims)-abs(tau)*Nyears))
   names(sims_tau) <- names(sims)
   sims_tau[,cond_site] <- sims[-daysremove_condsite,cond_site]
   sims_tau[,-cond_site] <- sims[-daysremove_othersites,-cond_site]
