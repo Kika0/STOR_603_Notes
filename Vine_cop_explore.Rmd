@@ -12,6 +12,7 @@ library(rvinecopulib)
 library(evd)
 library(ismev)
 library(tidyverse)
+library(gridExtra)
 library(MASS) # use dplyr::select to avoid function conflict
 library(pracma) # incomplete gamma function, will be used later in cond.ext.model for modelling the residual margins
 library(texmex) # air pollution data
@@ -26,6 +27,9 @@ theme_replace(
   panel.grid.minor = element_blank(),
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
+
+# load Vuong bootstrap statistics
+load("data_processed/Vuongtest_statistics.RData")
 ```
 
 ## Fit vine copula to winter data
@@ -151,7 +155,7 @@ Winter observed residuals vine cop parameters with imposed summer copula structu
 fitrw2
 ```
 
-### Try Vuong test on observed residuals vine copulas.
+## Try Vuong test on observed residuals vine copulas.
 
 Summer: no significant difference, can impose winter tree structure.
 ```{r}
@@ -226,18 +230,6 @@ Conditioning on $NO$.
 ```{r}
 x <- fn(j=3)
 x
-Zsim1 <- RVineSim(N=N_sim,RVM=x[[1]])
-Zsim2 <- RVineSim(N=N_sim,RVM=x[[2]])
-statisticNOw <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=500)
-ggplot(data.frame(statisticNOw)) +
-geom_histogram(aes(x=statisticNOw)) + geom_vline(xintercept = x[[5]][[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
-
-Zsim1 <- RVineSim(N=N_sim,RVM=x[[3]])
-Zsim2 <- RVineSim(N=N_sim,RVM=x[[4]])
-statisticNOs <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=500)
-ggplot(data.frame(statisticNOs)) +
-geom_histogram(aes(x=statisticNOs)) + geom_vline(xintercept = x[[6]][[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
-
 ```
 
 Conditioning on $SO_2$.
@@ -288,7 +280,7 @@ N_sim <- dim(obsresw)[1]
 Zsim1 <- RVineSim(N=N_sim,RVM=fitrw)
 Zsim2 <- RVineSim(N=N_sim,RVM=fitrw2)
 
-statisticO3w <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
+#statisticO3w <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
 p1 <- ggplot(data.frame(statisticO3w)) +
 geom_histogram(aes(x=statisticO3w)) + geom_vline(xintercept = RVineVuongTest(data= obsresw,RVM1 = fitrw, RVM2 = fitrw2)[[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
 
@@ -296,27 +288,37 @@ x <- fn(j=3)
 x
 Zsim1 <- RVineSim(N=N_sim,RVM=x[[1]])
 Zsim2 <- RVineSim(N=N_sim,RVM=x[[2]])
-statisticNOw <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
+#statisticNOw <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
 p2 <- ggplot(data.frame(statisticNOw)) +
 geom_histogram(aes(x=statisticNOw)) + geom_vline(xintercept = x[[5]][[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
 
 Zsim1 <- RVineSim(N=N_sim,RVM=x[[3]])
 Zsim2 <- RVineSim(N=N_sim,RVM=x[[4]])
-statisticNOs <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
+#statisticNOs <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
 p3 <- ggplot(data.frame(statisticNOs)) +
 geom_histogram(aes(x=statisticNOs)) + geom_vline(xintercept = x[[6]][[1]],linetype="dashed",col= "#C11432") + xlab("Vuong statistic")
 
 # control
 Zsim1 <- Zsim2 <-  RVineSim(N=N_sim,RVM=x[[1]])
-statisticO3control <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
+#statisticO3control <- Vuongstat(Zsim1=Zsim1,Zsim2=Zsim2,Nrep=N_rep)
 p4 <- ggplot(data.frame(statisticO3control)) +
 geom_histogram(aes(x=statisticO3control)) + geom_vline(xintercept = 0,linetype="dashed",col= "#C11432") + xlab("Vuong statistic") 
 
+# save the slow links
+#save(statisticO3w,statisticNOw,statisticNOs,statisticO3control,file="data_processed/Vuongtest_statistics.RData")
 
 # save 
-ggsave(p1,filename="../Documents/Vuong/O3w.png")
-ggsave(p2,filename="../Documents/Vuong/NOw.png")
-ggsave(p3,filename="../Documents/Vuong/NOs.png")
-ggsave(p4,filename="../Documents/Vuong/O3control.png")
+# ggsave(p1,filename="../Documents/Vuong/O3w.png")
+# ggsave(p2,filename="../Documents/Vuong/NOw.png")
+# ggsave(p3,filename="../Documents/Vuong/NOs.png")
+# ggsave(p4,filename="../Documents/Vuong/O3control.png")
+
+# calculate the CI quantiles
+cbind(data.frame("Example"=c("O3_winter","NO_winter","NO_summer","O3_winter_control")),rbind(quantile(statisticO3w,probs=c(0.025,0.975)),
+quantile(statisticNOw,probs=c(0.025,0.975)),
+quantile(statisticNOs,probs=c(0.025,0.975)),
+quantile(statisticO3control,probs=c(0.025,0.975))))
+
+grid.arrange(p1+ggtitle("O3 winter"),p2+ggtitle("NO winter"),p3+ggtitle("NO summer"),p4+ggtitle("O3 winter control"),ncol=1 )
 ```
 
