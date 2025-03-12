@@ -740,12 +740,12 @@ names(xy) <- c("x","y")
 xy$tf <- (xy$x>qnorm(0.99) &  xy$y>qnorm(0.99))
 xy <- xy %>% mutate(x=as.numeric(map(.x=qfrechet(pnorm(x)),.f=frechet_laplace_pit))) %>% 
   mutate(y=as.numeric(map(.x=qfrechet(pnorm(y)),.f=frechet_laplace_pit)))
-vL <- frechet_laplace_pit(qfrechet(0.99))
+vL <- frechet_laplace_pit(qfrechet(0.995))
 p1 <- ggplot(x_y) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab("") + ylab("") + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-12,12) + ylim(-12,12)+
                geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
               geom_hline(yintercept=vL,color="#009ADA",linetype="dashed") 
                  
-p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab("") + ylab("")+ scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) + theme(legend.position="none") + coord_fixed()+ xlim(-12,12) + ylim(-12,12) +
+p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab(TeX("$Y_1$")) + ylab("")+ scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) + theme(legend.position="none") + coord_fixed()+ xlim(-12,12) + ylim(-12,12) +
   geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
   geom_hline(yintercept=vL,color="#009ADA",linetype="dashed") 
 # p3 <- ggplot(x_y %>% filter(x> frechet_laplace_pit(qfrechet(0.99)))%>% filter(y> frechet_laplace_pit(qfrechet(0.99)))) + geom_point(aes(x=x,y=y),alpha=0.5,col="#009ADA") + xlab("") + ylab("")
@@ -753,6 +753,31 @@ p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab("")
 p <- grid.arrange(p1,p2,ncol=2)
 ggsave(p,filename = "AD_AI_Laplacemargin.png",width=10,height=5)
 ggsave(p,filename = "AD_AI_Laplacemargin.pdf",width=10,height=5)
+# add a series of plots
+p1 <- ggplot(x_y) + geom_point(aes(x=x,y=y),size=0.8,alpha=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-12,12) + ylim(-12,12)
+  p2 <- ggplot(xy) + geom_point(aes(x=x,y=y),size=0.8,alpha=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$"))+ scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) + theme(legend.position="none") + coord_fixed()+ xlim(-12,12) + ylim(-12,12) 
+  pY0 <- grid.arrange(p1,p2,ncol=2)
+
+p1 <- ggplot(x_y) + geom_point(aes(x=x,y=y),size=0.8,alpha=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-12,12) + ylim(-12,12)+
+  geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") 
+
+p2 <- ggplot(xy) + geom_point(aes(x=x,y=y),size=0.8,alpha=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$"))+ scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) + theme(legend.position="none") + coord_fixed()+ xlim(-12,12) + ylim(-12,12) +
+  geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") 
+
+pY1 <- grid.arrange(p1,p2,ncol=2)
+
+p1 <- ggplot(x_y) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-12,12) + ylim(-12,12)+
+  geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
+  geom_hline(yintercept=vL,color="#009ADA",linetype="dashed") 
+
+p2 <- ggplot(xy) + geom_point(aes(x=x,y=y,col=tf),size=0.8,alpha=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$"))+ scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) + theme(legend.position="none") + coord_fixed()+ xlim(-12,12) + ylim(-12,12) +
+  geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
+  geom_hline(yintercept=vL,color="#009ADA",linetype="dashed") 
+pY2 <- grid.arrange(p1,p2,ncol=2)
+
+ggsave(pY0,filename = "../Documents/illustrations/AD_AI_Laplacemargin0.png",width=6,height=3)
+ggsave(pY1,filename = "../Documents/illustrations/AD_AI_Laplacemargin1.png",width=6,height=3)
+ggsave(pY2,filename = "../Documents/illustrations/AD_AI_Laplacemargin2.png",width=6,height=3)
 
 # simulation study for different margin methods ----
 set.seed(12)
