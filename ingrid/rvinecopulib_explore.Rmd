@@ -15,8 +15,9 @@ library(tidyverse)
 #library(MASS) # use dplyr::select to avoid function conflict
 library(pracma) # incomplete gamma function, will be used later in cond.ext.model for modelling the residual margins
 library(texmex) # air pollution data
-file.sources = list.files(pattern="*helpers.R")
-sapply(file.sources,source,.GlobalEnv)
+source("../sample_distribution_helpers.R")
+source("../likelihood_helpers.R")
+source("../cond_model_helpers.R")
 
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
@@ -50,15 +51,31 @@ vc1 <- rvinecopulib::vinecop(data=obsresw)
 vc1
 summary(vc1)
 # compare with VineCopula fit
+vc2 <- VineCopula::RVineStructureSelect(data=obsresw)
+summary(vc2)
+```
 
+Compare also with using the independence test.
+
+```{r}
+vc1 <- rvinecopulib::vinecop(data=obsresw)
+vc1
+summary(vc1)
+# compare with VineCopula fit
+vc2 <- VineCopula::RVineStructureSelect(data=obsresw, indeptest = TRUE)
+summary(vc2)
 ```
 
 Winter pollution data, cond on $O_3$ with imposed summer pollution observed residuals tree structure.
 
 ```{r}
-vc1 <- rvinecopulib::vinecop(data=obsresw,)
-vc1
-summary(vc1)
+vcs1 <- rvinecopulib::vinecop(data=obsress)
+vcs2 <- VineCopula::RVineStructureSelect(data=obsress)
+vcw1 <- rvinecopulib::vinecop(data=obsresw,structure=get_structure(vcs1) )
+vcw2 <- VineCopula::RVineCopSelect(data = obsresw,Matrix = vcs2$Matrix)
+vcw1
+summary(vcw1)
+summary(vcw2)
 ```
 
 
