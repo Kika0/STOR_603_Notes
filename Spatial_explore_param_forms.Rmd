@@ -638,7 +638,7 @@ est_all20GG <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric()
                           "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
                           "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
 for (i in 1:ncol(df_sites)) {
-  cond_site <- find_site_index(as.numeric(df_sites[,i]))
+  cond_site <- find_site_index(as.numeric(df_sites[,i]),grid_uk = xyUK20_sf)
   for (j in 1:length(dayshift)) {
     sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[j],Ndays_season = 92)
     est_all20GG <- rbind(est_all20GG,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGG", method="sequentialGG",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(dayshift[j])))
@@ -656,11 +656,15 @@ est_all20GG <- est_all20GG %>% mutate(tau=factor(as.character(tau),levels = as.c
 #load("est_all20.RData")
 condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
 # condmodel_params <- c("a","b","mu","sig")
-for (i in 1:4) {
+for (i in 1:ncol(df_sites)) {
  tau_site_map <- map_param(tmp_est=est_all20GG %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
    for (j in 1:length(condmodel_params)) {
      tmap_save(tau_site_map[[j]],filename=paste0("../Documents/obs20km_nonstationary/GG_tau_",names(df_sites[i]),"_map_",j,"_",condmodel_params[j],".png"),width=15,height=4.5)
    }
 }
+
+# explore discrepancy
+names(df_sites)
+unique(est_all20GG$cond_site)
 ```
 
