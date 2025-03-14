@@ -3,7 +3,7 @@ library(VineCopula)
 library(evd)
 library(ismev)
 library(tidyverse)
-library(latex2exp)
+library(latex2exp) # for TeX labels
 library(gridExtra) # grid.arrange function
 library(xtable) # latex tables
 library(GGally) # ggpairs function
@@ -25,11 +25,9 @@ theme_replace(
 # simulate from the model ----
 set.seed(11)
 N <- 500
-v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-# repeat PP plots for summer and winter dataset
 
 # fit a vine to all the data
 fit <- RVineStructureSelect(sims %>% apply(c(2),FUN=row_number)/(nrow(sims)+1),
@@ -40,7 +38,7 @@ sim <- RVineSim(N=N,RVM=fit)
 sl <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]),title = TeX("$Y_1$")),
+gridExtra::grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]),title = TeX("$Y_1$")),
              PP_plot(observed=as.numeric(sims[,2]),simulated = as.numeric(sl[,2]),title = TeX("$Y_2$")),
              PP_plot(observed=as.numeric(sims[,3]),simulated = as.numeric(sl[,3]),title = TeX("$Y_3$")),
              PP_plot(observed=as.numeric(sims[,4]),simulated = as.numeric(sl[,4]),title = TeX("$Y_4$")),
@@ -49,17 +47,12 @@ grid.arrange(PP_plot(observed=as.numeric(sims[,1]),simulated = as.numeric(sl[,1]
 # compare all observed and simulated data for different subsets K
 # K={1},{1,2},{1,2,3},{1,2,3,4},{1,2,3,4,5}
 observed2 <- as.data.frame(sims %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
-# simulated2 <- as.data.frame(sim) %>% dplyr::select(1:2)  %>% apply(MARGIN=1,FUN = max)
 simulated2 <- as.data.frame(sl %>% dplyr::select(1:2) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
 observed3 <- as.data.frame(sims %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
-# simulated3 <-  as.data.frame(sim) %>% dplyr::select(1:3)  %>% apply(MARGIN=1,FUN = max)
 simulated3 <- as.data.frame(sl %>% dplyr::select(1:3) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
-
 observed4 <- as.data.frame(sims %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
-# simulated4 <-  as.data.frame(sim) %>% dplyr::select(1:4)  %>% apply(MARGIN=1,FUN = max)
 simulated4 <-  as.data.frame(sl %>% dplyr::select(1:4) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
 observed5 <- as.data.frame(sims %>% dplyr::select(1:5) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
-# simulated5 <-  as.data.frame(sim) %>% dplyr::select(1:5)  %>% apply(MARGIN=1,FUN = max)
 simulated5 <-  as.data.frame(sl %>% dplyr::select(1:5) %>% apply(c(2),FUN=row_number)/(nrow(sims)+1)) %>% apply(MARGIN=1,FUN = max)
 
 datmax <- grid.arrange(PP_plot(observed = observed2,simulated = simulated2, title = TeX("$K=\\{1,2\\}$")),
@@ -67,11 +60,9 @@ datmax <- grid.arrange(PP_plot(observed = observed2,simulated = simulated2, titl
                        PP_plot(observed = observed4,simulated = simulated4, title = TeX("$K=\\{1,2,3,4\\}$")),
                        PP_plot(observed = observed5,simulated = simulated5, title = TeX("$K=\\{1,2,3,4,5\\}$")),ncol=2)
 
-# explore residuals transformed to uniform margins
-# ggpairs((observed_residuals(df = sims,given = 1,v = 0.99) %>% apply(c(2),FUN=row_number))/(n_v+1))
-# transform to Uniform margins and fit a vine
+# transform residuals to Uniform margins and fit a vine ------
 j <- 1
-fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
+fit3 <- VineCopula::RVineStructureSelect((observed_residuals(df = sims,given = j,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                         trunclevel = 3, indeptest = TRUE)
 fit3
 # fit2 <- RVineStructureSelect((observed_residuals(df = sims,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
