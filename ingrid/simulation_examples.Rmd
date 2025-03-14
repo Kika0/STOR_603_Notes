@@ -1,0 +1,74 @@
+---
+title: "Simulation examples"
+output: html_document
+date: "2025-03-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(GGally)
+#library(MASS) # use dplyr::select to avoid function conflict
+library(pracma) # incomplete gamma function, will be used later in cond.ext.model for modelling the residual margins
+library(texmex) # air pollution data
+source("../sample_distribution_helpers.R")
+source("../likelihood_helpers.R")
+source("../cond_model_helpers.R")
+
+# set theme defaults to be black rectangle
+theme_set(theme_bw())
+theme_replace(
+  panel.spacing = unit(2, "lines"),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.background = element_blank(),
+  panel.border = element_rect(colour = "black", fill = NA) )
+
+```
+
+## Two linked clusters
+
+```{r}
+set.seed(11)
+N <- 5000
+#v <- 0.99
+sims <- generate_Y(N=N) %>% link_log(dep=3/4) %>%
+  link_norm(dep=1/4) %>% link_log(dep=3/4) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+
+```
+
+Plot pairwise.
+
+```{r}
+ggpairs(sims)
+```
+
+When $Y_1>v$.
+
+```{r}
+v <- 0.99
+simsv <- sims %>% filter(Y1>quantile(Y1,v))
+ggpairs(simsv)
+```
+
+# Fit a model to this example
+
+Inference steps (Laplace margins):
+
+1.  Estimate $\alpha$ and $\beta$.
+2.  Calculate observed residuals.
+3.  Fit residual margins.
+4.  Fit a vine copula.
+
+Simulation steps:
+
+1.  Simulate \$Y_1\$ from a fitted GPD.
+2.  Simulate residuals from a vine copula.
+3.  Transform residuals from uniform to AGG margins.
+4.  Calculate \$\\boldsymbol{Y}\_{-1}\$.
+5.  Transform from Laplace to the original margins.
+
+```{r}
+
+```

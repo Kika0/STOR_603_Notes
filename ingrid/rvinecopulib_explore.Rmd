@@ -78,4 +78,96 @@ summary(vcw1)
 summary(vcw2)
 ```
 
+## Copula statistic comparison
 
+Compare negative log-likelihood, AIC and BIC for each of the copulas for both winter and summer data.There are more observations in summer, hence NLL values will be likely higher.
+
+```{r}
+tmp <- data.frame(cond_pollutant=character(),method=character(),season=character(),NLL=numeric(),AIC=numeric(),BIC=numeric())
+
+AIC <- function(vc) {
+  2*vc$npars+2*vc$loglik
+}
+
+BIC <- function(vc) {
+  vc$npars*log(vc$nobs) +2*vc$loglik
+}
+
+for (i in 1:5) {
+  # calculate observed residuals
+obsresw <- (observed_residuals(df = winter_lap,given = i,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
+
+obsress <- (observed_residuals(df = summer_lap,given = i,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+
+vcw1 <- rvinecopulib::vinecop(data=obsresw)
+# compare with VineCopula fit
+vcw2 <- VineCopula::RVineStructureSelect(data=obsresw)
+
+vcs1 <- rvinecopulib::vinecop(data=obsress)
+# compare with VineCopula fit
+vcs2 <- VineCopula::RVineStructureSelect(data=obsress)
+
+tmp <- rbind(tmp,data.frame(cond_pollutant=names(winter)[i],method="rvinecopulib",season="winter",NLL=vcw1$loglik,AIC=AIC(vc=vcw1),BIC=BIC(vcw1)),
+             data.frame(cond_pollutant=names(winter)[i],method="VineCopula",season="winter",NLL=vcw2$logLik,AIC=-vcw2$AIC,BIC=-vcw2$BIC),
+             data.frame(cond_pollutant=names(winter)[i],method="rvinecopulib",season="summer",NLL=vcs1$loglik,AIC=AIC(vc=vcs1),BIC=BIC(vcs1)),
+             data.frame(cond_pollutant=names(winter)[i],method="VineCopula",season="summer",NLL=vcs2$logLik,AIC=-vcs2$AIC,BIC=-vcs2$BIC)
+             )
+}
+
+```
+
+Plot these for comparison.
+
+Compare likelihoods overall for each method and each season.
+
+```{r}
+tmp <- tmp %>% mutate(season=factor(season),method=factor(method))
+ggplot(tmp %>% filter(season=="winter"),aes(y=NLL,colour=method,x=rep(names(winter),each=2))) + geom_point() + scale_color_manual(values=c("#009ADA", "#C11432"))
+
+#geom_line(aes(x=method,y=NLL,group=c(cond_pollutant,season))
+```
+And for summer.
+
+```{r}
+ggplot(tmp %>% filter(season=="summer"),aes(y=NLL,colour=method,x=rep(names(winter),each=2))) + geom_point() + scale_color_manual(values=c("#009ADA", "#C11432"))
+
+```
+
+Compare AIC winter.
+
+```{r}
+ggplot(tmp %>% filter(season=="winter"),aes(y=AIC,colour=method,x=rep(names(winter),each=2))) + geom_point() + scale_color_manual(values=c("#009ADA", "#C11432"))
+```
+
+
+And summer.
+```{r}
+ggplot(tmp %>% filter(season=="summer"),aes(y=AIC,colour=method,x=rep(names(winter),each=2))) + geom_point() + scale_color_manual(values=c("#009ADA", "#C11432"))
+```
+
+Compare BIC winter.
+
+```{r}
+ggplot(tmp %>% filter(season=="winter"),aes(y=BIC,colour=method,x=rep(names(winter),each=2))) + geom_point() + scale_color_manual(values=c("#009ADA", "#C11432"))
+```
+And summer.
+
+```{r}
+ggplot(tmp %>% filter(season=="summer"),aes(y=BIC,colour=method,x=rep(names(winter),each=2))) + geom_point() + scale_color_manual(values=c("#009ADA", "#C11432"))
+```
+Maybe truncate?
+
+## Print $PM_{10}>v$ fit for comparison.
+
+```{r}
+vcw1
+summary(vcw1)
+summary(vcw2)
+```
+And for summer.
+
+```{r}
+vcs1
+summary(vcs1)
+summary(vcs2)
+```
