@@ -1,0 +1,58 @@
+---
+title: "Vine structure comparison"
+output: html_document
+date: "2025-03-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(VineCopula)
+library(rvinecopulib)
+library(tidyverse)
+library(texmex)
+```
+
+```{r}
+v <- 0.7
+# transform to Laplace margins
+winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+pew <-  par_est(df=winter_lap,v=v,given=j,margin = "AGG", method = "sequential2")
+obsresw <- (observed_residuals(df = winter_lap,given = 1,v = v,a = pew$a,b=pew$b) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
+
+pes <-  par_est(df=summer_lap,v=v,given=j,margin = "AGG", method = "sequential2")
+obsress <- (observed_residuals(df = summer_lap,given = 1,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+
+vcw1 <- rvinecopulib::vinecop(data=obsresw)
+vcw1
+summary(vc1)
+# compare with VineCopula fit
+vcw2 <- VineCopula::RVineStructureSelect(data=obsresw)
+summary(vcw2)
+
+vcs1 <- rvinecopulib::vinecop(data=obsress)
+vcs1
+summary(vcs1)
+# compare with VineCopula fit
+vcs2 <- VineCopula::RVineStructureSelect(data=obsress)
+summary(vcs2)
+
+```
+```
+
+## Impose tree structure and copula families
+
+
+## Compare imposing one link at a time
+```{r}
+summary(vc2)
+
+bivc <- VineCopula::RVineStructureSelect(data=obsresw[,1:2])
+RVineSeqEst(data=obsresw,RVM=vc2)
+
+# with imposed structure
+
+vcw3 <- RVineMLE(data=obsresw,RVM=vcs2)
+
+RVineVuongTest(data=obsresw,RVM2=vcw3$RVM,RVM1=vc2)
+```
