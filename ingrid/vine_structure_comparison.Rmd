@@ -48,11 +48,27 @@ summary(vcs2)
 summary(vc2)
 
 bivc <- VineCopula::RVineStructureSelect(data=obsresw[,1:2])
-RVineSeqEst(data=obsresw,RVM=vc2)
+RVineSeqEst(data=obsress[,1:2],RVM=bivc)
 
-# with imposed structure
+# look at other way around
+bivc <- VineCopula::RVineStructureSelect(data=obsress[,1:2])
+RVineSeqEst(data=obsresw[,1:2],RVM=bivc)
 
-vcw3 <- RVineMLE(data=obsresw,RVM=vcs2)
 
-RVineVuongTest(data=obsresw,RVM2=vcw3$RVM,RVM1=vc2)
 ```
+
+Try another pair
+
+```{r}
+summary(vc2)
+
+bivc <- VineCopula::RVineStructureSelect(data=obsresw[,3:4])
+RVineSeqEst(data=obsress[,3:4],RVM=bivc)
+
+# look at other way around
+bivc <- VineCopula::RVineStructureSelect(data=obsress[,3:4])
+RVineSeqEst(data=obsresw[,3:4],RVM=bivc)
+
+
+```
+
