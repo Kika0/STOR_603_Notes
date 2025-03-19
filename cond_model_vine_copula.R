@@ -24,7 +24,7 @@ theme_replace(
 
 # simulate from the model ----
 set.seed(11)
-N <- 500
+N <- 5000
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
@@ -79,11 +79,12 @@ fit3
 N_sim <- N*(1-v)
 Zsim <- RVineSim(N=N_sim,RVM=fit3)
 # calculate parameter estimates
-pe <- par_est(df=sims,v=v,given=j,margin = "AGGsigdelta", method = "two_step")
+pe <- par_est(df=sims,v=v,given=j,margin = "AGG", method = "sequential2")
 # transform back residuals to original margins
 # can use kernel smoothed distribution as initial step
 
-obs_res <- observed_residuals(df = sims,given = j,v = v) 
+obs_res <- observed_residuals(df = sims,given = j,v = v, a=pe$a,b=pe$b) 
+
 # to_opt <- function(z) {
 #   
 # }
@@ -235,7 +236,7 @@ v_sim <- 0.99 # threshold for simulation
 N_sim <- 500 # number of observations to simulate
 p_est <- c() # numeric of estimated probabilities of all extreme
 for (l in 1:5) {
-  pe <- par_est(df = sims,v = v,given = l,margin = "AGGsigdelta", method = "two_step")
+  pe <- par_est(df = sims,v = v,given = l,margin = "AGG", method = "sequential2")
   obs_res <- observed_residuals(df = sims,given = l,v = v,a = pe$a,b = pe$b) 
   fit3 <- RVineStructureSelect((observed_residuals(df = sims,given = l,v = v, a = pe$a,b = pe$b) %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),
                              trunclevel = 3, indeptest = FALSE)
