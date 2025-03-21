@@ -36,14 +36,16 @@ summary(vcs1)
 # compare with VineCopula fit
 vcs2 <- VineCopula::RVineStructureSelect(data=obsress)
 summary(vcs2)
+```
 
-```
-```
 
 ## Impose tree structure and copula families
 
 
 ## Compare imposing one link at a time
+
+Try the residuals of $NO_2$ and $NO$.
+
 ```{r}
 summary(vc2)
 
@@ -57,7 +59,7 @@ RVineSeqEst(data=obsresw[,1:2],RVM=bivc)
 
 ```
 
-Try another pair
+Try another pair of $SO_2$ and $PM_{10}$ residuals.
 
 ```{r}
 summary(vc2)
@@ -69,6 +71,32 @@ RVineSeqEst(data=obsress[,3:4],RVM=bivc)
 bivc <- VineCopula::RVineStructureSelect(data=obsress[,3:4])
 RVineSeqEst(data=obsresw[,3:4],RVM=bivc)
 
+```
 
+## Try all possible bivariate coplas for a given link
+
+```{r}
+index_cop <- c(0:10,13,16,18,20,23,24,26:30,33,34,36:40,104,114,124,134,204,214,224)
+x <- list()
+tmp <- obsresw[,1:2]
+tmp1 <- obsress[,1:2]
+
+for (i in 1:length(index_cop)) {
+  tryCatch({
+x[[i]] <-  BiCopEst(u1=as.numeric(tmp[,1]),u2=as.numeric(tmp[,2]),family=i)$AIC
+  },error=function(e){print(NA)})
+}
+```
+
+Try the Shiny app for comparing copula fits.
+
+```{r}
+BiCopCompare(u1=obsresw[,1],u2=obsresw[,2])
+
+# Try another pair of SO2 and PM10
+BiCopCompare(u1=obsresw[,3],u2=obsresw[,4])
+
+
+BiCopCompare(u1=obsresw[,2],u2=obsresw[,3])
 ```
 
