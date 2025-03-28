@@ -89,43 +89,48 @@ fit_res <- rvinecopulib::vinecop( (obs_res %>% apply(c(2),FUN=row_number))/(nrow
 Simulation steps.
 
 ```{r, warning=FALSE}
-# set.seed(11)
-v_sim <- v
-Nsim <- 100000
-# # 1. simulate Y1
-# U <- runif(Nsim)
-# Y1_gen <- -log(2*(1-v_sim)) + rexp(Nsim)
-# Gen_Y1 <- data.frame(Y1=Y1_gen)
-# 
-# # 2. simulate residuals from a vine copula
-# Zsim_unif <- rvinecopulib::rvinecop(n=Nsim,vine=fit_res) %>% as.data.frame()
-# 
-# # 3. convert to original margins
-# to_opt <- function(x) {
-#   return( (F_AGG(x,theta=c(mu,sigl,sigu,deltal,deltau))-Zsim_unif[i,k])^2  )  
-# }
-# Zsim <- Zsim_unif
-# for (k in 1:ncol(Zsim)) {
-#   mu <- pe$mu_agg[k]
-#   sigl <- pe$sigl[k]
-#   sigu <- pe$sigu[k]
-#   deltal <- pe$deltal[k]
-#   deltau <- pe$deltau[k]
-#   for (i in 1:nrow(Zsim)) {
-#     Zsim[i,k] <- optim(fn=to_opt,par=1,method="Brent",lower=-10,upper=10)$par
-#   }
-# }
-# 
-# 
-# # 4. calculate each Yj
-# Y1 <- Gen_Y1$Y1
-# Y2 <- pe$a[1]*Y1 + Y1^pe$b[1] *Zsim[,1]
-# Y3 <-  pe$a[2]*Y1 + Y1^pe$b[2] *Zsim[,2]
-# Y4 <- pe$a[3]*Y1 + Y1^pe$b[3] *Zsim[,3]
-# Y5 <-  pe$a[4]*Y1 + Y1^pe$b[4] *Zsim[,4]
-# res <- c(1:ncol(sims))[-j]
-# Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim="model")
-# names(Gen_Y1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+# repeat simulation for each threshold for a more precise estimates
+simulate_cond_model <- function(v_sim,Nsim=1000,param_estimates, res_dist="vine_copula") {
+pe <- param_estimates
+# 1. simulate Y1
+U <- runif(Nsim)
+Y1_gen <- -log(2*(1-v_sim)) + rexp(Nsim)
+Gen_Y1 <- data.frame(Y1=Y1_gen)
+if (res_dist=="empirical") {
+# 2. simulate residuals from an empirical distribution
+Zsim <- obs_res[sample(x=1:nrow(obs_res),size=Nsim,replace=TRUE),]
+} else if (res_dist=="vine_copula") {
+# 2. simulate residuals from a vine copula
+Zsim_unif <- rvinecopulib::rvinecop(n=Nsim,vine=fit_res) %>% as.data.frame()
+ 
+# 3. convert to original margins
+to_opt <- function(x) {
+   return( (F_AGG(x,theta=c(mu,sigl,sigu,deltal,deltau))-Zsim_unif[i,k])^2  )  
+ }
+Zsim <- Zsim_unif
+for (k in 1:ncol(Zsim)) {
+  mu <- pe$mu_agg[k]
+  sigl <- pe$sigl[k]
+  sigu <- pe$sigu[k]
+  deltal <- pe$deltal[k]
+  deltau <- pe$deltau[k]
+  for (i in 1:nrow(Zsim)) {
+    Zsim[i,k] <- optim(fn=to_opt,par=1,method="Brent",lower=-10,upper=10)$par
+  }
+}
+
+} 
+# 4. calculate each Yj
+Y1 <- Gen_Y1$Y1
+Y2 <- pe$a[1]*Y1 + Y1^pe$b[1] *Zsim[,1]
+Y3 <-  pe$a[2]*Y1 + Y1^pe$b[2] *Zsim[,2]
+Y4 <- pe$a[3]*Y1 + Y1^pe$b[3] *Zsim[,3]
+Y5 <-  pe$a[4]*Y1 + Y1^pe$b[4] *Zsim[,4]
+res <- c(1:ncol(sims))[-j]
+Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim="model")
+names(Gen_Y1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+return(Gen_Y1)
+}
 ```
 
 Compare residual margin densities of observed and simulated values.
@@ -134,7 +139,6 @@ Compare residual margin densities of observed and simulated values.
 # ptmp <- rbind(obs_res %>% mutate(residuals="observed"),Zsim %>% mutate(residuals="simulated"))
 # ggpairs(ptmp,aes(col=residuals)) 
 ```
-
 
 Print estimated and true point estimates.
 
@@ -152,22 +156,19 @@ psim <- pu <-  c()
 u <- c(0.99,0.9925,0.995,0.9975,0.999)
 
 # one of the clusters u
-psim1 <- psim2 <- pu1 <- pu2 <- pemp <- pemp1 <-   c()
+psim1 <- psim2 <- pu1 <- pu2 <- pemp <- pemp1 <- c()
 uq <- sapply(1:length(u),function(i){unif_laplace_pit(u[i]) })
 for (i in 1:length(u)) {
  pu[i] <- nrow(sims1 %>% filter(if_all(.cols=everything(),~.x>uq[i])))/nrow(sims1)*(1-v)
  pemp[i] <- nrow(sims %>% filter(if_all(.cols=everything(),~.x>uq[i])))/nrow(sims)
- 
  pu1[i] <- nrow(sims1 %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))/nrow(sims1)*(1-v)
-
-  pemp1[i] <- nrow(sims %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))/nrow(sims)
+ Nsim <- 1000
+Gen_Y1 <- simulate_cond_model(v_sim=u[i],param_estimates=pe,Nsim=Nsim)
+ pemp1[i] <- nrow(sims %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))/nrow(sims)
  pu2[i] <- nrow(sims1 %>% filter(if_all(.cols=all_of(4:5),~.x>uq[i])))/nrow(sims1)*(1-v)
  psim[i] <- nrow(Gen_Y1 %>% filter(if_all(.cols=everything(),~.x>uq[i])))*(1-u[i])/Nsim
  psim1[i] <- nrow(Gen_Y1 %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))*(1-u[i])/Nsim
- psim2[i] <- nrow(Gen_Y1 %>% filter(if_all(.cols=all_of(4:5),~.x>uq[i])))*(1-u[i])/Nsim 
 }
-pu*1000
-psim*1000
 ```
 
 Calculate bias(times 1000 for easier reading).
@@ -194,31 +195,13 @@ We start with empirical residuals.
 
 ```{r, warning=FALSE}
 set.seed(11)
-v_sim <- v
-Nsim <- 100000
-# 1. simulate Y1
-U <- runif(Nsim)
-Y1sim <- -log(2*(1-v_sim)) + rexp(Nsim)
-Ysim <- data.frame(Y1=Y1sim)
-
-# 2. simulate residuals from a vector of observed residuals
-Zsim <- obs_res[sample(x=1:nrow(obs_res),size=Nsim,replace=TRUE),]
-
-
-# 4. calculate each Yj
-Y1 <- Ysim$Y1
-Y2 <- pe$a[1]*Y1 + Y1^pe$b[1] *Zsim[,1]
-Y3 <-  pe$a[2]*Y1 + Y1^pe$b[2] *Zsim[,2]
-Y4 <- pe$a[3]*Y1 + Y1^pe$b[3] *Zsim[,3]
-Y5 <-  pe$a[4]*Y1 + Y1^pe$b[4] *Zsim[,4]
-res <- c(1:ncol(sims))[-j]
-Ysim <- Ysim %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim="model")
-names(Ysim) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+Nsim <- 1000
 
 # calculate the probabilities
 psimemp <- psimemp1 <-   c()
 uq <- sapply(1:length(u),function(i){unif_laplace_pit(u[i]) })
 for (i in 1:length(u)) {
+  Ysim <- simulate_cond_model(v_sim=u[i],param_estimates=pe,Nsim=Nsim,res_dist = "empirical")
  psimemp[i] <- nrow(Ysim %>% filter(if_all(.cols=everything(),~.x>uq[i])))*(1-u[i])/Nsim
  psimemp1[i] <- nrow(Ysim %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))*(1-u[i])/Nsim
 
@@ -227,7 +210,7 @@ for (i in 1:length(u)) {
 # could save large dataframes
 # sims data, sims1 large data for true values
 # Gen_Y1 model simulation, Ysim model simulation empirical residuals
-# save(sims,sims1,Gen_Y1,Ysim,file="../data_processed/simulation_examples.RData")
+# save(sims,sims1,file="../data_processed/simulation_examples.RData")
 ```
 
 
