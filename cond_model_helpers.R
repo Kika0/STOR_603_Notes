@@ -457,10 +457,10 @@ plot_simulated <- function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
   df <- sims %>% dplyr::select(starts_with("Y"))
   par_sum <- data.frame(matrix(nrow=5,ncol=0))
   # Y_not_1_extreme <- df %>% filter(Y_1<quantile(Y_1,v))
-  Z_2 <- c()
-  Z_3 <- c()
-  Z_N_2 <- c()
-  Z_N_3 <- c()
+  Z2 <- c()
+  Z3 <- c()
+  ZN2 <- c()
+  ZN3 <- c()
   j <- given
   cond_colours <- c("#C11432","#66A64F","#009ADA")
   d <- ncol(df)
@@ -481,60 +481,60 @@ plot_simulated <- function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
     sig_hat <- c(opt[[1]]$par[4],opt[[2]]$par[4])
     
     # generate residual Z ----
-    Y_1 <- Y_given1extreme[,j]
-    Y_2 <- Y_given1extreme[,res[1]]
-    Y_3 <- Y_given1extreme[,res[2]]
-    
-    tmp_z2 <- (Y_2-a_hat[1]*Y_1)/(Y_1^b_hat[1])
-    tmp_z3 <- (Y_3-a_hat[2]*Y_1)/(Y_1^b_hat[2])
-    
-    Z_2 <- append(Z_2,tmp_z2)
-    Z_3 <- append(Z_3,tmp_z3)
-    given <- append(given,rep(j,(N*(1-v))))
-    
-    # calculate the normal using the PIT
-    Z_N_2 <- append(Z_N_2,qnorm(F_smooth_Z(tmp_z2)))
-    Z_N_3 <- append(Z_N_3,qnorm(F_smooth_Z(tmp_z3)))
-    
-    rho_hat <- cor(Z_N_2,Z_N_3)
-    # generate from normal
-    if (j==5) {
-      Z_N <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,0,0,1),2,2))
-    }
-    else {
-    Z_N <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
-    }
-    Z <- data.frame(Z_2,Z_3)
-    
-    # transform back to original margins
-    Z_star <- norm_to_orig(Z_N=Z_N,emp_res = Z)
-    
-    U <- runif(1000)
-    Y_1_gen <- -log(2*(1-0.999)) + rexp(1000)
-    Gen_Y_1 <- data.frame(Y_1=Y_1_gen)
-    
-    # for each Y, generate a residual and calculate Y_2
-    Y_1 <- Gen_Y_1$Y_1
-    # Y_2 <- a_hat*Y_1 + Y_1^b_hat *x
-    # Y_3 <-  a_hat*Y_1 + Y_1^b_hat *y
-    Y_2 <- a_hat*Y_1 + Y_1^b_hat *Z_star[,1]
-    Y_3 <-  a_hat*Y_1 + Y_1^b_hat *Z_star[,2]
-    
-    Gen_Y_1 <- Gen_Y_1 %>% mutate(Y_2=Y_2,Y_3=Y_3) %>% mutate(sim=rep("model",1000))
-    names(Gen_Y_1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),"sim")
-    # generate Y_1 (extrapolate so above largest observed value)
-    
-    #plot
     Y1 <- Y_given1extreme[,j]
     Y2 <- Y_given1extreme[,res[1]]
     Y3 <- Y_given1extreme[,res[2]]
+    
+    tmp_z2 <- (Y2-a_hat[1]*Y1)/(Y1^b_hat[1])
+    tmp_z3 <- (Y3-a_hat[2]*Y1)/(Y1^b_hat[2])
+    
+    Z2 <- append(Z2,tmp_z2)
+    Z3 <- append(Z3,tmp_z3)
+    given <- append(given,rep(j,(N*(1-v))))
+    
+    # calculate the normal using the PIT
+    ZN2 <- append(ZN2,qnorm(F_smooth_Z(tmp_z2)))
+    ZN3 <- append(ZN3,qnorm(F_smooth_Z(tmp_z3)))
+    
+    rho_hat <- cor(ZN2,ZN3)
+    # generate from normal
+    if (j==5) {
+      ZN <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,0,0,1),2,2))
+    }
+    else {
+    ZN <- mvrnorm(n=1000,mu=c(0,0),Sigma=matrix(c(1,rho_hat,rho_hat,1),2,2))
+    }
+    Z <- data.frame(Z2,Z3)
+    
+    # transform back to original margins
+    Z_star <- norm_to_orig(ZN=ZN,emp_res = Z)
+    
+    U <- runif(1000)
+    Y1gen <- -log(2*(1-0.999)) + rexp(1000)
+    GenY1 <- data.frame(Y1=Y1gen)
+    
+    # for each Y, generate a residual and calculate Y2
+    Y1 <- GenY1$Y1
+    # Y2 <- a_hat*Y1 + Y1^b_hat *x
+    # Y3 <-  a_hat*Y1 + Y1^b_hat *y
+    Y2 <- a_hat*Y1 + Y1^b_hat *Z_star[,1]
+    Y3 <-  a_hat*Y1 + Y1^b_hat *Z_star[,2]
+    
+    GenY1 <- GenY1 %>% mutate(Y2=Y2,Y3=Y3) %>% mutate(sim=rep("model",1000))
+    names(GenY1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),"sim")
+    # generate Y1 (extrapolate so above largest observed value)
+    
+    #plot
+    Y1 <- Ygiven1extreme[,j]
+    Y2 <- Ygiven1extreme[,res[1]]
+    Y3 <- Ygiven1extreme[,res[2]]
     tmp <- data.frame(Y1,Y2,Y3) %>% mutate(sim=rep("data",500))
     names(tmp) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),"sim")
     thres <- frechet_laplace_pit( qfrechet(0.999))
     v <- 0.99
-    l <- min(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3)
-    u <- max(Gen_Y_1 %>% dplyr::select(-sim),Y1,Y2,Y3)
-    Gen_orig <- rbind(Gen_Y_1,tmp)
+    l <- min(GenY1 %>% dplyr::select(-sim),Y1,Y2,Y3)
+    u <- max(GenY1 %>% dplyr::select(-sim),Y1,Y2,Y3)
+    Gen_orig <- rbind(GenY1,tmp)
     p1 <- ggplot(Gen_orig) +  annotate("rect",xmin=thres, ymin=thres, xmax=Inf,ymax=Inf, alpha=0.25,fill="#C11432") + geom_point(aes(x=Y1,y=Y2,col=sim),alpha=0.5) + geom_vline(xintercept=thres,col=cond_colours[j],linetype="dashed") +geom_abline(slope=0,intercept=thres,col=cond_colours[j],linetype="dashed") +
       scale_color_manual(values = c("data"="black","model" = cond_colours[j])) + xlab(TeX("$Y_1$")) +ylab(TeX("$Y_2$")) +
       xlim(c(l,u)) + ylim(c(l,u)) 
