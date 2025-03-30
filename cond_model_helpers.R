@@ -725,7 +725,7 @@ find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::sele
 }
 
 # function for plotting parameter estimates on a map and against distance
-map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="", grid_uk=uk_temp_sf) {
+map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="",grid_uk=uk_temp_sf) {
   misscol <- "aquamarine"
   Nsites <- max(tmp_est$res, tmp_est$given,na.rm=TRUE)
   if (identical(facet_var,"cond_site")) {
@@ -749,12 +749,11 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
      nrow_facet <- length(unique(tmp_est$cond_site))
     legend_outside_size <- 0.2 
   }
-
-  tmp <- tmp_est %>% mutate(site_index = rep(1:Nsites,Nfacet))
-  # match back to spatial locations and plot
+  rep_Nsites <- nrow(tmp_est)/Nsites
+  tmp <- tmp_est %>% mutate(site_index = rep(1:Nsites,rep_Nsites))
   if (nrow(grid_uk)==445) {
-  uk_temp_sf <- grid_uk %>% mutate(site_index=1:Nsites) %>% dplyr::select(site_index) %>% cbind(ukcp18[,1:8])
-  uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index")) 
+    uk_temp_sf <- grid_uk %>% mutate(site_index=1:Nsites) %>% dplyr::select(site_index) %>% cbind(ukcp18[,1:8])
+    uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index")) 
   } else {
     uk_temp_sf <- grid_uk %>% mutate(site_index=1:Nsites)
     uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index"))
@@ -862,4 +861,28 @@ shift_time <- function(sims=sims,cond_site=cond_site,tau=0, Ndays_season = 90) {
   sims_tau[,cond_site] <- sims[-daysremove_condsite,cond_site]
   sims_tau[,-cond_site] <- sims[-daysremove_othersites,-cond_site]
   return(sims_tau)
+}
+
+#' Link parameter estimates to spatial locations
+#'
+#' @param tmp_est Output of par_est function or rbind multiple outputs.
+#' @param grid_uk sf object of spatial location points.
+#'
+#' @return sf object (to be used in map_param function)
+#' @export
+#'
+#' @examples
+est_join_spatial <- function(tmp_est,grid_uk=uk_temp_sf) {
+Nsites <- max(tmp_est$res, tmp_est$given,na.rm=TRUE)
+rep_Nsites <- nrow(tmp_est)/Nsites
+tmp <- tmp_est %>% mutate(site_index = rep(1:Nsites,rep_Nsites))
+if (nrow(grid_uk)==445) {
+  uk_temp_sf <- grid_uk %>% mutate(site_index=1:Nsites) %>% dplyr::select(site_index) %>% cbind(ukcp18[,1:8])
+  uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index")) 
+} else {
+  uk_temp_sf <- grid_uk %>% mutate(site_index=1:Nsites)
+  uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index"))
+}
+uk_tmp1 <- st_as_sf(uk_tmp)
+return(uk_tmp1)
 }
