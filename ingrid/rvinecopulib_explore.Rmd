@@ -7,7 +7,7 @@ date: "2025-03-10"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # libraries and functions ----
-#library(VineCopula)
+library(VineCopula)
 library(rvinecopulib)
 #library(evd)
 #library(ismev)
@@ -36,15 +36,16 @@ v <- 0.7
 # transform to Laplace margins
 winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+j <- 1
+pew <-  par_est(df=winter_lap,v=v,given=j,margin = "AGG", method = "sequential2")
+obsresw <- (observed_residuals(df = winter_lap,given = j,v = v,a = pew$a,b=pew$b) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
 
-obsresw <- (observed_residuals(df = winter_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
-
-obsress <- (observed_residuals(df = summer_lap,given = 1,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+pes <-  par_est(df=summer_lap,v=v,given=j,margin = "AGG", method = "sequential2")
+obsress <- (observed_residuals(df = summer_lap,given = j,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
 
 ```
 
 ## Estimate copula conditional on $O_3$
-
 
 ```{r}
 vc1 <- rvinecopulib::vinecop(data=obsresw)
@@ -94,10 +95,11 @@ BIC <- function(vc) {
 }
 
 for (i in 1:5) {
-  # calculate observed residuals
-obsresw <- (observed_residuals(df = winter_lap,given = i,v = v) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
+pew <-  par_est(df=winter_lap,v=v,given=i,margin = "AGG", method = "sequential2")
+obsresw <- (observed_residuals(df = winter_lap,given = i,v = v,a = pew$a,b=pew$b) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
 
-obsress <- (observed_residuals(df = summer_lap,given = i,v = v) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+pes <-  par_est(df=summer_lap,v=v,given=i,margin = "AGG", method = "sequential2")
+obsress <- (observed_residuals(df = summer_lap,given = i,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
 
 vcw1 <- rvinecopulib::vinecop(data=obsresw)
 # compare with VineCopula fit
@@ -171,3 +173,6 @@ vcs1
 summary(vcs1)
 summary(vcs2)
 ```
+
+
+
