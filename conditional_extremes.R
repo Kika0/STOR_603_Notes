@@ -992,7 +992,7 @@ N <- 50000
 v <- 0.99
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%link_log(dep=1/2) %>%link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-pe <- par_est(df = sims, given = 1, v = v,margin = "AGGsigdelta",method="sequential2")
+pe <- par_est(df = sims, given = 1, v = v,margin = "AGG",method="sequential2")
 Y_given1extreme <- sims %>% filter(Y1>quantile(Y1,v))
 Y1 <- Y_given1extreme$Y1
 Y2 <- Y_given1extreme$Y2
@@ -1010,15 +1010,15 @@ Z3sort <- sort(Z3) # sorted observed residuals
 Z4sort <- sort(Z4) # sorted observed residuals
 Z5sort <- sort(Z5) # sorted observed residuals
 # optimize NLL for AGG
-opt2 <- optim(fn=NLL_AGGsigdelta,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
-opt3 <- optim(fn=NLL_AGGsigdelta,x=Z3,par=c(mean(Z3),sd(Z3),sd(Z3),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
-opt4 <- optim(fn=NLL_AGGsigdelta,x=Z4,par=c(mean(Z4),sd(Z4),sd(Z4),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
-opt5 <- optim(fn=NLL_AGGsigdelta,x=Z5,par=c(mean(Z5),sd(Z5),sd(Z5),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+opt2 <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+opt3 <- optim(fn=NLL_AGG,x=Z3,par=c(mean(Z3),sd(Z3),sd(Z3),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+opt4 <- optim(fn=NLL_AGG,x=Z4,par=c(mean(Z4),sd(Z4),sd(Z4),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+opt5 <- optim(fn=NLL_AGG,x=Z5,par=c(mean(Z5),sd(Z5),sd(Z5),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
 # repeat optimization to evaluate possible differences
-opt2a <- optim(fn=NLL_AGGsigdelta,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
-opt3a <- optim(fn=NLL_AGGsigdelta,x=Z3,par=c(mean(Z3),sd(Z3),sd(Z3),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
-opt4a <- optim(fn=NLL_AGGsigdelta,x=Z4,par=c(mean(Z4),sd(Z4),sd(Z4),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
-opt5a <- optim(fn=NLL_AGGsigdelta,x=Z5,par=c(mean(Z5),sd(Z5),sd(Z5),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+opt2a <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+opt3a <- optim(fn=NLL_AGG,x=Z3,par=c(mean(Z3),sd(Z3),sd(Z3),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+opt4a <- optim(fn=NLL_AGG,x=Z4,par=c(mean(Z4),sd(Z4),sd(Z4),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+opt5a <- optim(fn=NLL_AGG,x=Z5,par=c(mean(Z5),sd(Z5),sd(Z5),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
 # compare log-likelihood and AGG estimates with par_est function
 data.frame("to_obsres"=c(opt2$value,opt2$par),"ato_obsres"=c(opt2a$value,opt2a$par),"by_function"=as.numeric(pe[1,c(4,8,11,12,14,15)]))
 data.frame("to_obsres"=c(opt3$value,opt3$par),"ato_obsres"=c(opt3a$value,opt3a$par),"by_function"=as.numeric(pe[2,c(4,8,11,12,14,15)]))
