@@ -24,7 +24,7 @@ sapply(file.sources,source,.GlobalEnv)
 source("rotate_unrotate_coordinates.R")
 gr_npole_lat <- 37.5
 gr_npole_lon <- 177.5
-load("spatialobjects.RData") # uk polygon and uk_temp_sf points sf objects
+load("data_processed/spatialobjects.RData") # uk polygon and uk_temp_sf points sf objects
 theme_set(theme_bw())
 theme_replace(
   panel.spacing = unit(2, "lines"),
@@ -525,7 +525,7 @@ Explore quantiles of the data (on the Laplace scale).
 cond_sites <- c("Birmingham","Inverness","Cromer")
 tmp <- est_all %>% filter(cond_site %in% cond_sites)
 x0999 <- unif_laplace_pit(0.999)
-q025 <- q075 <- numeric()
+q025 <- q050 <- q075 <- numeric()
 for (i in 1:nrow(tmp)) {
     # filter value of a and b
   a <- as.numeric(tmp[i,5])
@@ -544,6 +544,7 @@ for (i in 1:nrow(tmp)) {
   z <- (Y2-a*Y1)/(Y1^b)
   # calculate q025 and q075
   q025[i] <- a*x0999+x0999^b*quantile(z,0.25)
+  q050[i] <- a*x0999+x0999^b*quantile(z,0.5)
   q075[i] <- a*x0999+x0999^b*quantile(z,0.75)
   }
 }
@@ -586,11 +587,11 @@ tmap_save(map_param(tmp_est=tmpdiff,method = "rldiff", facet_var = c("cond_site"
 # Explore new data
 
 ```{r}
-sims <- xyUK20 %>% dplyr::select(!c(lon,lat,x,y)) %>% t() %>% as.data.frame()
+sims_orig <- xyUK20 %>% dplyr::select(!c(lon,lat,x,y)) %>% t() %>% as.data.frame()
 # ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
-colnames(sims) <- paste0("Y",1:ncol(sims))
+colnames(sims_orig) <- paste0("Y",1:ncol(sims_orig))
 # transform to Laplace margins
-sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+sims <- as.data.frame((sims_orig %>% apply(c(2),FUN=row_number))/(nrow(sims_orig)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 v <- 0.9 # set threshold
 
 est_all20 <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
@@ -653,7 +654,9 @@ save(est_all20GG,file="data_processed/est_all20GG.RData")
 est_all20GG <- est_all20GG %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
 # save(est_all,est_all_diag,tmp025,tmp075,tmpdiff,file="est_all.RData")
 
-#load("est_all20.RData")
+#load("data_processed/est_all20GG.RData")
+tmp1 <- est_join_spatial(tmp_est=est_all20GG,grid_uk = xyUK20_sf)
+tm_shape(tmp1 %>% filter(cond_site=="Birmingham")) + tm_dots(col="delta")
 condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
 # condmodel_params <- c("a","b","mu","sig")
 for (i in 1:ncol(df_sites)) {
@@ -666,5 +669,156 @@ for (i in 1:ncol(df_sites)) {
 # explore discrepancy
 names(df_sites)
 unique(est_all20GG$cond_site)
+# check AGG estimation
+sims10 <- sims[,1:10]
+pe10 <- par_est(df=sims10,v=v,given=5,margin = "AGG", method="sequentialGG",keef_constraints = c(1,2))
+pe10
+# compare parameter estimates with AGG fitted to the observed residuals
+obsr <- observed_residuals(df=sims10,given=5,v = 0.9,a=pe10$a,b=pe10$b)
+# fit AGG for each column
+dum1 <- data.frame("mu_agg"=numeric(),"sigl"=numeric(),"sigu" = numeric(),"deltal"=numeric(),"deltau" = numeric())
+opt2 <- list()
+for (i in 1:ncol(obsr)) {
+  Z2 <- as.numeric(unlist(obsr[,i]))
+opt2[[i]] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+dum1[nrow(dum1)+1,] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")$par
+}
+
+# run for Birmingham and tau=0 to check
+cond_site <- find_site_index(as.numeric(df_sites[,1]),grid_uk = xyUK20_sf)
+petest <- par_est(df=sims,v=v,given=cond_site,margin = "AGG", method="sequentialGG",keef_constraints = c(1,2))
+# estimate residual margins
+# compare parameter estimates with AGG fitted to the observed residuals
+obsr <- observed_residuals(df=sims,given=cond_site,v = 0.9,a=petest$a,b=petest$b)
+# fit AGG for each column
+dum1 <- data.frame("mu_agg"=numeric(),"sigl"=numeric(),"sigu" = numeric(),"deltal"=numeric(),"deltau" = numeric())
+opt2 <- list()
+for (i in 1:ncol(obsr)) {
+  Z2 <- as.numeric(unlist(obsr[,i]))
+opt2[[i]] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+dum1[nrow(dum1)+1,] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")$par
+}
+# plot to compare
+plot(petest$mu_agg,dum1$mu_agg)
+# join together and plot (hopefully correct estimates)
+i <- 1
+pet <- cbind(petest[,c(1:7,9,16,17)],dum1) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(0))
+
+# plot parameters
+i <- 1
+petsf <- est_join_spatial(tmp_est=pet,grid_uk=xyUK20_sf)
+map_param(tmp_est=petsf %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "cond_site",title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
+```
+
+## Try exploring quantiles on the original scale
+
+```{r}
+cond_sites <- c("Birmingham","Glasgow","London")
+tmp <- est_all20GG %>% filter(cond_site %in% cond_sites) %>% mutate(cond_site=factor(cond_site)) %>% filter(tau==0)
+x0999 <- unif_laplace_pit(1-1/(nrow(sims)/40*50))
+#x0999 <- unif_laplace_pit(0.999)
+q025 <- q050 <- q075 <- numeric()
+for (i in 1:nrow(tmp)) {
+    # filter value of a and b
+  a <- as.numeric(tmp[i,5])
+  b <- as.numeric(tmp[i,6])
+  if (is.na(a)) {q025[i] <- q050[i] <- q075[i] <- NA} else {
+  # find residual variable and cond.variable
+  cond_site. <- find_site_index(as.numeric(df_sites[,tmp$cond_site[i]]),grid_uk=xyUK20_sf)
+  res_site <- tmp$res[i]
+  # calculate Y1 and Yj
+  sims_tau <- shift_time(sims=sims,cond_site=cond_site.,tau=as.numeric(as.character(tmp$tau[i])),Ndays_season = nrow(sims)/40) %>% dplyr::select(all_of(c(cond_site.,res_site)))
+  names(sims_tau) <- c("Y1","Y2")
+  Y1_Y2 <- sims_tau %>% filter(sims_tau[,1]>quantile(sims_tau[,1],v))
+  Y1 <- as.numeric(Y1_Y2[,1])
+  Y2 <- as.numeric(Y1_Y2[,2])
+  # calculate observed residuals
+  z <- (Y2-a*Y1)/(Y1^b)
+  # calculate q025 and q075
+  q025[i] <- a*x0999+x0999^b*quantile(z,0.25)
+  q050[i] <- a*x0999+x0999^b*quantile(z,0.5)
+  q075[i] <- a*x0999+x0999^b*quantile(z,0.75)
+  }
+}
+
+# join and map
+# tmp <- tmp %>% mutate(q025,q075) %>%  pivot_longer(,cols=c(q025,q075),names_to = "q") %>% arrange(q) %>% mutate(q=factor(q)) %>% mutate(tau=factor(as.character(tau),levels=unique(as.character(tmp$tau))))
+
+# transform to original margins
+# calculate gpd param for each of the sites
+library(ismev)
+mu <- sig <- xi <- c()
+for (j in 1:ncol(sims_orig)) {
+ gpdpar <- ismev::gpd.fit(as.numeric(unlist(sims_orig[,j])),threshold = quantile(as.numeric(unlist(sims_orig[,j])),0.9))$mle
+ mu[j] <- quantile(as.numeric(unlist(sims_orig[,j])),0.9)
+  sig[j] <- gpdpar[1]
+   xi[j] <- gpdpar[2]
+}
+ysim <- xunif <-  c()
+q050 <- q025
+for (i in 1:length(q050)) {
+  if (is.na(q050[i])) {ysim[i]  <- xunif[i] <-  NA} else {
+ xunif[i] <-  pfrechet(laplace_frechet_pit(q050[i]))
+   res_site <- tmp$res[i]
+ X <- as.numeric(unlist(sims_orig[,res_site])) 
+  if (xunif[i]< quantile(X,0.9)) {
+    ysim[i] <- quantile(X,xunif[i])
+  } else {
+    ysim[i] <- pgpd(q=(xunif[i]-0.9)/(1-0.9),loc = mu[res_site],scale = sig[res_site],shape = xi[res_site])
+  }
+  }
+}
+
+tmp <- tmp %>% mutate(q050,ysim,xunif) %>%  mutate(tau=factor(as.character(tau),levels=unique(as.character(tmp$tau))))
+tmpsf <- est_join_spatial(tmp_est=tmp,grid_uk=xyUK20_sf)
+tm_shape(tmpsf) + tm_dots(col="ysim") + tm_facets(by="cond_site")
+ misscol <- "aquamarine"
+tm_shape(tmpsf) + tm_dots(col="ysim",style="cont",size=0.3,colorNA=misscol,title=TeX("Simulated temperature"), textNA = "Conditioning site") + tm_facets(by="cond_site",nrow = 1) +  tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title="") 
+
+# what are these extreme temperatures?
+i <- 3
+cond_site <- find_site_index(as.numeric(df_sites[,i]),grid_uk = xyUK20_sf)
+qgpd(p=(xunif-0.9)/(1-0.9),loc = mu[cond_site],scale = sig[cond_site],shape = xi[cond_site])
+
+
+```
+
+## What would be different return levels for London?
+
+```{r}
+cond_sites <- c("London")
+tmp <- est_all20GG %>% filter(cond_site %in% cond_sites) %>% mutate(cond_site=factor(cond_site)) %>% filter(tau==0)
+qsim <- c(10,50,100)
+q050 <- numeric()
+for (j in 1:length(qsim)) {
+xq <- unif_laplace_pit(1-1/(nrow(sims)/40*qsim[j]))
+for (i in 1:nrow(tmp)) {
+    # filter value of a and b
+  a <- as.numeric(tmp[i,5])
+  b <- as.numeric(tmp[i,6])
+  if (is.na(a)) {q050 <- append(q050,NA)} else {
+  # find residual variable and cond.variable
+  cond_site. <- find_site_index(as.numeric(df_sites[,3]),grid_uk=xyUK20_sf)
+  res_site <- tmp$res[i]
+  # calculate Y1 and Yj
+  sims_tau <- shift_time(sims=sims,cond_site=cond_site.,tau=as.numeric(as.character(tmp$tau[i])),Ndays_season = nrow(sims)/40) %>% dplyr::select(all_of(c(cond_site.,res_site)))
+  names(sims_tau) <- c("Y1","Y2")
+  Y1_Y2 <- sims_tau %>% filter(sims_tau[,1]>quantile(sims_tau[,1],v))
+  Y1 <- as.numeric(Y1_Y2[,1])
+  Y2 <- as.numeric(Y1_Y2[,2])
+  # calculate observed residuals
+  z <- (Y2-a*Y1)/(Y1^b)
+  # calculate q050
+  q050 <- append(q050,a*xq+xq^b*quantile(z,0.5))
+  }
+}
+}
+
+# add as a variable
+tmp1 <- rbind(tmp,tmp,tmp) %>% mutate(rl=factor(rep(qsim,each=nrow(tmp)))) %>% mutate(q050=q050)
+tmpsf <- est_join_spatial(tmp_est=tmp1,grid_uk=xyUK20_sf)
+tm_shape(tmpsf) + tm_dots(col="q050") + tm_facets(by="rl")
+tm1 <- tm_shape(tmpsf) + tm_dots(col="q050",style="cont",size=0.3,colorNA=misscol,title=TeX("Simulated temperature"), textNA = "Return level") + tm_facets(by="rl",nrow = 1) +  tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title="") 
+tmap_save(tm1,filename="../Documents/rl_LOndon.png")
 ```
 
