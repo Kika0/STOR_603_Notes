@@ -108,7 +108,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         #optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],lower=c(0,-Inf,0),upper = c(b_max,Inf,4),control = list(fnscale=-1,maxit=2000), method = "L-BFGS-B")
         optb <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_max=b_max,control = list(fnscale=-1,maxit=2000), method = "Nelder-Mead")
         b_hat <- append(b_hat,optb$par[length(optb$par)-2])
-        Z2 <- (Y2-opta$par[1]*Y1)/(Y1^optb$par[1])
+        Z2 <- (Y2-opta$par[1]*Y1)/(Y1^optb$par[length(optb$par)-2])
        optmusig <- optim(par=init_parb,fn = Y_likelihood,df=Y_given1extreme,given=j,sim=res[i-1],a_hat=opta$par[1],b_hat=optb$par[1],control = list(fnscale=-1,maxit=2000))
          mu_hat <- append(mu_hat,optmusig$par[length(optmusig$par)-1])
         sig_hat <- append(sig_hat,optmusig$par[length(optmusig$par)])  
@@ -197,7 +197,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         lik2 <- append(lik2,opt$value)
       }
       if (margin=="AGG" & method!="one_step") {
-        opt <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "SANN")
+        opt <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
         mu_agg_hat <- append(mu_agg_hat,opt$par[1])
         sigl_hat <- append(sigl_hat,opt$par[2])
         sigu_hat <- append(sigu_hat,opt$par[3])
@@ -750,15 +750,7 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     legend_outside_size <- 0.2 
   }
   rep_Nsites <- nrow(tmp_est)/Nsites
-  tmp <- tmp_est %>% mutate(site_index = rep(1:Nsites,rep_Nsites))
-  if (nrow(grid_uk)==445) {
-    uk_temp_sf <- grid_uk %>% mutate(site_index=1:Nsites) %>% dplyr::select(site_index) %>% cbind(ukcp18[,1:8])
-    uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index")) 
-  } else {
-    uk_temp_sf <- grid_uk %>% mutate(site_index=1:Nsites)
-    uk_tmp <- tmp %>% left_join(uk_temp_sf,by=c("site_index"))
-  }
-  uk_tmp1 <- st_as_sf(uk_tmp)
+  uk_tmp1 <- tmp_est
   if (method=="q") {
     if (identical(facet_var,"q")) {
     pq <- tm_shape(uk_tmp1) + tm_dots(col="value",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$q_p$"), textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
