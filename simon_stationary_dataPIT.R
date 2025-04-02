@@ -149,3 +149,29 @@ colnames(sims) <- paste0("Y",1:ncol(sims))
 sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 v <- 0.9 # set threshold
 
+# create a dataframe for stationary data
+# create a dataframe
+xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=90*100,nrow=nrow(xyUK20_sf))))
+names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(91:180,40),"_",rep(1981:2080,each=90)) 
+
+for (i in 1: length(list_of_files)) {
+  xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="mod") %>% pull(x) 
+}
+# link back to spatial
+tm_shape(cbind(xyUK20_sf,xyUK20)) + tm_dots(col="X155_1990")
+# save as R object for further analysis
+
+# explore NA values
+# p <- data01 %>% mutate(year=floor(time)) %>% filter(is.na(uqgam)) %>% group_by(year,class) %>% summarize(n=n()) %>% arrange(-n) %>% ggplot() + geom_line(aes(x=year,y=n,col=class)) + ggtitle("Counts of NA values of uqgam for each year for observation and model data")
+# ggsave(p,filename="../Documents/newdata/uqgamNA.png",width=10,height=5)
+
+# setup for par_est
+sims <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
+# ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
+colnames(sims) <- paste0("Y",1:ncol(sims))
+# transform to Laplace margins
+sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+v <- 0.9 # set threshold
+
+sum(is.na(sims))
+pe <- par_est(df=sims,v=v,given=5,margin = "AGG", method="sequentialGG",keef_constraints = c(1,2))
