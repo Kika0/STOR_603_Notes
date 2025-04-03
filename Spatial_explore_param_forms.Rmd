@@ -592,51 +592,10 @@ sims_orig <- xyUK20 %>% dplyr::select(!c(lon,lat,x,y)) %>% t() %>% as.data.frame
 colnames(sims_orig) <- paste0("Y",1:ncol(sims_orig))
 # transform to Laplace margins
 sims <- as.data.frame((sims_orig %>% apply(c(2),FUN=row_number))/(nrow(sims_orig)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-
-# plot everything
-est_all20 <- est_all20 %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
-# save(est_all,est_all_diag,tmp025,tmp075,tmpdiff,file="est_all.RData")
-
-#load("est_all20.RData")
-condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
-# condmodel_params <- c("a","b","mu","sig")
-for (i in 1:ncol(df_sites)) {
- tau_site_map <- map_param(tmp_est=est_all20 %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
-   for (j in 1:length(condmodel_params)) {
-     tmap_save(tau_site_map[[j]],filename=paste0("../Documents/obs20km_nonstationary/tau_",names(df_sites[i]),"_map_",j,"_",condmodel_params[j],".png"),width=15,height=4.5)
-   }
-}
-
-# add also maps of alpha and beta
-
-
 ```
 
-Run with new margins.
 
 ```{r}
-est_all20GG <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
-                          "a" = numeric(), "b" = numeric(),
-                          "mu" = numeric(),"mu_agg" = numeric(),
-                          "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
-                          "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
-                          "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
-for (i in 1:ncol(df_sites)) {
-  cond_site <- find_site_index(as.numeric(df_sites[,i]),grid_uk = xyUK20_sf)
-  for (j in 1:length(dayshift)) {
-    sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[j],Ndays_season = 92)
-    est_all20GG <- rbind(est_all20GG,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGG", method="sequentialGG",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(dayshift[j])))
-  }
-}
-```
-
-```{r}
-save(est_all20GG,file="data_processed/est_all20GG.RData")
-
-# plot everything
-est_all20GG <- est_all20GG %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
-# save(est_all,est_all_diag,tmp025,tmp075,tmpdiff,file="est_all.RData")
-
 #load("data_processed/est_all20GG.RData")
 tmp1 <- est_join_spatial(tmp_est=est_all20GG,grid_uk = xyUK20_sf)
 tm_shape(tmp1 %>% filter(cond_site=="Birmingham")) + tm_dots(col="delta")
@@ -649,47 +608,6 @@ for (i in 1:ncol(df_sites)) {
    }
 }
 
-# explore discrepancy
-names(df_sites)
-unique(est_all20GG$cond_site)
-# check AGG estimation
-sims10 <- sims[,1:10]
-pe10 <- par_est(df=sims10,v=v,given=5,margin = "AGG", method="sequentialGG",keef_constraints = c(1,2))
-pe10
-# compare parameter estimates with AGG fitted to the observed residuals
-obsr <- observed_residuals(df=sims10,given=5,v = 0.9,a=pe10$a,b=pe10$b)
-# fit AGG for each column
-dum1 <- data.frame("mu_agg"=numeric(),"sigl"=numeric(),"sigu" = numeric(),"deltal"=numeric(),"deltau" = numeric())
-opt2 <- list()
-for (i in 1:ncol(obsr)) {
-  Z2 <- as.numeric(unlist(obsr[,i]))
-opt2[[i]] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
-dum1[nrow(dum1)+1,] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")$par
-}
-
-# run for Birmingham and tau=0 to check
-cond_site <- find_site_index(as.numeric(df_sites[,1]),grid_uk = xyUK20_sf)
-petest <- par_est(df=sims,v=v,given=cond_site,margin = "AGG", method="sequentialGG",keef_constraints = c(1,2))
-# estimate residual margins
-# compare parameter estimates with AGG fitted to the observed residuals
-obsr <- observed_residuals(df=sims,given=cond_site,v = 0.9,a=petest$a,b=petest$b)
-# fit AGG for each column
-dum1 <- data.frame("mu_agg"=numeric(),"sigl"=numeric(),"sigu" = numeric(),"deltal"=numeric(),"deltau" = numeric())
-opt2 <- list()
-for (i in 1:ncol(obsr)) {
-  Z2 <- as.numeric(unlist(obsr[,i]))
-opt2[[i]] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
-dum1[nrow(dum1)+1,] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")$par
-}
-# plot to compare
-plot(petest$mu_agg,dum1$mu_agg)
-# join together and plot (hopefully correct estimates)
-i <- 1
-pet <- cbind(petest[,c(1:7,9,16,17)],dum1) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(0))
-
-# plot parameters
-i <- 1
-petsf <- est_join_spatial(tmp_est=pet,grid_uk=xyUK20_sf)
 map_param(tmp_est=petsf %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "cond_site",title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
 
 # plot delta
