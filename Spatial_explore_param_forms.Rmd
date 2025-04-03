@@ -584,7 +584,7 @@ tmap_save(map_param(tmp_est=tmpdiff,method = "rldiff", facet_var = c("cond_site"
 
 ```
 
-# Explore new data
+# Explore new data on 20km scale
 
 ```{r}
 sims_orig <- xyUK20 %>% dplyr::select(!c(lon,lat,x,y)) %>% t() %>% as.data.frame()
@@ -592,23 +592,6 @@ sims_orig <- xyUK20 %>% dplyr::select(!c(lon,lat,x,y)) %>% t() %>% as.data.frame
 colnames(sims_orig) <- paste0("Y",1:ncol(sims_orig))
 # transform to Laplace margins
 sims <- as.data.frame((sims_orig %>% apply(c(2),FUN=row_number))/(nrow(sims_orig)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-v <- 0.9 # set threshold
-
-est_all20 <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
-                          "a" = numeric(), "b" = numeric(),
-                          "mu" = numeric(),"mu_agg" = numeric(),
-                          "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
-                          "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
-                          "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
-for (i in 1:ncol(df_sites)) {
-  cond_site <- find_site_index(as.numeric(df_sites[,i]),grid_uk = xyUK20_sf)
-  for (j in 1:length(dayshift)) {
-    sims_tau <- shift_time(sims=sims,cond_site=cond_site,tau=dayshift[j],Ndays_season = 92)
-    est_all20 <- rbind(est_all20,par_est(df=sims_tau,v=v,given=cond_site,margin = "AGG", method="sequential2",keef_constraints = c(1,2)) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(dayshift[j])))
-  }
-}
-
-save(est_all20,file="data_processed/est_all20.RData")
 
 # plot everything
 est_all20 <- est_all20 %>% mutate(tau=factor(as.character(tau),levels = as.character(-3:3)))
@@ -861,4 +844,9 @@ qgpd(p=((1-1/(nrow(sims)/40*qsim[3]))-0.9)/(1-0.9),loc = mu[cond_site],scale = s
 ```
 
 ## Estimate for stationary data
+
+```{r}
+# test function
+spatial_par_est(data_Lap = sims,cond_sites = df_sites %>% dplyr::select(all_of(10)),dayshift = 0)
+```
 
