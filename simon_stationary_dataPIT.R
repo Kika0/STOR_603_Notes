@@ -174,4 +174,38 @@ sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% 
 v <- 0.9 # set threshold
 
 sum(is.na(sims))
-pe <- par_est(df=sims,v=v,given=5,margin = "AGG", method="sequentialGG",keef_constraints = c(1,2))
+# run for Birmingham and tau=0 to check
+cond_site <- find_site_index(as.numeric(df_sites[,1]),grid_uk = xyUK20_sf)
+pe <- par_est(df=sims,v=v,given=cond_site,margin = "AGG", method="sequentialGG",keef_constraints = c(1,2))
+i <- 1
+pet <- pe %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites[i]),tau=as.character(0))
+
+# plot parameters
+petsf <- est_join_spatial(tmp_est=pet,grid_uk=xyUK20_sf)
+p1 <- map_param(tmp_est=petsf %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "cond_site",title_map = "With a bug",grid_uk = xyUK20_sf)
+
+# estimate residual margins
+# compare parameter estimates with AGG fitted to the observed residuals
+obsr <- observed_residuals(df=sims,given=cond_site,v = v,a=pe$a,b=pe$b)
+# fit AGG for each column
+dum1 <- data.frame("mu_agg"=numeric(),"sigl"=numeric(),"sigu" = numeric(),"deltal"=numeric(),"deltau" = numeric())
+opt2 <- list()
+for (i in 1:ncol(obsr)) {
+  Z2 <- as.numeric(unlist(obsr[,i]))
+  opt2[[i]] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+  dum1[nrow(dum1)+1,] <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")$par
+}
+
+# compare estimates
+plot(pe$mu_agg,dum1$mu_agg) # different as expected
+
+# compare estimates on a map
+i <- 1
+pet1 <- cbind(pe[,c(5:7,9,13,16,17)],dum1) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(df_sites)[i])
+petsf1 <- est_join_spatial(tmp_est=pet1,grid_uk=xyUK20_sf)
+p2 <- map_param(tmp_est=petsf1 %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "cond_site",title_map = "Bug fixed",grid_uk = xyUK20_sf)
+x <- c("mu_agg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
+for (k in c(5:11)) {
+tmap_save(tmap_arrange(p1[[k]],p2[[k]]),filename=paste0("../Documents/AGG_troubleshoot/Birmingham_",x[k-4],".png"),width=8,height=8)
+}
+
