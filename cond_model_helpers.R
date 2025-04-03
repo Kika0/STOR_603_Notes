@@ -170,41 +170,6 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
         deltau_hat <- append(deltau_hat,opt$par[4])
         lik <- append(lik,opt$value)
       }
-      
-      if (margin=="GenGaus" & method!="one_step") {
-        opt <- optim(fn=NLL_GenGaus,x=Z2,par=c(mean(Z2),sd(Z2),1.5),control=list(maxit=2000),method = "SANN")
-        mu_agg_hat <- append(mu_agg_hat,opt$par[1])
-        sig_agg_hat <- append(sig_agg_hat,opt$par[2])
-        delta_hat <- append(delta_hat,opt$par[3])
-        lik2 <- append(lik2,opt$value)
-      }
-      
-      if (margin=="AGGdelta" & method!="one_step") {
-        opt <- optim(fn=NLL_AGGdelta,x=Z2,par=c(mean(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "SANN")
-        mu_agg_hat <- append(mu_agg_hat,opt$par[1])
-        sig_agg_hat <- append(sig_agg_hat,opt$par[2])
-        deltal_hat <- append(deltal_hat,opt$par[3])
-        deltau_hat <- append(deltau_hat,opt$par[4])
-        lik2 <- append(lik2,opt$value)
-      }
-      
-      if (margin=="AGGsig" & method!="one_step") {
-        opt <- optim(fn=NLL_AGGsig,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.5),control=list(maxit=2000),method = "SANN")
-        mu_agg_hat <- append(mu_agg_hat,opt$par[1])
-        sigl_hat <- append(sigl_hat,opt$par[2])
-        sigu_hat <- append(sigu_hat,opt$par[3])
-        delta_hat <- append(delta_hat,opt$par[4])
-        lik2 <- append(lik2,opt$value)
-      }
-      if (margin=="AGG" & method!="one_step") {
-        opt <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
-        mu_agg_hat <- append(mu_agg_hat,opt$par[1])
-        sigl_hat <- append(sigl_hat,opt$par[2])
-        sigu_hat <- append(sigu_hat,opt$par[3])
-        deltal_hat <- append(deltal_hat,opt$par[4])
-        deltau_hat <- append(deltau_hat,opt$par[5])
-        lik2 <- append(lik2,opt$value)
-      }
       res_var <- append(res_var,res[i-1])
     }
   }
@@ -242,94 +207,46 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
                           "given" = rep(given,each=(d-1)), "res" = res_var)
   }
   
-  if (margin=="GenGaus" & method=="two_step") {
-    par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg" = sig_agg_hat,"sigl" = nas,"sigu" = nas,
-                          "delta"= delta_hat,"deltal" = nas, "deltau" = nas,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  
-  if (margin=="AGGsig" & method=="two_step") {
-    par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
-                          "delta"= delta_hat,"deltal" = nas, "deltau" = nas,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  
-  if (margin=="AGG" & method=="two_step") {
-    par_sum <- data.frame("lik" = lik, "lika"=nas,"likb"=nas,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
-                          "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  
-  if (margin=="AGG" & method=="sequentialGG") {
-    par_sum <- data.frame("lik" = lik, "lika"=lika,"likb"=likb,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
-                          "delta"=delta_hat,"deltal" = deltal_hat, "deltau" = deltau_hat,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  
-  if (margin=="AGG" & method %in% c("sequential","sequential2")) {
-    par_sum <- data.frame("lik" = nas, "lika"= lika,"likb"= likb,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
-                          "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  if (margin=="AGGsig" & method %in% c("sequential","sequential2")) {
-    par_sum <- data.frame("lik" = nas, "lika"= lika,"likb"= likb,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
-                          "delta"= delta_hat,"deltal" = nas, "deltau" = nas,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  if (margin=="AGGdelta" & method %in% c("sequential","sequential2")) {
-    par_sum <- data.frame("lik" = nas, "lika"= lika,"likb"= likb,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg"=sig_agg_hat,"sigl"=nas,"sigu"=nas,
-                          "delta"= nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  if (margin=="GenGaus" & method %in% c("sequential","sequential2")) {
-    par_sum <- data.frame("lik" = lik, "lika"= lika,"likb"= likb,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg"=sig_agg_hat,"sigl"= nas,"sigu"=nas,
-                          "delta"= delta_hat,"deltal" = nas, "deltau" = nas,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  
-  if (margin=="AGG" & method %in% c("sequential3")) {
-    par_sum <- data.frame("lik" = nas, "lika"= nas,"likb"= likb,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg"=nas,"sigl"=sigl_hat,"sigu"=sigu_hat,
-                          "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  
-  if (margin=="AGGdelta" & method %in% c("sequential","sequential2")) {
-    par_sum <- data.frame("lik" = nas, "lika"=lika,"likb"=likb,"lik2"=lik2,
-                          "a" = a_hat, "b" = b_hat,
-                          "mu" = mu_hat,"mu_agg"=mu_agg_hat,
-                          "sig" = sig_hat,"sig_agg"=sig_agg_hat,"sigl"=nas,"sigu"=nas,
-                          "delta"=nas,"deltal" = deltal_hat, "deltau" = deltau_hat,
-                          "given" = rep(given,each=(d-1)), "res" = res_var)
-  }
-  
   return(par_sum)
+}
+
+# estimate residual margins
+res_margin_par_est <- function(obs_res,method="AGG") {
+  if (method=="GenGaus") {
+    tmp <- data.frame("lik"=numeric(),"mu_agg"=numeric(),"sig_agg"=numeric(),"delta"=numeric())
+  }
+  if (method=="AGGdelta") {
+    tmp <- data.frame("lik"=numeric(),"mu_agg"=numeric(),"sig_agg"=numeric(),"deltal"=numeric(),"deltau"=numeric())
+  }
+  if (method=="AGGsig") {
+    tmp <- data.frame("lik"=numeric(),"mu_agg"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"delta"=numeric())
+  }
+  if (method=="AGG") {
+    tmp <- data.frame("lik"=numeric(),"mu_agg"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"deltal"=numeric(),deltau=numeric())
+  }  
+  for (i in 1:ncol(obsr)) {
+    Z2 <- as.numeric(unlist(obs_res[,i]))
+  
+  if (method=="GenGaus") {
+    opt <- optim(fn=NLL_GenGaus,x=Z2,par=c(mean(Z2),sd(Z2),1.5),control=list(maxit=2000),method = "SANN")
+    tmp[nrow(tmp)+1,] <- c(opt$value,opt$par)
+  }
+  
+  if (method=="AGGdelta") {
+    opt <- optim(fn=NLL_AGGdelta,x=Z2,par=c(mean(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "SANN")
+    tmp[nrow(tmp)+1,] <- c(opt$value,opt$par)
+  }
+  
+  if (method=="AGGsig") {
+    opt <- optim(fn=NLL_AGGsig,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.5),control=list(maxit=2000),method = "SANN")
+    tmp[nrow(tmp)+1,] <- c(opt$value,opt$par)
+  }
+  if (method=="AGG") {
+    opt <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
+    tmp[nrow(tmp)+1,] <- c(opt$value,opt$par)
+  }
+  }
+  return(tmp)
 }
 
 par_est_ite <- function(df=sims,d1j = d1j, v=0.9, given=c(1),N=100, show_ite=FALSE,mu_init=NULL,sig_init=NULL,b_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
