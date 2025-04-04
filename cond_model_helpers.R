@@ -213,16 +213,16 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
 # estimate residual margins
 res_margin_par_est <- function(obs_res,method="AGG") {
   if (method=="GenGaus") {
-    tmp <- data.frame("lik"=numeric(),"mu_agg"=numeric(),"sig_agg"=numeric(),"delta"=numeric())
+    tmp <- data.frame("likres"=numeric(),"mu_agg"=numeric(),"sig_agg"=numeric(),"delta"=numeric())
   }
   if (method=="AGGdelta") {
-    tmp <- data.frame("lik"=numeric(),"mu_agg"=numeric(),"sig_agg"=numeric(),"deltal"=numeric(),"deltau"=numeric())
+    tmp <- data.frame("likres"=numeric(),"mu_agg"=numeric(),"sig_agg"=numeric(),"deltal"=numeric(),"deltau"=numeric())
   }
   if (method=="AGGsig") {
-    tmp <- data.frame("lik"=numeric(),"mu_agg"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"delta"=numeric())
+    tmp <- data.frame("likres"=numeric(),"mu_agg"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"delta"=numeric())
   }
   if (method=="AGG") {
-    tmp <- data.frame("lik"=numeric(),"mu_agg"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"deltal"=numeric(),deltau=numeric())
+    tmp <- data.frame("likres"=numeric(),"mu_agg"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"deltal"=numeric(),deltau=numeric())
   }  
   for (i in 1:ncol(obsr)) {
     Z2 <- as.numeric(unlist(obs_res[,i]))
