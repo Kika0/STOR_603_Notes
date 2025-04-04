@@ -775,7 +775,7 @@ ggplot(est_all_sf) + geom_point(aes(x=deltal,y=deltau))
 
 # estimate with old data to test
 sims1 <- as.data.frame((sims_orig %>% apply(c(2),FUN=row_number))/(nrow(sims_orig)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-
-spatial_par_est(data_Lap = sims1,cond_sites = df_sites %>% dplyr::select(all_of(1)),dayshift = c(-3:3),Ndays_season = 92)
+library(profvis)
+profvis(spatial_par_est(data_Lap = sims1,cond_sites = df_sites %>% dplyr::select(all_of(1)),dayshift = c(0),Ndays_season = 92))
 ```
 
