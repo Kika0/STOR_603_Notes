@@ -5,30 +5,14 @@ library(sf)
 library(tmap)
 load("data_processed/spatial_helper.RData")
 # load the data
-load("../luna/kristina/MSdata_CPM5km_member1/ukgd_cpm85_5k_x100y23_MSdata01.RData")
-data01.std.param # not much info here
+load("../luna/kristina/MSdata01/ukgd_cpm85_5k_x100y24_MSdata01.RData")
 data01 <- data01 %>% mutate(year=floor(time))
-# NA in uqgam may mean high value of u
-data01 %>% filter(is.na(uqgam)) %>% view()
-summary(data01 %>% filter(is.na(uqgam)) )
-# is it right to replace these with low temperature? maybe replace with an average of neighbouring temperatures?
 
-# when u is NA, uqgam is also NA
-data01 %>% filter(is.na(u)) %>% view()
-summary(data01 %>% filter(is.na(u)))
-
-dim(data01)
-summary(data01)
-glimpse(data01)
-data01 %>% group_by(year) %>% summarize(mean_year=mean(x)) %>% ggplot(aes(x=year,y=mean_year)) + geom_point()
-ggplot(data01 %>% filter(doy %in% c(1:20))) + geom_point(aes(x=time,y=x))
-# to explore gpd functions for the tails
-str(gpdpar)
-summary(chosen.MSgpd)
+#data01 %>% group_by(year) %>% summarize(mean_year=mean(x)) %>% ggplot(aes(x=year,y=mean_year)) + geom_point()
 
 # load the Gpd parameters
-load("../luna/kristina/MSGpdParam/ukgd_cpm85_5k_x100y23.MSGpdParam.2024-10-22-064747.RData")
-glimpse(gpdpar) # dataframe for columns for scale, shape and threshold
+#load("../luna/kristina/scratch/hadsx/heatwave/HadUKGrid/dur-clim/CPM5km/v2kristina/UK/01/MSGpdParam/ukgd_cpm85_5k_x76y148.MSGpdParam.2025-02-26.RData")
+#glimpse(gpdpar) # dataframe for columns for scale, shape and threshold
 
 ###############################################################################
 # 5km
@@ -100,20 +84,14 @@ xyUK20_sf <-xyUK_sf %>% filter(x %in% x20,y %in% y20)
 # save sf objects used for spatial analysis
 save(uk,uk_notsimplified,xyUK20_sf,files_subset1,file="data_processed/spatial_helper.RData")
 
+
+# start here to get data---
 tm_shape(xyUK20_sf) + tm_dots(col="temp")
 # great, now load only files that overlap this grid or perhaps delete all other files?
 files <- list.files("../luna/kristina/MSdata01/")
 list_of_files <- list() #create empty list
 # only subset for x in x20 and y in y20
 files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSdata01.RData")})
-# explore an example of a missing file
-head(sort(files_subset),n=50)
-head(sort(files_subset1),n=50)
-
-# what is the one missing files?
-files_missing <- files_subset[!(files_subset %in% files)]
-files_missing[1] # it is over Heysham in the sea, a mistake due to a simplified UK polygon
-
 #loop through the files
 files_subset1 <- files_subset[files_subset %in% files]
 # could take only x and y divisible by 4 to subset and speed up data loading
@@ -124,50 +102,34 @@ for (i in 1:length(files_subset1)) {
 }
 xyUK20_sf <- xyUK20_sf[files_subset %in% files_subset1,]
 
-# join the summer data together could try 1960-1999 for non-stationary data 
+# join the summer data together could try 1960-1999 for non-stationary data -----
 # June 1 is 152 doy, August 31 is 243 doy (92 days per year)
 # create a dataframe
 xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=92*40,nrow=nrow(xyUK20_sf))))
 names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(152:243,40),"_",rep(1960:1999,each=92)) 
-
 for (i in 1: length(list_of_files)) {
   xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="obs",doy>=152,doy<=243, year<=1999) %>% pull(x) 
 }
-# link back to spatial
-tm_shape(cbind(xyUK20_sf,xyUK20)) + tm_dots(col="X155_1990")
-# save as R object for further analysis
-
-# explore NA values
-# p <- data01 %>% mutate(year=floor(time)) %>% filter(is.na(uqgam)) %>% group_by(year,class) %>% summarize(n=n()) %>% arrange(-n) %>% ggplot() + geom_line(aes(x=year,y=n,col=class)) + ggtitle("Counts of NA values of uqgam for each year for observation and model data")
-# ggsave(p,filename="../Documents/newdata/uqgamNA.png",width=10,height=5)
-
 # setup for par_est
-sims <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
+data_obs <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
 # ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
-colnames(sims) <- paste0("Y",1:ncol(sims))
+colnames(data_obs) <- paste0("Y",1:ncol(data_obs))
 # transform to Laplace margins
-sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-v <- 0.9 # set threshold
+data_obs_Lap <- as.data.frame((data_obs %>% apply(c(2),FUN=row_number))/(nrow(data_obs)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 
-# create a dataframe for stationary data
-# create a dataframe
+# create a dataframe for stationary data ----
 xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=90*100,nrow=nrow(xyUK20_sf))))
 names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(91:180,40),"_",rep(1981:2080,each=90)) 
 
 for (i in 1: length(list_of_files)) {
   xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="mod") %>% pull(x) 
 }
-# link back to spatial
-tm_shape(cbind(xyUK20_sf,xyUK20)) + tm_dots(col="X155_1990")
-# save as R object for further analysis
-
-# explore NA values
-# p <- data01 %>% mutate(year=floor(time)) %>% filter(is.na(uqgam)) %>% group_by(year,class) %>% summarize(n=n()) %>% arrange(-n) %>% ggplot() + geom_line(aes(x=year,y=n,col=class)) + ggtitle("Counts of NA values of uqgam for each year for observation and model data")
-# ggsave(p,filename="../Documents/newdata/uqgamNA.png",width=10,height=5)
-
 # setup for par_est
-sims <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
+data_mod <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
 # ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
-colnames(sims) <- paste0("Y",1:ncol(sims))
+colnames(data_mod) <- paste0("Y",1:ncol(data_mod))
 # transform to Laplace margins
-sims <- as.data.frame((sims %>% apply(c(2),FUN=row_number))/(nrow(sims)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+data_mod_Lap <- as.data.frame((data_mod %>% apply(c(2),FUN=row_number))/(nrow(data_mod)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+
+# save as R object for further analysis
+save(data_obs,data_obs_Lap,data_mod,data_mod_Lap,file = "data_processed/temperature_data.RData")
