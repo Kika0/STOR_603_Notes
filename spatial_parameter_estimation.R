@@ -31,10 +31,10 @@ spatial_par_est <- function(data_Lap,cond_sites,dayshift=c(0),Ndays_season=90,v=
       obsr <- observed_residuals(df=data_Lap,given=cond_site,v = v,a=pe$a,b=pe$b)
       # estimate residual margin parameters
       pe_res <- res_margin_par_est(obs_res = obsr,method="AGG")
-      est_all <- rbind(est_all,cbind(pe_res,pe) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(cond_sites[i]),tau=as.character(dayshift[j])))
+      est_all <- rbind(est_all,cbind(pe[,-c(8,10:12,14:15)],pe_res) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(cond_sites[i]),tau=as.character(dayshift[j])))
        }
   }
   est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(dayshift)))
   est_all_sf <- est_join_spatial(tmp_est=est_all,grid_uk=grid_uk)
-  save(est_all_sf,file=paste0("data_processed/",data_Lap,"_",ab_method,"_",res_margin,".RData"))
+  save(est_all_sf,file=paste0("data_processed/N",nrow(data_Lap),"_",ab_method,"_",res_margin,".RData"))
 }
