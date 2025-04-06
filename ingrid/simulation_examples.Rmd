@@ -50,7 +50,6 @@ sims1 <- generate_Y(N=N) %>% link_log1(dep=a) %>%
 Plot pairwise. Plot with and without function for comparison.
 
 ```{r}
-
 p1 <- ggpairs(rbind(sims,sims1) %>% mutate(method=c(rep("before",N),rep("after",N))),ggplot2::aes(color=method,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
   scale_color_manual(values = c("before"="black","after" = "#C11432")) + scale_fill_manual(values = c("before"="black","after" = "#C11432"))
 ggsave(p1,filename="../../Documents/link_log_newformula075.png")
