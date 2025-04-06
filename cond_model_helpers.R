@@ -224,7 +224,7 @@ res_margin_par_est <- function(obs_res,method="AGG") {
   if (method=="AGG") {
     tmp <- data.frame("likres"=numeric(),"mu_agg"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"deltal"=numeric(),deltau=numeric())
   }  
-  for (i in 1:ncol(obsr)) {
+  for (i in 1:ncol(obs_res)) {
     Z2 <- as.numeric(unlist(obs_res[,i]))
   
   if (method=="GenGaus") {
@@ -662,7 +662,7 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     legend_outside_size <- 0.2 
   } else if (identical(facet_var[2], c("tau"))) {
     Nfacet <- length(unique(tmp_est$cond_site))*length(unique(tmp_est$tau))
-    facet_label <- list(levels(tmp_est %>% dplyr::select(facet_var[1]) %>% pull()),levels(tmp_est %>% dplyr::select(facet_var[2]) %>% pull()))   
+    facet_label <- list(levels(tmp_est %>% st_drop_geometry() %>%  dplyr::select(facet_var[1]) %>% pull()),levels(tmp_est %>% st_drop_geometry() %>% dplyr::select(facet_var[2]) %>% pull()))   
      nrow_facet <- length(unique(tmp_est$cond_site))
     legend_outside_size <- 0.2 
   }
