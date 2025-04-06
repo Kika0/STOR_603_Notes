@@ -31,21 +31,29 @@ theme_replace(
 
 ```{r}
 set.seed(11)
-N <- 500000
+N <- 5000
 v <- 0.99
-# sims <- generate_Y(N=N) %>% link_log(dep=3/4) %>%
-#   link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=3/4) %>%
-#   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
+a <- 3/4
+sims <- generate_Y(N=N) %>% link_log(dep=a) %>%
+  link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=a) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
+
+sims1 <- generate_Y(N=N) %>% link_log1(dep=a) %>%
+  link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log1(dep=a) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
 
 # could save a large sample
 # save(sims,file="../data_processed/simulation_examples.RData")
-load("../data_processed/simulation_examples.RData")
+#load("../data_processed/simulation_examples.RData")
 ```
 
-Plot pairwise.
+Plot pairwise. Plot with and without function for comparison.
 
 ```{r}
-#ggpairs(sims)
+
+p1 <- ggpairs(rbind(sims,sims1) %>% mutate(method=c(rep("before",N),rep("after",N))),ggplot2::aes(color=method,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
+  scale_color_manual(values = c("before"="black","after" = "#C11432")) + scale_fill_manual(values = c("before"="black","after" = "#C11432"))
+ggsave(p1,filename="../../Documents/link_log_newformula075.png")
 ```
 
 When $Y_1>v$.
