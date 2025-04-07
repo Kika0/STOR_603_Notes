@@ -596,6 +596,7 @@ load("data_processed/spatial_helper.RData")
 # test function
 spatial_par_est(data_Lap = data_obs,cond_sites = df_sites %>% dplyr::select(all_of(1)),dayshift = c(-3:3))
 load("data_processed/N9000_sequential2_AGG.RData")
+
 map_param(tmp_est=est_all_sf %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
 glimpse(est_all_sf)
 
@@ -606,9 +607,27 @@ ggplot(est_all_sf) + geom_point(aes(x=deltal,y=deltau))
 spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites %>% dplyr::select(all_of(1:6)),ab_method="sequentialGG",dayshift = c(-3:3),Ndays_season = 90)
 
 load("data_processed/N9000_sequential2_AGG.RData")
+est_all_sfmod <- est_all_sf
+load("data_processed/N3680_sequential2_AGG.RData")
+# replace delta with 2
+est_all_sf <- est_all_sf %>% mutate(delta=(!is.na(a))*2)
+est_all_sfmod <- est_all_sfmod %>% mutate(delta=(!is.na(a))*2)
+
 map_param(tmp_est=est_all_sf %>% filter(cond_site==names(df_sites)[4]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
 glimpse(est_all_sf)
+
+# save for comparison
+for (i in 1:1) {
+  m1 <- map_param(tmp_est=est_all_sf %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i],grid_uk = xyUK20_sf) + tm_layout(legend.outsite.size=0.3,legend.text.size = 1,legend.title.size=1.5)
+  m2 <- map_param(tmp_est=est_all_sfmod %>% filter(cond_site==names(df_sites)[i]),method="AGG",facet_var = "tau",title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
+  for (j in 1:4) {
+   tmap_save(m1[[j]]+ tm_layout(legend.outsite.size=0.3,legend.text.size = 1,legend.title.size=1.5),filename=paste0("../Documents/compare_",names(df_sites)[i],"obs_",j,".png"),width=12,height=9.5)
+      tmap_save(m2[[j]]+ tm_layout(legend.outsite.size=0.3,legend.text.size = 1,legend.title.size=1.5),filename=paste0("../Documents/compare_",names(df_sites)[i],"mod_",j,".png"),width=12,height=9.5)
+  }
+}
 # try to see for all sites
 map_param(tmp_est=est_all_sf,method="AGG",facet_var = c("cond_site","tau"),title_map = names(df_sites)[i],grid_uk = xyUK20_sf)
+
+# save in a loop comparison of a,b,mu,sig
 ```
 
