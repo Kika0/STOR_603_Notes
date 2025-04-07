@@ -189,6 +189,13 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
                         "sig" = sig_hat,"sig_agg"=nas,"sigl"=nas,"sigu"=nas,
                         "delta"=nas,"deltal"=nas,"deltau"=nas,
                         "given" = rep(given,each=(d-1)), "res" = res_var)  }
+    if (method %in% c("sequentialGG")) {
+      par_sum <- data.frame("lik"=nas, "lika" = lika,"likb"=likb,"lik2"=lik,
+                            "a" = a_hat, "b" = b_hat,
+                            "mu" = mu_hat,"mu_agg"=nas,
+                            "sig" = sig_hat,"sig_agg"=nas,"sigl"=nas,"sigu"=nas,
+                            "delta"=delta_hat,"deltal"=nas,"deltau"=nas,
+                            "given" = rep(given,each=(d-1)), "res" = res_var)  }
   }
   if (margin=="AGGdelta" & method=="one_step") {
     par_sum <- data.frame("lik" = lik,"lika"=nas,"likb"=nas,"lik2"=nas,
