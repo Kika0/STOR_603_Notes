@@ -13,7 +13,8 @@ generate_Y <- function(N) {
   return(sims)
 }
 
-#' Sample from X|Y logistic distribution
+
+#' Sample from X|Y logistic distribution (neater formula)
 #'
 #' Take last column of a dataframe (Y) and add new column X sample from distribution
 #' conditional on Y (both have standard Fréchet margins).
@@ -30,37 +31,6 @@ link_log <- function(sims,dep=1/2) {
   N <- length(Y)
   a <- dep
   # generate x
-  to_opt <- function(x) {
-    (  (  y^(-(1/a)+1)*(y^(-1/a)+x^(-1/a))^(a-1)*exp(-(y^(-1/a)+x^(-1/a))^a)*exp(1/y)  )-Unif)^2
-  }
-  x <- c()
-  for (i in 1:N){
-    Unif <- runif(1) # generate U
-    y <- Y[i]
-    x[i] <- optim(par=1,fn=to_opt,lower=0,upper=10^6,method="Brent")$par
-  }
-  sims <- sims %>% mutate(X=x)
-  names(sims)[ncol(sims)] <- paste0("Y",ncol(sims)) # rename columns
-  return(sims)
-}
-
-#' Sample from X|Y logistic distribution (neater formula)
-#'
-#' Take last column of a dataframe (Y) and add new column X sample from distribution
-#' conditional on Y (both have standard Fréchet margins).
-#'
-#' @param sims A dataframe of variables as columns.
-#' @param dep A dependence parameter a of bivariate logistic distribution.
-#'
-#' @return A dataframe with ncol(sims)+1 columns.
-#' @export
-#'
-#' @examples link_log(sims=generate_Y(N=10),dep=1/2)
-link_log1 <- function(sims,dep=1/2) {
-  Y <- sims %>% pull(-1)
-  N <- length(Y)
-  a <- dep
-  # generate x
   to_opt <- function(z) {
     (  (  (1+z^(-1/a))^(a-1)*  exp(y^(-1)*( 1-(1+z^(-1/a))^a ) ) )-Unif)^2
   }
@@ -68,7 +38,7 @@ link_log1 <- function(sims,dep=1/2) {
   for (i in 1:N){
     Unif <- runif(1) # generate U
     y <- Y[i]
-    x[i] <- optim(par=1,fn=to_opt,lower=0,upper=10^6,method="Brent")$par*y
+    x[i] <- optim(par=1,fn=to_opt,lower=0.001,upper=10,method="Brent")$par*y
   }
   sims <- sims %>% mutate(X=x)
   names(sims)[ncol(sims)] <- paste0("Y",ncol(sims)) # rename columns
