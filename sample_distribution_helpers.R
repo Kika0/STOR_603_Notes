@@ -61,15 +61,14 @@ link_log1 <- function(sims,dep=1/2) {
   N <- length(Y)
   a <- dep
   # generate x
-  to_opt <- function(x) {
-    z <- x/y
+  to_opt <- function(z) {
     (  (  (1+z^(-1/a))^(a-1)*  exp(y^(-1)*( 1-(1+z^(-1/a))^a ) ) )-Unif)^2
   }
   x <- c()
   for (i in 1:N){
     Unif <- runif(1) # generate U
     y <- Y[i]
-    x[i] <- optim(par=1,fn=to_opt,lower=0,upper=10^6,method="Brent")$par
+    x[i] <- optim(par=1,fn=to_opt,lower=0,upper=10^6,method="Brent")$par*y
   }
   sims <- sims %>% mutate(X=x)
   names(sims)[ncol(sims)] <- paste0("Y",ncol(sims)) # rename columns
