@@ -85,7 +85,7 @@ RVineSeqEst(data=obsresw[,3:4],RVM=bivc)
 
 ```
 
-## Try all possible bivariate coplas for a given link
+## Try all possible bivariate copulas for a given link
 
 ```{r}
 index_cop <- c(0:10,13,16,18,20,23,24,26:30,33,34,36:40,104,114,124,134,204,214,224)
@@ -159,8 +159,8 @@ tmpdftop5s
 Which one gives the lowest sum (winter + summer) of the AIC for $NO_2$ and $NO$ pair of residuals?
 
 ```{r}
-sAIC <- tmpdfs %>% filter(pair_index=="NO_NO2") %>% pull(AIC)
-tmpdf1 <- tmpdf %>% filter(pair_index=="NO2_NO") %>% mutate(AICsum=AIC+sAIC)
+sAIC <- tmpdfs %>% filter(pair_index=="SO2_NO") %>% pull(AIC)
+tmpdf1 <- tmpdf %>% filter(pair_index=="SO2_NO") %>% mutate(AICsum=AIC+sAIC)
 tmpdf1 <- tmpdf1 %>% arrange(-desc(AICsum)) %>% relocate(AICsum,.after=AIC)
 tmpdf1
 ```
@@ -168,7 +168,7 @@ Compare the top 5 rows for winter and summer.
 
 ```{r}
 tmpdf1[1:5,]
-tmpdfs %>% filter(pair_index=="NO_NO2", family %in% tmpdf1[1:5,7])
+tmpdfs %>% filter(pair_index=="SO2_NO", family %in% tmpdf1[1:5,7])
 ```
 
 To generalise this, we could look at all the pair that are in either winter or summer tree 1 structure.
@@ -247,10 +247,58 @@ The idea is to repeat the algorithm but each step picks the best structure overa
 
 ```{r}
 fit_copula_two_dataset <- function(data1=obsresw,data2=obsress) {
+  d <- ncol(obsresw)
   # 1. fit a common tree structure
-  rvinecopulib::vinecop(data=obsresw, selcrit = "mbicv") %>% summary()
-  # if Vuong test rejects, only copula pairs in common between two datasets can be compared in step 2 and 3
-  summary(vcw1)
+  rvine_winter <- rvinecopulib::vinecop(data=obsresw, selcrit = "mbicv") 
+  rvine_summer <- rvinecopulib::vinecop(data=obsress, selcrit = "mbicv") 
+  rvine_join <- rvinecopulib::vinecop(data=rbind(obsresw,obsress), selcrit = "mbicv") 
+  get_matrix(rvine_join)
+  if (identical(get_matrix(rvine_winter),get_matrix(rvine_join)) | identical(get_matrix(rvine_summer),get_matrix(rvine_join)) ) {
+    # impose common structure
+    tree_struc <- get_matrix(rvine_join)
+  # calculate best fitting overall bivariate copula for each pair in T1
+tmpdfw <- tmpdfs <-  data.frame(pair_index=as.numeric(),u1=as.numeric(),u2=as.numeric(),tau=as.numeric(),AIC=as.numeric(),familyname= as.character(),family=as.numeric(),par=as.numeric(),par2=as.numeric())
+# write a loop for all pairs in the first tree
+for (m in 1:(d-1)) {
+  index_var1 <- tree_struc[1,m]
+  index_var2 <- tree_struc[(d-m+1),m]
+  # calculate all possible copulas
+  for (i in 1:length(index_cop)) {
+    x <- BiCopEst(u1=as.numeric(obsresw[,index_var1]),u2=as.numeric(obsresw[,index_var2]),family=index_cop[i])
+    tmpdfw <- rbind(tmpdfw,data.frame(pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=x$tau,AIC=x$AIC,familyname=x$familyname,family=x$family,par=x$par,par2=x$par2))
+   y <- BiCopEst(u1=as.numeric(obsress[,index_var1]),u2=as.numeric(obsress[,index_var2]),family=index_cop[i])
+    tmpdfs <- rbind(tmpdfs,data.frame(pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=y$tau,AIC=y$AIC,familyname=y$familyname,family=y$family,par=y$par,par2=y$par2))
+  
+
+# fix copula families in the first tree
+
+  }
+  tmpdf <- tmpdfw %>% mutate(taus=tmpdfs$tau) %>% rowid_to_column()
+tmpdf1 <- tmpdfw %>% mutate(tausum=abs(taus+tau))
+tmpdf1 <- tmpdf1 %>% group_by(pair_index) %>%  arrange(desc(tausum)) %>% relocate(tausum,taus,.after=tau) %>% slice(1)
+
+  tmpdf5w <- tmpdfw %>% mutate(tausum=abs(taus+tauw))
+tmpdf5w <- tmpdf5w %>% group_by(pair_index) %>%  arrange(desc(tausum)) %>% relocate(tausum,taus,.after=tau) %>% slice(1:5)
+t <- tmpdf5w$rowid
+tmpdf5s <- tmpdfs[t,]
 }
+  # find best fitting overall cond.copula in T2,...
+  for (i in 2:(d-1)) {
+    
+  } # end for loop for conditional copula trees
+return(list(tmpdf1,tmpdf5w,tmpdf5s))
+  } # end if tree structure match
+  else {
+    # if Vuong test rejects, only copula pairs in common between two datasets can be compared in step 2 and 3
+    print("No match between joined tree structure and summer/winter data.")
+  }
+  
+}
+```
+
+Try.
+
+```{r}
+fit_copula_two_dataset()
 ```
 
