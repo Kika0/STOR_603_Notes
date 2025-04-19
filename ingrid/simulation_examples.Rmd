@@ -38,10 +38,6 @@ sims <- generate_Y(N=N) %>% link_log(dep=a) %>%
   link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=a) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
 
-sims1 <- generate_Y(N=N) %>% link_log1(dep=a) %>%
-  link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log1(dep=a) %>%
-  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
-
 # could save a large sample
 # save(sims,file="../data_processed/simulation_examples.RData")
 #load("../data_processed/simulation_examples.RData")
@@ -84,11 +80,11 @@ Simulation steps:
 ```{r}
 j <- 1
 # 1. estimate a and b
-pe <- par_est(df=sims,v=v,given=j,margin = "AGG", method = "sequential2")
+pe <- par_est(df=sims,v=v,given=j,margin = "Normal", method = "sequential2")
 # 2. calculate observed residuals
 obs_res <- observed_residuals(df = sims,given = j,v = v, a=pe$a,b=pe$b)
-# 3a. get parameters for AGG residual margins
-res_margin <- pe %>% dplyr::select(mu_agg,sigl,sigu,deltal,deltau)
+# 3a. estimate parameters for AGG residual margins
+res_margin <- res_margin_par_est(obs_res=obs_res,method = "AGG")
 # 3b. fit a vine copula
 fit_res <- rvinecopulib::vinecop( (obs_res %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1))  
 ```
