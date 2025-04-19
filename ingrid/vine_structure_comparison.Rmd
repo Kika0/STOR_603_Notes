@@ -32,12 +32,20 @@ j <- 5
 # transform to Laplace margins
 winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+<<<<<<< HEAD
 
 # sum up log likelihood and parameters
 T1_AIC <- function(x) {
   y <- summary(x)
 -2*sum(y$loglik[1:3])+2*length(as.numeric(unlist(y$parameters[1:3])))
 }
+=======
+pew <-  par_est(df=winter_lap,v=v,given=j,margin = "Normal", method = "sequential2")
+obsresw <- (observed_residuals(df = winter_lap,given = j,v = v,a = pew$a,b=pew$b) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
+
+pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequential2")
+obsress <- (observed_residuals(df = summer_lap,given = j,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+>>>>>>> febe180f0778add8cc2d24d356b3a95de2ba6825
 
 T1l<- function(x) {
   y <- summary(x)
@@ -278,7 +286,11 @@ fit_copula_two_dataset <- function(data1=obsresw,data2=obsress) {
     # impose common structure
     tree_struc <- get_matrix(rvine_join)
   # calculate best fitting overall bivariate copula for each pair in T1
+<<<<<<< HEAD
 tmpdfw <- tmpdfs <-  data.frame(pair_index=numeric(),u1=numeric(),u2=numeric(),tau=numeric(),AIC=numeric(),ll=numeric(),familyname= character(),family=numeric(),par=numeric(),par2=numeric())
+=======
+tmpdfw <- tmpdfs <-  data.frame(tree=numeric(),edge=numeric(),pair_index=numeric(),u1=numeric(),u2=as.numeric(),tau=as.numeric(),AIC=as.numeric(),familyname= as.character(),family=as.numeric(),par=as.numeric(),par2=as.numeric())
+>>>>>>> febe180f0778add8cc2d24d356b3a95de2ba6825
 # set up dataframe to store family
 familydf <- summary(rvine_join)[,c(1:4,6:7)] %>% mutate(joint_family=NA,joint_family_index=NA)
 # write a loop for all pairs in the first tree
@@ -288,6 +300,7 @@ for (m in 1:(d-1)) {
   # calculate all possible copulas
   for (i in 1:length(index_cop)) {
     x <- BiCopEst(u1=as.numeric(obsresw[,index_var1]),u2=as.numeric(obsresw[,index_var2]),family=index_cop[i])
+<<<<<<< HEAD
     tmpdfw <- rbind(tmpdfw,data.frame(pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=x$tau,AIC=x$AIC,ll=x$logLik,familyname=x$familyname,family=x$family,par=x$par,par2=x$par2))
    y <- BiCopEst(u1=as.numeric(obsress[,index_var1]),u2=as.numeric(obsress[,index_var2]),family=index_cop[i])
     tmpdfs <- rbind(tmpdfs,data.frame(pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=y$tau,AIC=y$AIC,ll=y$logLik,familyname=y$familyname,family=y$family,par=y$par,par2=y$par2))
@@ -304,11 +317,80 @@ t <- tmpdf5w$rowid
 tmpdf5s <- tmpdfs[t,]
 # save copula families in first tree in a matrix
 familydf[1:(d-1),c(7:8)] <- tmpdf1[1:(d-1),c(10:11)]
+=======
+    tmpdfw <- rbind(tmpdfw,data.frame(tree=1,edge=m,pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=x$tau,AIC=x$AIC,familyname=x$familyname,family=x$family,par=x$par,par2=x$par2))
+   y <- BiCopEst(u1=as.numeric(obsress[,index_var1]),u2=as.numeric(obsress[,index_var2]),family=index_cop[i])
+    tmpdfs <- rbind(tmpdfs,data.frame(tree=1,edge=m,pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=y$tau,AIC=y$AIC,familyname=y$familyname,family=y$family,par=y$par,par2=y$par2))
+  }
+
+  }
+tmpdfw <- tmpdfw %>% mutate(taus=tmpdfs$tau) %>% rowid_to_column()
+tmpdf1 <- tmpdfw %>% mutate(tausum=abs(taus+tau))
+tmpdf1 <- tmpdf1 %>% group_by(edge) %>%  arrange(desc(tausum)) %>% relocate(tausum,taus,.after=tau) %>% slice(1) %>% arrange(-desc(edge))
+
+tmpdf5w <- tmpdfw %>% mutate(tausum=abs(taus+tau))
+tmpdf5w <- tmpdf5w %>% group_by(edge) %>%  arrange(desc(tausum)) %>% relocate(tausum,taus,.after=tau) %>% slice(1:5)
+t <- tmpdf5w$rowid
+tmpdf5s <- tmpdfs[t,]
+# save copula families in first tree in a matrix
+familydf[1:(d-1),c(7:8)] <- tmpdf1[1:(d-1),c(11:12)]
+>>>>>>> febe180f0778add8cc2d24d356b3a95de2ba6825
 
   # find best fitting overall cond.copula in T2,...
-  for (i in 2:(d-1)) {
-    
-  } # end for loop for conditional copula trees
+u1cond <- u2cond <- list()
+tmpdfw <- tmpdfs <-  data.frame(tree=numeric(),edge=numeric(),pair_index=numeric(),u1=numeric(),u2=as.numeric(),tau=as.numeric(),AIC=as.numeric(),familyname= as.character(),family=as.numeric(),par=as.numeric(),par2=as.numeric())
+
+#   for (t in 2:(d-2)) {
+# for (j in 1:(d-2)) {
+#   # select edge 1
+#  ucond <-  familydf %>% filter(tree==t,edge==j) 
+#  u11 <- obsresw[,(ucond %>% pull(conditioned))[[1]][1]]
+# u1cond <- obsresw[,(ucond %>% pull(conditioning))[[1]][1]]
+# u12 <- obsresw[,(ucond %>% pull(conditioned))[[1]][2]]
+# 
+# # find which family
+# f1 <- f2 <- c()
+# for (l in 1:(d-1)) {
+#  f1[l] <-  identical(sort((familydf %>% filter(tree==1))$conditioned[[l]]),sort(c((ucond %>% pull(conditioned))[[1]][1],(ucond %>% pull(conditioning))[[1]][1])))
+#  f2[l] <- identical(sort((familydf %>% filter(tree==1))$conditioned[[l]]), sort(c((ucond %>% pull(conditioned))[[1]][2],(ucond %>% pull(conditioning))[[1]][1])))
+# }
+# #family1 <- (familydf %>% filter(tree==1))[familydf$conditioned==sort(c(1,3)),]
+# family1 <- (familydf %>% filter(tree==1))$joint_family_index[f1]
+# 
+# family2 <- (familydf %>% filter(tree==1))$joint_family_index[f2]
+# parf1 <- 
+# par2f1
+# 
+# u1cond[[j]] <- BiCopHfunc(u1=u11,u2=u1cond,family = family1,par=1.74,par2=0.47)$hfunc2
+# # 1 given 2
+# u2cond[[j]] <- BiCopHfunc(u1=u12,u2=u1cond,family = family2,par=6,par2=0.8)$hfunc2
+# 
+# #repeat for summer
+# 
+# 
+#  for (i in 1:length(index_cop)) {
+#     x <- BiCopEst(u1=as.numeric(u1cond[[j]]),u2=as.numeric(u2cond[[j]]),family=index_cop[i])
+#     tmpdfw <- rbind(tmpdfw,data.frame(tree=t,edge=j,pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=x$tau,AIC=x$AIC,familyname=x$familyname,family=x$family,par=x$par,par2=x$par2))
+#    y <- BiCopEst(u1=as.numeric(obsress[,index_var1]),u2=as.numeric(obsress[,index_var2]),family=index_cop[i])
+#     tmpdfs <- rbind(tmpdfs,data.frame(tree=t,edge=j,pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=y$tau,AIC=y$AIC,familyname=y$familyname,family=y$family,par=y$par,par2=y$par2))
+#   }
+# 
+# 
+# }
+#     tmpdfw <- tmpdfw %>% mutate(taus=tmpdfs$tau) %>% rowid_to_column()
+# tmpdf2 <- tmpdfw %>% mutate(tausum=abs(taus+tau))
+# tmpdf2 <- tmpdf2 %>% group_by(edge) %>%  arrange(desc(tausum)) %>% relocate(tausum,taus,.after=tau) %>% slice(1) %>% arrange(-desc(edge))
+# 
+# tmpdf5w2 <- tmpdfw %>% mutate(tausum=abs(taus+tau))
+# tmpdf5w2 <- tmpdf5w2 %>% group_by(edge) %>%  arrange(desc(tausum)) %>% relocate(tausum,taus,.after=tau) %>% slice(1:5)
+# t <- tmpdf5w2$rowid
+# tmpdf5s2 <- tmpdfs[t,]
+# # save copula families in first tree in a matrix
+# familydf[4:5,c(7:8)] <- tmpdf2[1:(d-2),c(11:12)]
+# 
+# }
+
+   # end for loop for conditional copula trees
 return(list(familydf,tmpdf1,tmpdf5w,tmpdf5s))
   } # end if tree structure match
   else {

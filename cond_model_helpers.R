@@ -804,3 +804,107 @@ if (nrow(grid_uk)==445) {
 uk_tmp1 <- st_as_sf(uk_tmp)
 return(uk_tmp1)
 }
+
+Yrun1Lap <- as.data.frame((Yrun %>% apply(c(2),FUN=row_number))/(nrow(Yrun)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+
+cond_model_fit_wrapper = function(i){
+  return(fn(site_index=i,Yrun=Yrun1Lap))
+}
+
+## each fit is independent of the rest so we can do these in parallel
+cond_model <- mcmapply(FUN = cond_model_fit_wrapper,
+                       i = 1:25,
+                       SIMPLIFY = FALSE,
+                       mc.cores = detectCores() - 1)
+
+fn <- function(site_index=1,v=0.95,Yrun=Yrun1) {
+  # transform to Laplace margins
+  # Yrun1Lap <- as.data.frame((Yrun %>% apply(c(2),FUN=row_number))/(nrow(Yrun)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+  j <- site_index
+  pe_cond1 <- par_est(df=Yrun,v=v,given=j,keef_constraints = c(1,2))
+  # calculate a vector of observed residuals
+  Z_hat <- function(Yi, Y_i, a, b){
+    Z <- (Y_i - a*Yi)/(Yi^b)
+  }
+  
+  Y_given1extreme <- Yrun %>% filter(Yrun[,j]>quantile(Yrun[,j],v))
+  Y_given1extreme_list <- lapply(apply(Y_given1extreme, 2, list),
+                                 function(x){x[[1]]})
+  
+  Z_new <- do.call(cbind, pmap(.f = Z_hat,
+                               .l = list(Y_i = Y_given1extreme_list[-j],
+                                         a = pe_cond1$a,
+                                         b = pe_cond1$b),
+                               Yi = Y_given1extreme_list[[j]]))
+  Z_new <- as.data.frame(Z_new)
+  names(Z_new) <- paste0("Z",c(1:ncol(Y_given1extreme))[-j])
+  # 
+  # Z <- as.data.frame(matrix(nrow=nrow(Y_given1extreme),ncol=0))
+  # Y1 <- Y_given1extreme[,j]
+  # res <- c(1:ncol(Y_given1extreme))[-j]
+  # for (i in 2:ncol(Y_given1extreme)) {
+  #   Y2 <- Y_given1extreme[,res[i-1]]
+  #   Z <- cbind(Z,data.frame("Z"= (Y2-pe_cond1$a[i-1]*Y1)/(Y1^pe_cond1$b[i-1]) ) )
+  # }
+  # names(Z) <- paste0("Z",res)
+  
+  return(list(pe_cond1,Z_new))
+}
+
+# generate a table of parameter estimates conditional on (given) each of the specified vector of variables
+par_est <- function(df=sims,v=0.99,given=c(1),margin="Normal",method="sequential2", a=NULL, keef_constraints=0) {
+  # lika <- likb <- likmusig <- a_hat <- b_hat <- bmax <- mu_hat <- sig_hat <- res_var <- c()
+  names(df) <- paste0("Y",1:ncol(df))
+  d <- ncol(df)
+  j <- given
+  
+  Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+  # res <- c(1:d)[-j]
+  # init_par <- c()
+  # init_lik <- c()
+  
+  fn_1 <- function(Y = Y_given1extreme, j = given, i){
+    # optimise using the initial parameters
+    Y1 <- Y[,j]
+    Y2 <- Y[,i]
+    if (method=="sequential2") {
+      init_para <- c(0.8,0,1)
+      opta <- optim(par=init_para,fn = Y_NLL,df=Y,given=j,sim=i,b_hat=0,control = list(maxit=2000))
+      a_hat <- opta$par[1]
+      # a_hat <- append(a_hat,opta$par[1])
+      # lika <- append(lika,opta$value)
+      if (1 %in% keef_constraints) {
+        b_max1 <- optim(par=0.8,fn = keef_constraint1,a=a_hat,Y1=Y1,Y2=Y2,control = list(maxit=2000),lower=0,upper=1, method = "Brent")$par
+      } else {b_max1 <- 1}
+      if (2 %in% keef_constraints) {
+        b_max2 <- optim(par=0.8,fn = keef_constraint2,a=a_hat,Y1=Y1,Y2=Y2,control = list(maxit=2000),lower=0, upper=1, method = "Brent")$par
+      } else {b_max2 <- 1} 
+      b_max <- min(b_max1,b_max2)
+      # bmax <- append(bmax,b_max)
+      init_parb <- c(b_max/2,0,1)
+      optb <- optim(par=init_parb,fn = Y_NLL,df=Y,given=j,sim=i,a_hat=a_hat,b_max=b_max,control = list(maxit=2000), method = "Nelder-Mead")
+    }
+    return(c(opta$value, optb$value, optb$value, opta$par[1], optb$par[length(optb$par)-2], optb$par[length(optb$par)-1], optb$par[length(optb$par)], i))
+  }
+  
+  # debug(fn_1)
+  fits_i <- t(sapply(c(1:d)[-j], function(k){
+    fn_1(i = k)
+  }))
+  fits_i <- as.data.frame(cbind(fits_i, rep(j, times = d-1)))
+  colnames(fits_i) <- c("lika", "likb", "likmusig", "a", "b", "mu", "sig", "res", "given")
+  
+  
+  
+  # if (margin=="Normal") {
+  #    if (method %in% c("sequential2")) {
+  #     par_sum <- data.frame("lika" = lika,"likb"=likb,"likmusig"=likmusig,
+  #                           "a" = a_hat, "b" = b_hat,"b_max"=bmax,
+  #                           "mu" = mu_hat,
+  #                           "sig" = sig_hat,
+  #                           "given" = rep(given,each=(d-1)), "res" = res_var)  }
+  # }
+  
+  
+  return(fits_i)
+}
