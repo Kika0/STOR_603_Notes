@@ -28,19 +28,23 @@ theme_replace(
 
 ```{r}
 v <- 0.7
-j <- 1
+j <- 5
 # transform to Laplace margins
 winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-pew <-  par_est(df=winter_lap,v=v,given=j,margin = "AGG", method = "sequential2")
-obsresw <- (observed_residuals(df = winter_lap,given = 1,v = v,a = pew$a,b=pew$b) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
 
-pes <-  par_est(df=summer_lap,v=v,given=j,margin = "AGG", method = "sequential2")
-obsress <- (observed_residuals(df = summer_lap,given = 1,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+# sum up log likelihood and parameters
+T1_AIC <- function(x) {
+  y <- summary(x)
+-2*sum(y$loglik[1:3])+2*length(as.numeric(unlist(y$parameters[1:3])))
+}
 
-vcw1 <- rvinecopulib::vinecop(data=obsresw)
-vcw1
-summary(vcw1)
+T1l<- function(x) {
+  y <- summary(x)
+-2*sum(y$loglik[1:3])
+}
+
+T1_AIC(vcw1)
 # compare with VineCopula fit
 vcw2 <- VineCopula::RVineStructureSelect(data=obsresw)
 summary(vcw2)
@@ -48,6 +52,23 @@ summary(vcw2)
 vcs1 <- rvinecopulib::vinecop(data=obsress)
 vcs1
 summary(vcs1)
+T1_AIC(vcs1)
+# sum
+T1_AIC(vcs1) + T1_AIC(vcw1)
+# calculate log-likelihood
+T1l(vcw1) + T1l (vcs1)
+# winter with imposed summer structure
+vcw3 <- rvinecopulib::vinecop(data=obsresw,structure=get_structure(vcs1))
+T1_AIC(vcw3)
+# test for summer structure also
+vcs3 <- rvinecopulib::vinecop(data=obsress,structure=get_structure(vcs1))
+T1_AIC(vcw3) + T1_AIC(vcs3)
+T1l(vcw3) + T1l(vcs3)
+
+# joined data
+rvine_join <- rvinecopulib::vinecop(data=rbind(obsresw,obsress)) 
+T1_AIC(rvine_join)
+T1l(rvine_join)
 # compare with VineCopula fit
 vcs2 <- VineCopula::RVineStructureSelect(data=obsress)
 summary(vcs2)
@@ -257,7 +278,7 @@ fit_copula_two_dataset <- function(data1=obsresw,data2=obsress) {
     # impose common structure
     tree_struc <- get_matrix(rvine_join)
   # calculate best fitting overall bivariate copula for each pair in T1
-tmpdfw <- tmpdfs <-  data.frame(pair_index=as.numeric(),u1=as.numeric(),u2=as.numeric(),tau=as.numeric(),AIC=as.numeric(),familyname= as.character(),family=as.numeric(),par=as.numeric(),par2=as.numeric())
+tmpdfw <- tmpdfs <-  data.frame(pair_index=numeric(),u1=numeric(),u2=numeric(),tau=numeric(),AIC=numeric(),ll=numeric(),familyname= character(),family=numeric(),par=numeric(),par2=numeric())
 # set up dataframe to store family
 familydf <- summary(rvine_join)[,c(1:4,6:7)] %>% mutate(joint_family=NA,joint_family_index=NA)
 # write a loop for all pairs in the first tree
@@ -267,26 +288,22 @@ for (m in 1:(d-1)) {
   # calculate all possible copulas
   for (i in 1:length(index_cop)) {
     x <- BiCopEst(u1=as.numeric(obsresw[,index_var1]),u2=as.numeric(obsresw[,index_var2]),family=index_cop[i])
-    tmpdfw <- rbind(tmpdfw,data.frame(pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=x$tau,AIC=x$AIC,familyname=x$familyname,family=x$family,par=x$par,par2=x$par2))
+    tmpdfw <- rbind(tmpdfw,data.frame(pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=x$tau,AIC=x$AIC,ll=x$logLik,familyname=x$familyname,family=x$family,par=x$par,par2=x$par2))
    y <- BiCopEst(u1=as.numeric(obsress[,index_var1]),u2=as.numeric(obsress[,index_var2]),family=index_cop[i])
-    tmpdfs <- rbind(tmpdfs,data.frame(pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=y$tau,AIC=y$AIC,familyname=y$familyname,family=y$family,par=y$par,par2=y$par2))
+    tmpdfs <- rbind(tmpdfs,data.frame(pair_index=paste0(names(winter)[index_var1+1],"_",names(winter)[index_var2+1]),u1=index_var1,u2=index_var2,tau=y$tau,AIC=y$AIC,ll=y$logLik,familyname=y$familyname,family=y$family,par=y$par,par2=y$par2))
   }
   
-  # save copula families in first tree in a matrix
-  tmpdfw %>% 
-familydf[m,c(7:8)] <- tmpdf1[m,c(9:10)]
-
   }
-tmpdfw <- tmpdfw %>% mutate(taus=tmpdfs$tau) %>% rowid_to_column()
-tmpdf1 <- tmpdfw %>% mutate(tausum=abs(taus+tau))
-tmpdf1 <- tmpdf1 %>% group_by(pair_index) %>%  arrange(desc(tausum)) %>% relocate(tausum,taus,.after=tau) %>% slice(1)
+tmpdfw <- tmpdfw %>% mutate(AICs=tmpdfs$AIC,lls=tmpdfs$ll) %>% rowid_to_column()
+tmpdf1 <- tmpdfw %>% mutate(AICsum=(AICs+AIC))
+tmpdf1 <- tmpdf1 %>% group_by(pair_index) %>%  arrange(-desc(AICsum)) %>% relocate(AICsum,AICs,.after=AIC) %>% slice(1)
 
-tmpdf5w <- tmpdfw %>% mutate(tausum=abs(taus+tau))
-tmpdf5w <- tmpdf5w %>% group_by(pair_index) %>%  arrange(desc(tausum)) %>% relocate(tausum,taus,.after=tau) %>% slice(1:5)
+tmpdf5w <- tmpdfw %>% mutate(AICsum=(AICs+AIC))
+tmpdf5w <- tmpdf5w %>% group_by(pair_index) %>%  arrange(-desc(AICsum)) %>% relocate(AICsum,AICs,.after=AIC) %>% slice(1:5)
 t <- tmpdf5w$rowid
 tmpdf5s <- tmpdfs[t,]
 # save copula families in first tree in a matrix
-familydf[1:(d-1),c(7:8)] <- tmpdf1[1:(d-1),c(9:10)]
+familydf[1:(d-1),c(7:8)] <- tmpdf1[1:(d-1),c(10:11)]
 
   # find best fitting overall cond.copula in T2,...
   for (i in 2:(d-1)) {
@@ -305,6 +322,51 @@ return(list(familydf,tmpdf1,tmpdf5w,tmpdf5s))
 Try.
 
 ```{r}
-fit_copula_two_dataset()
+# summarise analysis to report AIC and NLL values
+j <- 1
+pew <-  par_est(df=winter_lap,v=v,given=j,margin = "Normal", method = "sequential2")
+obsresw <- (observed_residuals(df = winter_lap,given = j,v = v,a = pew$a,b=pew$b) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
+
+pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequential2")
+obsress <- (observed_residuals(df = summer_lap,given = j,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
+
+# 1. separate fits to winter and summer data
+vcw1 <- rvinecopulib::vinecop(data=obsresw)
+summary(vcw1)
+# compare with VineCopula fit
+vcs1 <- rvinecopulib::vinecop(data=obsress)
+summary(vcs1)
+# sum
+T1_AIC(vcs1) + T1_AIC(vcw1)
+# calculate log-likelihood
+T1l(vcw1) + T1l (vcs1)
+
+# 2. imposed summer structure
+# winter with imposed summer structure
+vcw3 <- rvinecopulib::vinecop(data=obsresw,structure=get_structure(vcs1))
+# test for summer structure also
+vcs3 <- rvinecopulib::vinecop(data=obsress,structure=get_structure(vcs1))
+T1_AIC(vcw3) + T1_AIC(vcs3)
+T1l(vcw3) + T1l(vcs3)
+
+fc <- fit_copula_two_dataset()
+sum(fc[[2]]$AIC)+ sum(fc[[2]]$AICs)
+fc
+
+# 4. joined structure
+ rvine_join <- rvinecopulib::vinecop(data=rbind(obsresw,obsress), selcrit = "mbicv") 
+summary(rvine_join)
+T1_AIC(rvine_join)
+T1l(rvine_join)
+ 
+-2*sum(fc[[2]]$ll)
+# impose tree and family of joined fit
+rvw5 <- rvinecopulib::vinecop(data=obsresw,structure = get_matrix(rvine_join),family_set = c("gaussian","clayton"),allow_rotations = FALSE)
+rvs5 <- rvinecopulib::vinecop(data=obsress,structure = get_matrix(rvine_join),family_set = c("gaussian","clayton"),,allow_rotations = FALSE)
+summary(rvw5)
+summary(rvs5)
+T1_AIC(rvw5) + T1_AIC(rvs5)
+T1l(rvw5) + T1l(rvs5)
+
 ```
 
