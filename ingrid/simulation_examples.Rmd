@@ -24,7 +24,15 @@ theme_replace(
   panel.grid.minor = element_blank(),
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
+```
+Paste here some leftover code.
 
+```{r}
+## each fit is independent of the rest so we can do these in parallel
+cond_model <- mcmapply(FUN = cond_model_fit_wrapper,
+                       i = 1:25,
+                       SIMPLIFY = FALSE,
+                       mc.cores = detectCores() - 1)
 ```
 
 ## Two linked clusters
@@ -41,6 +49,8 @@ sims <- generate_Y(N=N) %>% link_log(dep=a) %>%
 # could save a large sample
 # save(sims,file="../data_processed/simulation_examples.RData")
 #load("../data_processed/simulation_examples.RData")
+
+# compare LaplacesDemon and current function
 ```
 
 Plot pairwise. Plot with and without function for comparison.
