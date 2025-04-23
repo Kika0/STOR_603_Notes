@@ -10,8 +10,9 @@ library(tidyverse)
 library(GGally)
 #library(MASS) # use dplyr::select to avoid function conflict
 library(pracma) # incomplete gamma function, will be used later in cond.ext.model for modelling the residual margins
-library(texmex) # air pollution data
 library(xtable)
+library(LaplacesDemon)
+
 source("../sample_distribution_helpers.R")
 source("../likelihood_helpers.R")
 source("../cond_model_helpers.R")
@@ -39,18 +40,16 @@ cond_model <- mcmapply(FUN = cond_model_fit_wrapper,
 
 ```{r}
 set.seed(11)
-N <- 5000
+N <- 50000
 v <- 0.99
 a <- 1/4
 sims <- generate_Y(N=N) %>% link_log(dep=a) %>%
   link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=a) %>%
-  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
+  apply(c(2),FUN=frechet_laplace_pit1) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
 
 # could save a large sample
 # save(sims,file="../data_processed/simulation_examples.RData")
 #load("../data_processed/simulation_examples.RData")
-
-# compare LaplacesDemon and current function
 ```
 
 Plot pairwise. Plot with and without function for comparison.
