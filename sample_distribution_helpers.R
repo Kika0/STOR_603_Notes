@@ -85,6 +85,14 @@ frechet_laplace_pit <- function(x) {
   return(y)
 }
 
+frechet_laplace_pit1 <- function(x) {
+  return(LaplacesDemon::qlaplace(evd::pfrechet(x))) 
+}
+
+empirical_laplace_pit2 <- function(x) {
+  return(LaplacesDemon::qlaplace(rank(x)/(N+1))) 
+}
+
 #' Transform back from Laplace to Fréchet margins
 #'
 #' @param x A number sampled from Laplace distribution.
