@@ -26,22 +26,13 @@ theme_replace(
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
 ```
-Paste here some leftover code.
-
-```{r}
-## each fit is independent of the rest so we can do these in parallel
-cond_model <- mcmapply(FUN = cond_model_fit_wrapper,
-                       i = 1:25,
-                       SIMPLIFY = FALSE,
-                       mc.cores = detectCores() - 1)
-```
 
 ## Two linked clusters
 
 ```{r}
 set.seed(11)
-N <- 50000
-v <- 0.99
+N <- 5000
+v <- 0.9
 a <- 1/4
 sims <- generate_Y(N=N) %>% link_log(dep=a) %>%
   link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=a) %>%
@@ -49,18 +40,10 @@ sims <- generate_Y(N=N) %>% link_log(dep=a) %>%
 
 # could save a large sample
 # save(sims,file="../data_processed/simulation_examples.RData")
-#load("../data_processed/simulation_examples.RData")
+load("../data_processed/simulation_examples.RData")
 ```
 
-Plot pairwise. Plot with and without function for comparison.
-
-```{r}
-p1 <- ggpairs(rbind(sims,sims1) %>% mutate(method=c(rep("before",N),rep("after",N))),ggplot2::aes(color=method,alpha=0.5), upper = list(continuous = wrap("cor", size = 2.5))) +
-  scale_color_manual(values = c("before"="black","after" = "#C11432")) + scale_fill_manual(values = c("before"="black","after" = "#C11432"))
-ggsave(p1,filename="../../Documents/link_log_newformula025.png")
-```
-
-When $Y_1>v$.
+Plot pairwise when $Y_1>v$.
 
 ```{r}
 v <- 0.99
@@ -102,8 +85,9 @@ Simulation steps.
 
 ```{r, warning=FALSE}
 # repeat simulation for each threshold for a more precise estimates
-simulate_cond_model <- function(v_sim,Nsim=1000,param_estimates, res_dist="vine_copula") {
+simulate_cond_model <- function(v_sim,Nsim=1000,param_estimates,res_margin_estimates=res_margin, res_dist="vine_copula") {
 pe <- param_estimates
+res_margin <- res_margin_estimates
 # 1. simulate Y1
 U <- runif(Nsim)
 Y1_gen <- -log(2*(1-v_sim)) + rexp(Nsim)
@@ -121,11 +105,11 @@ to_opt <- function(x) {
  }
 Zsim <- Zsim_unif
 for (k in 1:ncol(Zsim)) {
-  mu <- pe$mu_agg[k]
-  sigl <- pe$sigl[k]
-  sigu <- pe$sigu[k]
-  deltal <- pe$deltal[k]
-  deltau <- pe$deltau[k]
+  mu <- res_margin$mu_agg[k]
+  sigl <- res_margin$sigl[k]
+  sigu <- res_margin$sigu[k]
+  deltal <- res_margin$deltal[k]
+  deltau <- res_margin$deltau[k]
   for (i in 1:nrow(Zsim)) {
     Zsim[i,k] <- optim(fn=to_opt,par=1,method="Brent",lower=-10,upper=10)$par
   }
@@ -157,11 +141,11 @@ Print estimated and true point estimates.
 ```{r}
 # simulate a large sample for the empirical estimates
 set.seed(15)
-N <- 1000000 # set lower before knitting as there is no need to save this object as lower N still gives useful estimates
-v <- 0.99
+N <- 100000 # set lower before knitting as there is no need to save this object as lower N still gives useful estimates
+v <- 0.9
 # sims1 <- data.frame(Y1=qfrechet(p=runif(N,min=v,max=1))) %>% link_log(dep=3/4) %>%
-#   link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=3/4) %>%
-#   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
+#  link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=3/4) %>%
+#   apply(c(2),FUN=frechet_laplace_pit1) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
 
 # calculate empirical estimates
 psim <- pu <-  c()
@@ -203,7 +187,6 @@ Is this an improvement over other methods?
 ## Fit alternative methods for modelling the dependence of the residuals
 
 We start with empirical residuals.
-
 
 ```{r, warning=FALSE}
 set.seed(11)
