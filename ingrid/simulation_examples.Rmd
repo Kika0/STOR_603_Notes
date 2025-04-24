@@ -78,7 +78,7 @@ obs_res <- observed_residuals(df = sims,given = j,v = v, a=pe$a,b=pe$b)
 # 3a. estimate parameters for AGG residual margins
 res_margin <- res_margin_par_est(obs_res=obs_res,method = "AGG")
 # 3b. fit a vine copula
-fit_res <- rvinecopulib::vinecop( (obs_res %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1))  
+fit_res <- rvinecopulib::vinecop( (obs_res %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1),selcrit = "mbic")  
 ```
 
 Simulation steps.
@@ -100,20 +100,18 @@ Zsim <- obs_res[sample(x=1:nrow(obs_res),size=Nsim,replace=TRUE),]
 Zsim_unif <- rvinecopulib::rvinecop(n=Nsim,vine=fit_res) %>% as.data.frame()
  
 # 3. convert to original margins
-to_opt <- function(x) {
-   return( (F_AGG(x,theta=c(mu,sigl,sigu,deltal,deltau))-Zsim_unif[i,k])^2  )  
+# rewrite using apply
+to_opt <- function(x,margin_par,p) {
+   return( (F_AGG(x,theta=margin_par)-p)^2  )  
  }
-Zsim <- Zsim_unif
-for (k in 1:ncol(Zsim)) {
-  mu <- res_margin$mu_agg[k]
-  sigl <- res_margin$sigl[k]
-  sigu <- res_margin$sigu[k]
-  deltal <- res_margin$deltal[k]
-  deltau <- res_margin$deltau[k]
-  for (i in 1:nrow(Zsim)) {
-    Zsim[i,k] <- optim(fn=to_opt,par=1,method="Brent",lower=-10,upper=10)$par
-  }
+AGG_inverse <- function(p,margin_par) {
+  sapply(1:Nsim,FUN=function(k){optim(fn=to_opt,margin_par=margin_par,p=p[k],par=1,method="Nelder-Mead",lower=-10,upper=10)$par})
 }
+  AGG_inverse_wrapper = function(i){
+    return(AGG_inverse(p=as.numeric(unlist(Zsim_unif[,i])), margin_par=c(res_margin$mu_agg[i], res_margin$sigl[i],res_margin$sigu[i],res_margin$deltal[i],res_margin$deltau[i])))
+  }
+  
+Zsim <- as.data.frame(sapply(1:ncol(Zsim_unif), AGG_inverse_wrapper))
 
 } 
 # 4. calculate each Yj
@@ -148,7 +146,6 @@ v <- 0.9
 #   apply(c(2),FUN=frechet_laplace_pit1) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
 
 # calculate empirical estimates
-psim <- pu <-  c()
 u <- c(0.99,0.9925,0.995,0.9975,0.999)
 
 # one of the clusters u
@@ -220,5 +217,61 @@ tmp_results1 <- data.frame("Emp_P1"=pemp1*1000,"True_P1" = pu1*1000, "Est_P1" = 
 xtable(tmp_results1,digits=6)
 #,"True_P2" = pu2*1000, "Est_P2" = psim2*1000, "Bias_P2" = (psim2-pu2)*1000
 
+```
+Write into a function.
+
+```{r}
+vine_bias <- function(i) {
+N <- 5000
+v <- 0.9
+a <- 1/4
+sims <- generate_Y(N=N) %>% link_log(dep=a) %>%
+  link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=a) %>%
+  apply(c(2),FUN=frechet_laplace_pit1) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
+j <- 1
+# 1. estimate a and b
+pe <- par_est(df=sims,v=v,given=j,margin = "Normal", method = "sequential2")
+# 2. calculate observed residuals
+obs_res <- observed_residuals(df = sims,given = j,v = v, a=pe$a,b=pe$b)
+# 3a. estimate parameters for AGG residual margins
+res_margin <- res_margin_par_est(obs_res=obs_res,method = "AGG")
+# 3b. fit a vine copula
+fit_res <- rvinecopulib::vinecop( (obs_res %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1))  
+Nsim <- 10000
+
+# calculate empirical estimates
+psim <- pu <-  c()
+u <- c(0.99,0.9925,0.995,0.9975,0.999)
+
+# one of the clusters u
+psim <- psim1 <- pemp <- pemp1 <- c()
+uq <- sapply(1:length(u),function(i){unif_laplace_pit(u[i]) })
+for (i in 1:length(u)) {
+ pemp[i] <- nrow(sims %>% filter(if_all(.cols=everything(),~.x>uq[i])))/nrow(sims)
+Gen_Y1 <- simulate_cond_model(v_sim=u[i],param_estimates=pe,Nsim=Nsim)
+ pemp1[i] <- nrow(sims %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))/nrow(sims)
+ psim[i] <- nrow(Gen_Y1 %>% filter(if_all(.cols=everything(),~.x>uq[i])))*(1-u[i])/Nsim
+ psim1[i] <- nrow(Gen_Y1 %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))*(1-u[i])/Nsim
+}
+return(data.frame(pemp,pemp1,psim,psim1))
+}
+```
+
+
+Compare the bias for different thresholds.
+
+```{r}
+Nrep <- 200
+x <- sapply(1:Nrep,FUN=vine_bias,simplify=FALSE)
+
+
+```
+
+Plot estimates.
+
+```{r}
+tmp <- bind_rows(x, .id = "iteration") %>% mutate("threshold"=factor(rep(u,Nrep)))
+
+ggplot(tmp) + geom_boxplot(aes(y=pemp-pu,x=threshold))
 ```
 
