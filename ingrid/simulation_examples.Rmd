@@ -103,7 +103,7 @@ v <- 0.9
 u <- c(0.99,0.9925,0.995,0.9975,0.999)
 
 # one of the clusters u
-psim1 <- psim2 <- pu1 <- pu2 <- pemp <- pemp1 <- c()
+pu <- psim <- psim1 <- psim2 <- pu1 <- pu2 <- pemp <- pemp1 <- c()
 uq <- sapply(1:length(u),function(i){unif_laplace_pit(u[i]) })
 for (i in 1:length(u)) {
  pu[i] <- nrow(sims1 %>% filter(if_all(.cols=everything(),~.x>uq[i])))/nrow(sims1)*(1-v)
@@ -183,6 +183,6 @@ Plot estimates.
 ```{r}
 tmp <- bind_rows(x, .id = "iteration") %>% mutate("threshold"=factor(rep(u,Nrep)))
 
-ggplot(tmp) + geom_boxplot(aes(y=pemp-pu,x=threshold))
+ggplot(tmp) + geom_boxplot(aes(y=psim1-pu1,x=threshold))
 ```
 
