@@ -898,9 +898,8 @@ par_est1 <- function(df=sims,v=0.99,given=c(1),margin="Normal",method="sequentia
 }
 
 # repeat simulation for each threshold for a more precise estimates
-simulate_cond_model <- function(v_sim,Nsim=1000,param_estimates,res_margin_estimates=res_margin, res_dist="vine_copula") {
+simulate_cond_model <- function(v_sim,Nsim=1000,param_estimates,res_margin_estimates=res_margin,res_dist="vine_copula") {
   pe <- param_estimates
-  res_margin <- res_margin_estimates
   # 1. simulate Y1
   U <- runif(Nsim)
   Y1_gen <- -log(2*(1-v_sim)) + rexp(Nsim)
@@ -911,14 +910,14 @@ simulate_cond_model <- function(v_sim,Nsim=1000,param_estimates,res_margin_estim
   } else if (res_dist=="vine_copula") {
     # 2. simulate residuals from a vine copula
     Zsim_unif <- rvinecopulib::rvinecop(n=Nsim,vine=fit_res) %>% as.data.frame()
-    
+    res_margin <- res_margin_estimates
     # 3. convert to original margins
     # rewrite using apply
     to_opt <- function(x,margin_par,p) {
       return( (F_AGG(x,theta=margin_par)-p)^2  )  
     }
     AGG_inverse <- function(p,margin_par) {
-      sapply(1:Nsim,FUN=function(k){optim(fn=to_opt,margin_par=margin_par,p=p[k],par=1,method="Nelder-Mead")$par})
+      sapply(1:Nsim,FUN=function(m){optim(fn=to_opt,margin_par=margin_par,p=p[k],par=1,method="Brent",lower=-10,upper=10)$par})
     }
     AGG_inverse_wrapper = function(i){
       return(AGG_inverse(p=as.numeric(unlist(Zsim_unif[,i])), margin_par=c(res_margin$mu_agg[i], res_margin$sigl[i],res_margin$sigu[i],res_margin$deltal[i],res_margin$deltau[i])))
@@ -951,19 +950,19 @@ vine_bias <- function(k) {
   # 1. estimate a and b
   pe <- par_est(df=sims,v=v,given=j,margin = "Normal", method = "sequential2")
   # 2. calculate observed residuals
-  obs_res <- observed_residuals(df = sims,given = j,v = v, a=pe$a,b=pe$b)
+  obs_res <<- observed_residuals(df = sims,given = j,v = v, a=pe$a,b=pe$b)
   # 3a. estimate parameters for AGG residual margins
   res_margin <- res_margin_par_est(obs_res=obs_res,method = "AGG")
   # 3b. fit a vine copula
   fit_res <<- rvinecopulib::vinecop( (obs_res %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1))  
-  Nsim <- 1000
+  Nsim <- 10000
   
   # calculate empirical estimates
   psim <- pu <-  c()
   u <- c(0.99,0.9925,0.995,0.9975,0.999)
   
   # one of the clusters u
-  psim <- psim1 <- pemp <- pemp1 <- c()
+  psim <- psim1 <- pemp <- pemp1 <- psime <- psime1 <- c()
   uq <- sapply(1:length(u),function(i){unif_laplace_pit(u[i]) })
   for (i in 1:length(u)) {
     pemp[i] <- nrow(sims %>% filter(if_all(.cols=everything(),~.x>uq[i])))/nrow(sims)
@@ -971,6 +970,9 @@ vine_bias <- function(k) {
     Gen_Y1 <- simulate_cond_model(v_sim=u[i],param_estimates=pe,res_margin_estimates = res_margin,Nsim=Nsim)
     psim[i] <- nrow(Gen_Y1 %>% filter(if_all(.cols=everything(),~.x>uq[i])))*(1-u[i])/Nsim
     psim1[i] <- nrow(Gen_Y1 %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))*(1-u[i])/Nsim
+    Gen_Y1e <- simulate_cond_model(v_sim=u[i],param_estimates=pe,Nsim=Nsim,res_dist = "empirical")
+    psime[i] <- nrow(Gen_Y1e %>% filter(if_all(.cols=everything(),~.x>uq[i])))*(1-u[i])/Nsim
+    psime1[i] <- nrow(Gen_Y1e %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))*(1-u[i])/Nsim
   }
-  return(data.frame(pemp,pemp1,psim,psim1))
+  return(data.frame(pemp,pemp1,psim,psim1,psime,psime1))
 }
