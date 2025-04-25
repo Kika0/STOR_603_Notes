@@ -956,7 +956,7 @@ vine_bias <- function(k) {
   res_margin <- res_margin_par_est(obs_res=obs_res,method = "AGG")
   # 3b. fit a vine copula
   fit_res <<- rvinecopulib::vinecop( (obs_res %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1))  
-  Nsim <- 10000
+  Nsim <- 1000
   
   # calculate empirical estimates
   psim <- pu <-  c()
