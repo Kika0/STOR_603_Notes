@@ -805,23 +805,15 @@ uk_tmp1 <- st_as_sf(uk_tmp)
 return(uk_tmp1)
 }
 
-Yrun1Lap <- as.data.frame((Yrun %>% apply(c(2),FUN=row_number))/(nrow(Yrun)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-
 cond_model_fit_wrapper = function(i){
   return(fn(site_index=i,Yrun=Yrun1Lap))
 }
-
-## each fit is independent of the rest so we can do these in parallel
-cond_model <- mcmapply(FUN = cond_model_fit_wrapper,
-                       i = 1:25,
-                       SIMPLIFY = FALSE,
-                       mc.cores = detectCores() - 1)
 
 fn <- function(site_index=1,v=0.95,Yrun=Yrun1) {
   # transform to Laplace margins
   # Yrun1Lap <- as.data.frame((Yrun %>% apply(c(2),FUN=row_number))/(nrow(Yrun)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
   j <- site_index
-  pe_cond1 <- par_est(df=Yrun,v=v,given=j,keef_constraints = c(1,2))
+  pe_cond1 <- par_est1(df=Yrun,v=v,given=j,keef_constraints = c(1,2))
   # calculate a vector of observed residuals
   Z_hat <- function(Yi, Y_i, a, b){
     Z <- (Y_i - a*Yi)/(Yi^b)
@@ -852,12 +844,10 @@ fn <- function(site_index=1,v=0.95,Yrun=Yrun1) {
 }
 
 # generate a table of parameter estimates conditional on (given) each of the specified vector of variables
-par_est <- function(df=sims,v=0.99,given=c(1),margin="Normal",method="sequential2", a=NULL, keef_constraints=0) {
-  # lika <- likb <- likmusig <- a_hat <- b_hat <- bmax <- mu_hat <- sig_hat <- res_var <- c()
+par_est1 <- function(df=sims,v=0.99,given=c(1),margin="Normal",method="sequential2", a=NULL, keef_constraints=0) {
   names(df) <- paste0("Y",1:ncol(df))
   d <- ncol(df)
   j <- given
-  
   Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
   # res <- c(1:d)[-j]
   # init_par <- c()
@@ -871,8 +861,6 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="Normal",method="sequential
       init_para <- c(0.8,0,1)
       opta <- optim(par=init_para,fn = Y_NLL,df=Y,given=j,sim=i,b_hat=0,control = list(maxit=2000))
       a_hat <- opta$par[1]
-      # a_hat <- append(a_hat,opta$par[1])
-      # lika <- append(lika,opta$value)
       if (1 %in% keef_constraints) {
         b_max1 <- optim(par=0.8,fn = keef_constraint1,a=a_hat,Y1=Y1,Y2=Y2,control = list(maxit=2000),lower=0,upper=1, method = "Brent")$par
       } else {b_max1 <- 1}
@@ -884,7 +872,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="Normal",method="sequential
       init_parb <- c(b_max/2,0,1)
       optb <- optim(par=init_parb,fn = Y_NLL,df=Y,given=j,sim=i,a_hat=a_hat,b_max=b_max,control = list(maxit=2000), method = "Nelder-Mead")
     }
-    return(c(opta$value, optb$value, optb$value, opta$par[1], optb$par[length(optb$par)-2], optb$par[length(optb$par)-1], optb$par[length(optb$par)], i))
+    return(c(opta$value, optb$value, optb$value, opta$par[1], optb$par[length(optb$par)-2],b_max, optb$par[length(optb$par)-1], optb$par[length(optb$par)], i))
   }
   
   # debug(fn_1)
@@ -892,7 +880,7 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="Normal",method="sequential
     fn_1(i = k)
   }))
   fits_i <- as.data.frame(cbind(fits_i, rep(j, times = d-1)))
-  colnames(fits_i) <- c("lika", "likb", "likmusig", "a", "b", "mu", "sig", "res", "given")
+  colnames(fits_i) <- c("lika", "likb", "likmusig", "a", "b","b_max" ,"mu", "sig", "res", "given")
   
   
   
@@ -907,4 +895,82 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="Normal",method="sequential
   
   
   return(fits_i)
+}
+
+# repeat simulation for each threshold for a more precise estimates
+simulate_cond_model <- function(v_sim,Nsim=1000,param_estimates,res_margin_estimates=res_margin, res_dist="vine_copula") {
+  pe <- param_estimates
+  res_margin <- res_margin_estimates
+  # 1. simulate Y1
+  U <- runif(Nsim)
+  Y1_gen <- -log(2*(1-v_sim)) + rexp(Nsim)
+  Gen_Y1 <- data.frame(Y1=Y1_gen)
+  if (res_dist=="empirical") {
+    # 2. simulate residuals from an empirical distribution
+    Zsim <- obs_res[sample(x=1:nrow(obs_res),size=Nsim,replace=TRUE),]
+  } else if (res_dist=="vine_copula") {
+    # 2. simulate residuals from a vine copula
+    Zsim_unif <- rvinecopulib::rvinecop(n=Nsim,vine=fit_res) %>% as.data.frame()
+    
+    # 3. convert to original margins
+    # rewrite using apply
+    to_opt <- function(x,margin_par,p) {
+      return( (F_AGG(x,theta=margin_par)-p)^2  )  
+    }
+    AGG_inverse <- function(p,margin_par) {
+      sapply(1:Nsim,FUN=function(k){optim(fn=to_opt,margin_par=margin_par,p=p[k],par=1,method="Nelder-Mead")$par})
+    }
+    AGG_inverse_wrapper = function(i){
+      return(AGG_inverse(p=as.numeric(unlist(Zsim_unif[,i])), margin_par=c(res_margin$mu_agg[i], res_margin$sigl[i],res_margin$sigu[i],res_margin$deltal[i],res_margin$deltau[i])))
+    }
+    
+    Zsim <- as.data.frame(sapply(1:ncol(Zsim_unif), AGG_inverse_wrapper))
+    
+  } 
+  # 4. calculate each Yj
+  Y1 <- Gen_Y1$Y1
+  Y2 <- pe$a[1]*Y1 + Y1^pe$b[1] *Zsim[,1]
+  Y3 <-  pe$a[2]*Y1 + Y1^pe$b[2] *Zsim[,2]
+  Y4 <- pe$a[3]*Y1 + Y1^pe$b[3] *Zsim[,3]
+  Y5 <-  pe$a[4]*Y1 + Y1^pe$b[4] *Zsim[,4]
+  res <- c(1:ncol(sims))[-j]
+  Gen_Y1 <- Gen_Y1 %>% mutate(Y2=Y2,Y3=Y3,Y4=Y4,Y5=Y5) %>% mutate(sim="model")
+  names(Gen_Y1) <- c(paste0("Y",j),paste0("Y",res[1]),paste0("Y",res[2]),paste0("Y",res[3]),paste0("Y",res[4]),"sim")
+  return(Gen_Y1)
+}
+
+# bootstrap for vine examples
+vine_bias <- function(k) {
+  N <- 5000
+  v <- 0.9
+  a <- 1/4
+  sims <- generate_Y(N=N) %>% link_log(dep=a) %>%
+    link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=a) %>%
+    apply(c(2),FUN=frechet_laplace_pit1) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
+  j <- 1
+  # 1. estimate a and b
+  pe <- par_est(df=sims,v=v,given=j,margin = "Normal", method = "sequential2")
+  # 2. calculate observed residuals
+  obs_res <- observed_residuals(df = sims,given = j,v = v, a=pe$a,b=pe$b)
+  # 3a. estimate parameters for AGG residual margins
+  res_margin <- res_margin_par_est(obs_res=obs_res,method = "AGG")
+  # 3b. fit a vine copula
+  fit_res <<- rvinecopulib::vinecop( (obs_res %>% apply(c(2),FUN=row_number))/(nrow(sims)*(1-v)+1))  
+  Nsim <- 10000
+  
+  # calculate empirical estimates
+  psim <- pu <-  c()
+  u <- c(0.99,0.9925,0.995,0.9975,0.999)
+  
+  # one of the clusters u
+  psim <- psim1 <- pemp <- pemp1 <- c()
+  uq <- sapply(1:length(u),function(i){unif_laplace_pit(u[i]) })
+  for (i in 1:length(u)) {
+    pemp[i] <- nrow(sims %>% filter(if_all(.cols=everything(),~.x>uq[i])))/nrow(sims)
+    pemp1[i] <- nrow(sims %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))/nrow(sims)
+    Gen_Y1 <- simulate_cond_model(v_sim=u[i],param_estimates=pe,res_margin_estimates = res_margin,Nsim=Nsim)
+    psim[i] <- nrow(Gen_Y1 %>% filter(if_all(.cols=everything(),~.x>uq[i])))*(1-u[i])/Nsim
+    psim1[i] <- nrow(Gen_Y1 %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))*(1-u[i])/Nsim
+  }
+  return(data.frame(pemp,pemp1,psim,psim1))
 }
