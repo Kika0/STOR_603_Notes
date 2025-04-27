@@ -974,5 +974,5 @@ vine_bias <- function(k) {
     psime[i] <- nrow(Gen_Y1e %>% filter(if_all(.cols=everything(),~.x>uq[i])))*(1-u[i])/Nsim
     psime1[i] <- nrow(Gen_Y1e %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))*(1-u[i])/Nsim
   }
-  return(data.frame(pemp,pemp1,psim,psim1,psime,psime1))
+  return(list(data.frame(pemp,pemp1,psim,psim1,psime,psime1),cbind(pe[,c(1:7,9,16:17)],res_margin)))
 }
