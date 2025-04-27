@@ -43,6 +43,12 @@ T1l<- function(x) {
   y <- summary(x)
 -2*sum(y$loglik[1:3])
 }
+
+# return a row of 2nll and AIC of the first tree of winter and summer fits
+nllAICsw <- function(vcw,vcs) {
+  x <- c(T1_AIC(vcw),T1l(vcw),T1_AIC(vcs),T1l(vcs),T1_AIC(vcw)+T1_AIC(vcs),T1l(vcw)+T1l(vcs))
+  return(round(x,2))
+}
 ```
 
 Compare the 5 methods conditioning on each of the variables.
@@ -54,34 +60,28 @@ obsresw <- (observed_residuals(df = winter_lap,given = j,v = v,a = pew$a,b=pew$b
 pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequential2")
 obsress <- (observed_residuals(df = summer_lap,given = j,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
 
-T1_AIC(vcw1)
-# compare with VineCopula fit
-vcw2 <- VineCopula::RVineStructureSelect(data=obsresw)
-summary(vcw2)
+# 1. separate estimates for winter and summer residuals
+vcw1 <- rvinecopulib::vinecop(data=obsresw,selcrit = "mbic")
+vcs1 <- rvinecopulib::vinecop(data=obsress,selcrit = "aic")
+vcw1
+summary(vcw1)
 
-vcs1 <- rvinecopulib::vinecop(data=obsress,selcrit = "mbicv")
-vcs1
-summary(vcs1)
-T1_AIC(vcs1)
-# sum
-T1_AIC(vcs1) + T1_AIC(vcw1)
-# calculate log-likelihood
-T1l(vcw1) + T1l (vcs1)
-# winter with imposed summer structure
+m1 <- nllAICsw(vcw=vcw1,vcs=vcs1)
+
+# 2. winter with imposed summer structure
 vcw3 <- rvinecopulib::vinecop(data=obsresw,structure=get_structure(vcs1))
 T1_AIC(vcw3)
-# test for summer structure also
 vcs3 <- rvinecopulib::vinecop(data=obsress,structure=get_structure(vcs1))
 T1_AIC(vcw3) + T1_AIC(vcs3)
 T1l(vcw3) + T1l(vcs3)
 
-# joined data
+# 4. joined data
 rvine_join <- rvinecopulib::vinecop(data=rbind(obsresw,obsress)) 
 T1_AIC(rvine_join)
 T1l(rvine_join)
-# compare with VineCopula fit
-vcs2 <- VineCopula::RVineStructureSelect(data=obsress)
-summary(vcs2)
+
+# 6. imposed tree structure and family from summer vinecop
+
 ```
 
 
@@ -454,3 +454,9 @@ T1l(rvw5) + T1l(rvs5)
 
 ```
 
+
+### Additional notes on fitting vine copulas
+
+The default selection criterion is AIC, but possible alternatives are BIC, mBIC and mBICv. Furthermore, mBICv has a parameter $\psi_0$ for prior probability of  (lower $\psi_0$ tends to truncate earlier since non-independence copulas are more likely).
+
+Question for Ingrid: One argument of fitting vine copula in `rvinecopulib` package is `presel`: whether the family set should be thinned out according to the symmetry characteristics of the data.
