@@ -61,31 +61,31 @@ pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequentia
 obsress <- (observed_residuals(df = summer_lap,given = j,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
 
 # 1. separate estimates for winter and summer residuals
-vcw1 <- rvinecopulib::vinecop(data=obsresw,selcrit = "mbic")
-vcs1 <- rvinecopulib::vinecop(data=obsress,selcrit = "aic")
+vcw1 <- rvinecopulib::vinecop(data=obsresw,selcrit = "mbicv")
+vcs1 <- rvinecopulib::vinecop(data=obsress,selcrit = "mbicv")
 vcw1
 summary(vcw1)
-
 m1 <- nllAICsw(vcw=vcw1,vcs=vcs1)
 
 # 2. winter with imposed summer structure
-vcw3 <- rvinecopulib::vinecop(data=obsresw,structure=get_structure(vcs1))
-T1_AIC(vcw3)
-vcs3 <- rvinecopulib::vinecop(data=obsress,structure=get_structure(vcs1))
-T1_AIC(vcw3) + T1_AIC(vcs3)
-T1l(vcw3) + T1l(vcs3)
+vcw2 <- rvinecopulib::vinecop(data=obsresw,structure=get_structure(vcs1))
+T1_AIC(vcw2)
+m2 <- nllAICsw(vcw=vcw2,vcs=vcs1)
 
 # 4. joined data
 rvine_join <- rvinecopulib::vinecop(data=rbind(obsresw,obsress)) 
-T1_AIC(rvine_join)
-T1l(rvine_join)
+x <- c(T1_AIC(rvine_join),T1l(rvine_join))
+m4 <- c(rep(NA,4),round(x,2))
+
+# 5. imposed tree structure and restricted family
+vcw5 <- rvinecopulib::vinecop(data=obsresw,vinecop_object = vcs1)
+m5 <- nllAICsw(vcw=vcw5,vcs=vcs1)
 
 # 6. imposed tree structure and family from summer vinecop
-
+vcw6 <- rvinecopulib::vinecop(data=obsresw,structure = get_structure(vcs1),family_set = unique(summary(rvine_join)$family))
+vcs6 <- rvinecopulib::vinecop(data=obsress,structure = get_structure(vcs1),family_set = unique(summary(rvine_join)$family))
+m6 <- nllAICsw(vcw = vcw6, vcs= vcs6)
 ```
-
-
-## Impose tree structure and copula families
 
 
 ## Compare imposing one link at a time
