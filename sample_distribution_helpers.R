@@ -41,7 +41,7 @@ link_log <- function(sims,dep=1/2) {
     x[i] <- optim(par=1,fn=to_opt,lower=0.001,upper=10,method="Brent")$par*y
   }
   sims <- sims %>% mutate(X=x)
-  names(sims)[ncol(sims)] <- paste0("Y",ncol(sims)) # rename columns
+  names(sims)[ncol(sims)] <- paste0("Y",ncol(sims)) # rename last column
   return(sims)
 }
 
@@ -67,7 +67,7 @@ link_norm <- function(sims,dep=1/2) {
   x_N <- qnorm(1-U)*(1-r^2)^(1/2) + r*y_N
   x <- (-log(pnorm(x_N)))^(-1)
   sims <- sims %>% mutate(X=x)
-  names(sims)[ncol(sims)] <- paste0("Y",ncol(sims)) # rename columns
+  names(sims)[ncol(sims)] <- paste0("Y",ncol(sims)) # rename last column
   return(sims)
 }
 
