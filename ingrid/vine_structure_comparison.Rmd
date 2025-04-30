@@ -54,6 +54,7 @@ nllAICsw <- function(vcw,vcs) {
 Compare the 5 methods conditioning on each of the variables.
 
 ```{r}
+j <- 4
 pew <-  par_est(df=winter_lap,v=v,given=j,margin = "Normal", method = "sequential2")
 obsresw <- (observed_residuals(df = winter_lap,given = j,v = v,a = pew$a,b=pew$b) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
 
@@ -87,6 +88,14 @@ vcs6 <- rvinecopulib::vinecop(data=obsress,structure = get_structure(vcs1),famil
 m6 <- nllAICsw(vcw = vcw6, vcs= vcs6)
 ```
 
+Put together in a table.
+
+```{r}
+m0 <- c("separate fit", "imposed summer tree", "joined fit", "imposed tree+family", "imposed tree restricted family")
+
+t1 <- cbind(data.frame(m0),as.data.frame(rbind(m1,m2,m4,m5,m6)))
+xtable(t1)
+```
 
 ## Compare imposing one link at a time
 
