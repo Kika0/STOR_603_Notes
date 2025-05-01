@@ -108,7 +108,6 @@ Print estimated and true point estimates.
 
 ```{r}
 # calculate empirical estimates
-
 # one of the clusters u
 pu <- psim <- psim1 <- psim2 <- pu1 <- pu2 <- pemp <- pemp1 <- c()
 uq <- sapply(1:length(u),function(i){unif_laplace_pit(u[i]) })
