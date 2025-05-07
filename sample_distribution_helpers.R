@@ -155,6 +155,24 @@ F_AGG <- function(x,theta) {
   return(y)
 }
 
+#' AGG inverse cdf
+#'
+#' @param p A vector of probabilities.
+#' @param AGG_par A vector of AGG parameters c(mu,sigl,sigu,deltal,deltau).
+#'
+#' @return A vector of corresponding quantiles.
+#' @export
+#'
+#' @examples qAGG(p=runif(1000),AGG_par=c(0,1,1,2,2))
+qAGG <- function(p,AGG_par) {
+  Nsim <- length(p)
+  to_opt <- function(x,margin_par,p) {
+    return( (F_AGG(x,theta=margin_par)-p)^2  )  
+  }
+  y <- sapply(1:Nsim,FUN=function(m){optim(fn=to_opt,margin_par=AGG_par,p=p[m],par=1,method="Brent",lower=-10,upper=10)$par})
+  return(y)
+}
+
 AGG_density <- function(x,theta) {
   mu <- theta[1]
   sigl <- theta[2]
