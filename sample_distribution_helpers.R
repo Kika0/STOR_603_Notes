@@ -137,41 +137,47 @@ unif_laplace_pit <-  function(x) {
 
 #' CDF of AGG margins for residuals
 #'
-#' @param x A number sampled from U(0,1) distribution.
+#' @param x A vector on AGG margins.
 #'
-#' @return x transformed to AGG margins
+#' @return y A vector of probabilities from cdf of AGG distribution.
 #' @export
 #'
 #' @examples F_AGG(x=runif(1))
-F_AGG <- function(x,theta) {
+pAGG <- function(x,theta) {
+  y <- numeric(length(x))
   mu <- theta[1]
   sigl <- theta[2]
   sigu <- theta[3]
   deltal <- theta[4]
   deltau <- theta[5]
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
-  if (x<mu) { y <- C_AGG*sigl/deltal*as.numeric(pracma::gammainc(x=((mu-x)/sigl)^deltal, a=1/deltal))[2] }
-  else { y <- C_AGG*sigl/deltal *gamma(1/deltal) + C_AGG*sigu/deltau*as.numeric(pracma::gammainc(x=((x-mu)/sigu)^deltau, a=1/deltau)[1]) }
+  y[x<mu] <- C_AGG*sigl/deltal*gamma(1/deltal) *( 1-pgamma(q=  ((mu-x[x<mu])/sigl)^deltal ,shape=1/deltal,rate=1)  ) 
+  y[x>=mu] <- C_AGG*sigl/deltal*gamma(1/deltal) + C_AGG*sigu/deltau*gamma(1/deltau)*(pgamma(((x[x>=mu]-mu)/sigu)^deltau,shape=1/deltau,rate=1))
   return(y)
 }
 
-#' AGG inverse cdf
+#' Inverse CDF of AGG margins for residuals
 #'
-#' @param p A vector of probabilities.
-#' @param AGG_par A vector of AGG parameters c(mu,sigl,sigu,deltal,deltau).
+#' @param x A vector of probabilities.
 #'
-#' @return A vector of corresponding quantiles.
+#' @return y A vector on AGG margins.
 #' @export
 #'
-#' @examples qAGG(p=runif(1000),AGG_par=c(0,1,1,2,2))
-qAGG <- function(p,AGG_par) {
-  Nsim <- length(p)
-  to_opt <- function(x,margin_par,p) {
-    return( (F_AGG(x,theta=margin_par)-p)^2  )  
-  }
-  y <- sapply(1:Nsim,FUN=function(m){optim(fn=to_opt,margin_par=AGG_par,p=p[m],par=1,method="Brent",lower=-10,upper=10)$par})
+#' @examples qAGG(p=seq(0,1,length.out=100),theta=c(0,1,1,2,2))
+qAGG <- function(p,theta) {
+  y <- numeric(length(p))
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  deltal <- theta[4]
+  deltau <- theta[5]
+  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  pmu <- C_AGG*sigl/deltal*gamma(1/deltal)
+  y[p<pmu] <- -qgamma(1-(p[p<pmu]*deltal/(C_AGG*sigl*gamma(1/deltal))),shape = 1/deltal,rate = 1)^(1/deltal)*sigl+mu
+  y[p>=pmu] <- qgamma( (p[p>=pmu]/C_AGG - sigl/deltal*gamma(1/deltal))*deltau/(sigu*gamma(1/deltau)),shape=1/deltau,rate=1)^(1/deltau)*sigu+mu
   return(y)
 }
+
 
 AGG_density <- function(x,theta) {
   mu <- theta[1]
