@@ -10,6 +10,7 @@ library(VineCopula)
 library(rvinecopulib)
 library(tidyverse)
 library(texmex)
+library(xtable)
 #library(ggraph) # for plotting vines
 source("../sample_distribution_helpers.R")
 source("../likelihood_helpers.R")
@@ -94,8 +95,27 @@ Put together in a table.
 m0 <- c("separate fit", "imposed summer tree", "joined fit", "imposed tree+family", "imposed tree restricted family")
 
 t1 <- cbind(data.frame(m0),as.data.frame(rbind(m1,m2,m4,m5,m6)))
-xtable(t1)
+xtable::xtable(t1)
 ```
+## Explore different model fits
+
+Explore log-likelihoods of simulations from each of the models.
+
+```{r}
+# simulate from a model
+N <- nrow(obsresw)
+vinesim <- rvinecopulib::rvinecop(n=N,vinecop = vcw1)
+# evaluate the log likelihood
+rvinecopulib::pairs_copula_data(obsresw)
+rvinecopulib::pairs_copula_data(vinesim)
+vine_refit <- rvinecopulib::dvinecop(u=vinesim,vinecop = vcw1)
+summary(vcw1)
+sum(vine_refit)/N
+dvinecop(u=obsresw,vinecop =vcw1)
+
+# maybe we could see whether the refitted model is better?
+```
+
 
 ## Compare imposing one link at a time
 
