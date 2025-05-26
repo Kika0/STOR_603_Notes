@@ -37,25 +37,26 @@ a <- 1/4
 sims <- generate_Y(N=N) %>% link_log(dep=a) %>%
   link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=a) %>%
   apply(c(2),FUN=frechet_laplace_pit1) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
+ u <- c(0.99,0.9925,0.995,0.9975,0.999)
+uq <- LaplacesDemon::qlaplace(u)
 
 # could save a large sample such that Y1>v for umin is 0.99 quantile (frechet margins)
 N <- 10000000
 sims_large <- generate_Y(N=N) %>% link_log(dep=a) %>%
   link_norm(dep=3/4) %>% relocate(Y3,.before= Y1) %>% link_norm(dep=1/4) %>% link_log(dep=a) %>%
   apply(c(2),FUN=frechet_laplace_pit1) %>% as.data.frame() %>% relocate(Y3,.after = Y2)
-# save(sims_large,file="../data_processed/simulation_examples.RData")
-load("../data_processed/simulation_examples.RData")
 
 # calculate true probabilities
 # one of the clusters u
 pu <- pu1 <- pu2  <- c()
-uq <- LaplacesDemon::qlaplace(u)
 for (i in 1:length(u)) {
  pu[i] <- nrow(sims_large %>% filter(if_all(.cols=everything(),~.x>uq[i])))/nrow(sims_large)
  pu1[i] <- nrow(sims_large %>% filter(if_all(.cols=all_of(1:3),~.x>uq[i])))/nrow(sims_large)
  Nsim <- 1000
  pu2[i] <- nrow(sims_large %>% filter(if_all(.cols=all_of(4:5),~.x>uq[i])))/nrow(sims_large)
 }
+# save true probabilities
+save(pu,pu1,pu2,file = "../data_processed/trueprobs_simexample.RData")
 ```
 
 Plot pairwise when $Y_1>v$.
@@ -191,15 +192,20 @@ phat <- lapply(x, function(y){y[[1]]})
 
 
 tmp <- bind_rows(phat, .id = "iteration") %>% mutate("threshold"=factor(rep(u,Nrep)))
-tmpa <- tmp %>% dplyr::select(all_of(c(1,2,4,6,8))) %>% pivot_longer(cols=c(2,3,4)) %>% mutate(error=value-pu) %>% mutate(name=factor(name))
-p <- ggplot(tmpa) + geom_boxplot(aes(y=error,fill=name)) + facet_wrap(facets = "threshold",nrow=1) +ylim(c(-0.0005,0.0005)) + scale_fill_discrete(name="Method",labels=c("empirical","CM vine copula","CM emp. residuals")) +   theme(axis.title.x=element_blank(),
+tmpa <- tmp %>% dplyr::select(all_of(c(1,2,4,6,8))) %>% pivot_longer(cols=c(2,3,4)) %>% mutate(error=value-pu) %>% mutate(newP=pcomp(value)) %>%  mutate(name=factor(name))
+p <- ggplot(tmpa) + geom_boxplot(aes(y=error,fill=name)) + facet_wrap(facets = "threshold",nrow=1) + scale_fill_discrete(name="Method",labels=c("empirical","CM vine copula","CM emp. residuals")) +   theme(axis.title.x=element_blank(),
+    axis.text.x=element_blank(),
+    axis.ticks.x=element_blank())
+
+p <- ggplot(tmpa) + geom_boxplot(aes(y=newP,fill=name)) + facet_wrap(facets = "threshold",nrow=1) + scale_fill_discrete(name="Method",labels=c("empirical","CM vine copula","CM emp. residuals")) +   theme(axis.title.x=element_blank(),
     axis.text.x=element_blank(),
     axis.ticks.x=element_blank())
 ggsave(p,filename="../../Documents/error_compare100.png",width=10,height=3)
 
+
 # repeat for cluster 1
 tmp1 <- tmp %>% dplyr::select(all_of(c(1,3,5,7,8))) %>% pivot_longer(cols=c(2,3,4)) %>% mutate(error=value-pu) %>% mutate(name=factor(name))
-p <- ggplot(tmp1) + geom_boxplot(aes(y=error,fill=name)) + facet_wrap(facets = "threshold",nrow=1) +ylim(c(-0.0005,0.01)) + scale_fill_discrete(name="Method",labels=c("empirical","CM vine copula","CM emp. residuals")) +   theme(axis.title.x=element_blank(),
+p <- ggplot(tmp1) + geom_boxplot(aes(y=error,fill=name)) + facet_wrap(facets = "threshold",nrow=1) + scale_fill_discrete(name="Method",labels=c("empirical","CM vine copula","CM emp. residuals")) +   theme(axis.title.x=element_blank(),
     axis.text.x=element_blank(),
     axis.ticks.x=element_blank())
 
@@ -211,16 +217,23 @@ ggsave(p,filename="../../Documents/error1_compare100.png",width=10,height=3)
 Also look at CI of the spread.
 
 ```{r}
+pcomp <- function(p) {
+  y <- abs( pu*log(pu/p) + (1-pu)*log(  (1-pu)/(1-p) ) )
+    return(y)
+}
+tmp1 <- tmp1 %>% mutate()
 tmpa %>% group_by(threshold,name) %>% summarise(bias=mean(error)) %>% arrange(-desc(bias))
-tmpa %>% group_by(threshold,name) %>% summarise(variance=var(value)) %>% arrange(-desc(variance))
+tmpa %>% group_by(threshold,name) %>% summary()
 
 # which method across thresholds
 tmpa %>% group_by(name) %>% summarise(bias=mean(error)) %>% arrange(-desc(bias))
 tmpa %>% group_by(name) %>% summarise(variance=var(value)) %>% arrange(-desc(variance))
 
-tapply(tmpa$error, tmpa$name, summary)
 
-phist <- tmpa %>% filter(name=="psim") %>% ggplot() + geom_histogram(aes(x=value)) + facet_wrap(facets=c("threshold"),nrow=1)
+
+tapply(tmpa$error, tmpa$name, summary)
+tmph <- left_join(tmpa %>% filter(name=="psim"),tmpa %>% filter(name=="psim") %>% group_by(threshold) %>% summarise(mean=mean(error)),by=c("threshold")) %>% mutate(outlier=(error>sd(error)*3))
+phist <- tmph  %>% ggplot() + geom_histogram(aes(x=value,fill=outlier)) + facet_wrap(facets=c("threshold"),nrow=1)
 ggsave(phist,filename="../../Documents/phist.png",width=10,height=3)
 
 ```
@@ -234,8 +247,6 @@ pb <- ggplot(tmp) + geom_boxplot(aes(y=b,x=factor(res)))
 plika <- ggplot(tmp) + geom_boxplot(aes(y=lika,x=factor(res))) 
 plikb <- ggplot(tmp) + geom_boxplot(aes(y=likb,x=factor(res))) 
 
-
-
 pab <- grid.arrange(pa,pb,plika,plikb,nrow=2)
 ggsave(pab,filename="../../Documents/pe100.png",width=10,height=10)
 
@@ -248,5 +259,33 @@ plikres <- ggplot(tmp) + geom_boxplot(aes(y=likres,x=factor(res)))
 pres <- grid.arrange(p1,p2,p3,p4,p5,plikres,nrow=2)
 ggsave(pres,filename="../../Documents/pe100res.png",width=10,height=10)
 
+```
+
+## Examine outliers
+
+```{r}
+tmph %>% filter(outlier==TRUE)
+```
+
+Find corresponding parameter values.
+
+```{r}
+subsout <- tmp %>% filter(iteration %in% tmph$iteration[tmph$outlier==TRUE])
+pa <- ggplot(subsout) + geom_boxplot(aes(y=a,x=factor(res))) 
+pb <- ggplot(subsout) + geom_boxplot(aes(y=b,x=factor(res))) 
+plika <- ggplot(subsout) + geom_boxplot(aes(y=lika,x=factor(res))) 
+plikb <- ggplot(subsout) + geom_boxplot(aes(y=likb,x=factor(res))) 
+
+pab <- grid.arrange(pa,pb,plika,plikb,nrow=2)
+ggsave(pab,filename="../../Documents/pe100out.png",width=10,height=10)
+
+p1 <- ggplot(subsout) + geom_boxplot(aes(y=mu_agg,x=factor(res))) 
+p2 <- ggplot(subsout) + geom_boxplot(aes(y=sigl,x=factor(res))) 
+p3 <- ggplot(subsout) + geom_boxplot(aes(y=sigu,x=factor(res))) 
+p4 <- ggplot(subsout) + geom_boxplot(aes(y=deltal,x=factor(res))) 
+p5 <- ggplot(subsout) + geom_boxplot(aes(y=deltau,x=factor(res))) 
+plikres <- ggplot(subsout) + geom_boxplot(aes(y=likres,x=factor(res))) 
+pres <- grid.arrange(p1,p2,p3,p4,p5,plikres,nrow=2)
+ggsave(pres,filename="../../Documents/pe100resout.png",width=10,height=10)
 ```
 
