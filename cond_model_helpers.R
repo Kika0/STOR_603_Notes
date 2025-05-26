@@ -912,17 +912,9 @@ simulate_cond_model <- function(v_sim,Nsim=1000,param_estimates,res_margin_estim
     Zsim_unif <- rvinecopulib::rvinecop(n=Nsim,vine=fit_res) %>% as.data.frame()
     res_margin <- res_margin_estimates
     # 3. convert to original margins
-    # rewrite using apply
-    to_opt <- function(x,margin_par,p) {
-      return( (F_AGG(x,theta=margin_par)-p)^2  )  
-    }
-    AGG_inverse <- function(p,margin_par) {
-      sapply(1:Nsim,FUN=function(m){optim(fn=to_opt,margin_par=margin_par,p=p[k],par=1,method="Brent",lower=-10,upper=10)$par})
-    }
     AGG_inverse_wrapper = function(i){
-      return(AGG_inverse(p=as.numeric(unlist(Zsim_unif[,i])), margin_par=c(res_margin$mu_agg[i], res_margin$sigl[i],res_margin$sigu[i],res_margin$deltal[i],res_margin$deltau[i])))
+      return(qAGG(p=as.numeric(unlist(Zsim_unif[,i])), theta=c(res_margin$mu_agg[i], res_margin$sigl[i],res_margin$sigu[i],res_margin$deltal[i],res_margin$deltau[i])))
     }
-    
     Zsim <- as.data.frame(sapply(1:ncol(Zsim_unif), AGG_inverse_wrapper))
     
   } 
