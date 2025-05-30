@@ -35,7 +35,7 @@ tmp <- tmp %>% mutate(W=2*(ll-lltrue),Wstar=-2*ll+2+2*lltrue)
 pll <- ggplot(tmp) + geom_histogram(aes(x=ll)) + xlab("Log likelihood of fitted parameter")
 plltrue <- ggplot(tmp) + geom_histogram(aes(x=lltrue)) + xlab("Log likelihood of true parameter")
 pW <- ggplot(tmp) + geom_histogram(aes(x=W)) + xlab("Likelihood ratio test")
-pchi <- ggplot(data.frame(rchi=rchisq(1000,df=1))) + geom_histogram(aes(x=rchi)) + xlab(TeX("Random sample from $\\chi^2_1$ distribution"))
+pchi <- ggplot(data.frame(rchi=rchisq(1000,df=8))) + geom_histogram(aes(x=rchi)) + xlab(TeX("Random sample from $\\chi^2_1$ distribution"))
 pAIC <- ggplot(tmp) + geom_histogram(aes(x=Wstar)) + xlab("AIC difference")
 
 ggsave(pll,filename = "../Documents/p1.png") 
@@ -64,33 +64,47 @@ vcw3 <- VineCopula::RVineSeqEst(data=obsresw,RVM = vcs1)
 
 # 4. joined data
 rvine_join <- VineCopula::RVineStructureSelect(data=rbind(obsresw,obsress)) 
+# 4. joined data with imposed summer structure
+rvine_join <- VineCopula::RVineSeqEst(data=rbind(obsresw,obsress),RVM=vcw3) 
 
-cop_refit <- function(i,m1,m2) {
+cop_refit <- function(i,m1,level="l1") {
   set.seed(i*12)
-  # simulate from both vine copulas
-  x1 <- RVineSim(N=nrow(obsresw),RVM=m1)
-  # record the likelihoods
-   ll <- RVineLogLik(data=x1,RVM=m1)$loglik
-   lltrue <- RVineLogLik(data=x1,RVM=m2)$loglik
-  return(data.frame(ll=ll,lltrue=lltrue))
+  # 1. simulate from both vine copulas
+  xw <- RVineSim(N=nrow(obsresw),RVM=m1)
+  xs <- RVineSim(N=nrow(obsress),RVM=m1)
+  # 2. refit model for summer and winter separately
+  # this part depends on the model comparison level
+  if (level=="l1") {
+  refit_join <- RVineSeqEst(data = rbind(xw,xs),RVM=m1)
+  refitw <- RVineSeqEst(data=xw,RVM = vcw3)
+  refits <- RVineSeqEst(data=xs,RVM = vcw3)
+  # 3a. record the likelihood under null hypothesis
+  ll_m1 <- refit_join$logLik
+  #ll_m1 <- RVineLogLik(data = rbind(xw,xs),RVM=rvine_join)$loglik
+  }
+  # 3b. record likelihood under alternative hypothesis
+   ll_m2w <- refitw$logLik
+   ll_m2s <- refits$logLik
+  return(data.frame(ll_m1,ll_m2w,ll_m2s))
 }
 
 Nrep <- 500
 # select level of imposed structure for saving the plots
-l <- "l2"
+l <- "l1"
 start_time <- Sys.time() 
-tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1=vcw3,m2=vcw2))
+tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1=rvine_join,level=l))
 end_time <- Sys.time() 
 end_time - start_time
 
 # calculate the AIC
-npar1 <- 9
-npar2 <- 9
-tmp <- tmp %>% mutate(W=2*(ll-lltrue),AIC1=-2*ll+2*npar1,AIC2=-2*lltrue+2*npar2)
-tmp <- tmp %>% mutate(AICdiff=AIC1-AIC2)
+npar1 <- 8
+npar2 <- 8
+tmp <- tmp %>% mutate(ll_m2=ll_m2w+ll_m2s)
+tmp <- tmp %>% mutate(W=2*(ll_m2-ll_m1),AIC1=-2*ll_m1+2*npar1,AIC2=-2*ll_m2+2*npar2)
+tmp <- tmp %>% mutate(AICdiff=AIC2-AIC1)
 
 # improve the plots
-p1 <- ggplot(tmp %>% dplyr::select(c(lltrue,ll)) %>% pivot_longer(everything(),names_to = "Model")) + geom_density(aes(x=value,fill=Model),alpha=0.5)  +  scale_fill_manual(name="Model",
+p1 <- ggplot(tmp %>% dplyr::select(c(ll_m2,ll_m1)) %>% pivot_longer(everything(),names_to = "Model")) + geom_density(aes(x=value,fill=Model),alpha=0.5)  +  scale_fill_manual(name="Model",
                       labels=c(TeX("$M_1$"),
                                TeX("$M_2$")),
                       values=c("black","#C11432")) +
