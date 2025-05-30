@@ -15,7 +15,7 @@
 #' @export
 #'
 #' @examples
-spatial_par_est <- function(data_Lap,cond_sites,dayshift=c(0),Ndays_season=90,v=0.9,ab_method="sequential2",res_margin="AGG",grid_uk=xyUK20_sf) {
+spatial_par_est <- function(data_Lap,cond_sites,dayshift=c(0),Ndays_season=90,v=0.9,ab_method="sequential2",res_margin="AGG",grid_uk=xyUK20_sf,title="") {
   est_all <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
                             "a" = numeric(), "b" = numeric(),
                             "mu" = numeric(),"mu_agg" = numeric(),
@@ -36,5 +36,5 @@ spatial_par_est <- function(data_Lap,cond_sites,dayshift=c(0),Ndays_season=90,v=
   }
   est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(dayshift))) %>% mutate(cond_site=factor(cond_site))
   est_all_sf <- est_join_spatial(tmp_est=est_all,grid_uk=grid_uk)
-  save(est_all_sf,file=paste0("data_processed/N",nrow(data_Lap),"_",ab_method,"_",res_margin,".RData"))
+  save(est_all_sf,file=paste0("data_processed/N",nrow(data_Lap),"_",ab_method,"_",res_margin,"_",title,".RData"))
 }
