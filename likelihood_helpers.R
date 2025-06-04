@@ -149,7 +149,22 @@ NLL_AGGsig <- function(x,theta) {
 #' @export
 #'
 #' @examples NLL_AGG(x=rnorm(50),theta=c(0,1,1,2,2))
-NLL_AGG <- function(x,theta) {
+NLL_AGG <- function(x,theta,mu_hat=NULL,sigl_hat=NULL,sigu_hat=NULL,deltal_hat=NULL,deltau_hat=NULL) {  
+  if (is.null(mu_hat)==FALSE) {
+    theta <- append(theta,mu_hat,after=0)
+}
+  if (is.null(sigl_hat)==FALSE) {
+    theta <- append(theta,sigl_hat,after=1)
+  } 
+  if (is.null(sigu_hat)==FALSE) {
+    theta <- append(theta,sigu_hat,after=2)
+  }
+  if (is.null(deltal_hat)==FALSE) {
+    theta <- append(theta,deltal_hat,after=3)
+  } 
+  if (is.null(deltau_hat)==FALSE) {
+    theta <- append(theta,deltau_hat,after=4)
+  } 
   mu <- theta[1]
   sigl <- theta[2]
   sigu <- theta[3]
@@ -214,10 +229,10 @@ NLL_expalpha_twophi <- function(theta,df = Y_given1extreme, d1j. = d1j,SN.=SN,mu
 NLL_AGGdelta_onestep <- function(x,theta,a_hat=NULL,b_hat=NULL) {
   if (is.null(a_hat)==FALSE) {
     a <- a_hat
-  } else {a <- theta[5]}
+  } else {theta <- append(theta,a,after=0)}
   if (is.null(b_hat)==FALSE) {
     b <- b_hat
-  } else {b <- theta[6]}
+  } else {theta <- append(theta,b,after=1)}
   mu <- theta[1]
   sig <- theta[2]
   deltal <- theta[3]
