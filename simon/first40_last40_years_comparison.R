@@ -28,19 +28,19 @@ Dolgellau <- c(-3.8844362867080897,52.74213275545185)
 Bournemouth <- c(-1.8650607066137428,50.72173094587856)
 df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth)
 #spatial_par_est saves parameter estimates as est_all_sf sf object in ../Documents folder
-q <- 0.94 # quantile threshold
+q <- 0.98 # quantile threshold
 spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites",q*100))
 spatial_par_est(data_Lap = data_mod_Lap[1:3600,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("first40_12sites",q*100))
 spatial_par_est(data_Lap = data_mod_Lap[5401:9000,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("last40_12sites",q*100))
 
 # load all three parameter estimates sf objects ----
-load(paste0("data_processed/N9000_sequential2_AGG_all12sites_q",q*100,".RData"))
+load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"))
 est_all <- est_all_sf
 
-load("data_processed/N3600_sequential2_AGG_first40_12sites_q",q*100,".RData")
+load(paste0("data_processed/N3600_sequential2_AGG_first40_12sites",q*100,".RData"))
 est_allfirst40 <- est_all_sf
 
-load("data_processed/N3600_sequential2_AGG_last40_12sites_q",q*100,".RData")
+load(paste0("data_processed/N3600_sequential2_AGG_last40_12sites",q*100,".RData"))
 est_alllast40 <- est_all_sf
 
 # combine the first and the last 40 years
