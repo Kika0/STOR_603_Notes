@@ -29,9 +29,9 @@ Bournemouth <- c(-1.8650607066137428,50.72173094587856)
 df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth)
 #spatial_par_est saves parameter estimates as est_all_sf sf object in ../Documents folder
 q <- 0.98 # quantile threshold
-spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites",q*100))
-spatial_par_est(data_Lap = data_mod_Lap[1:3600,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("first40_12sites",q*100))
-spatial_par_est(data_Lap = data_mod_Lap[5401:9000,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("last40_12sites",q*100))
+# spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites",q*100))
+# spatial_par_est(data_Lap = data_mod_Lap[1:3600,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("first40_12sites",q*100))
+# spatial_par_est(data_Lap = data_mod_Lap[5401:9000,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("last40_12sites",q*100))
 
 # load all three parameter estimates sf objects ----
 load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"))
@@ -64,10 +64,18 @@ ggsave(p2,width=10,height=5,filename = paste0("../Documents/bcomb_12sitesq",q*10
 # bind data together
 est_comball <- bind_rows(est_all %>% mutate("Year_range"=c("1981_2080")),est_allfirst40 %>% mutate("Year_range"=c("1981_2020")),est_alllast40 %>% mutate("Year_range"=c("2041_2080")))
 est_comball <- est_comball %>% mutate(Year_range=factor(Year_range,levels=c("1981_2080","1981_2020","2041_2080")))
+#amin <- min(est_comball$a,na.rm=TRUE)
+amin <- -0.4
+amax <- 1
+bmin <- 0
+bmax <- 1
+#amax <- max(est_comball$a,na.rm=TRUE)
+#bmin <- min(est_comball$b,na.rm=TRUE)
+#bmax <- max(est_comball$b,na.rm=TRUE)
 for (i in 1:12) {
-  pa <- tm_shape(est_comball %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(col="a",palette="viridis",n=8,size=0.3,colorNA="aquamarine",title=TeX("$\\alpha$"),textNA = "Conditioning site") + tm_facets(by= c("cond_site","Year_range"))+  tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5)
+  pa <- tm_shape(est_comball %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(col="a",palette="viridis",breaks=seq(amin,amax,length.out=11),size=0.3,colorNA="aquamarine",title=TeX("$\\alpha$"),textNA = "Conditioning site") + tm_facets(by= c("cond_site","Year_range"))+  tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5)
     tmap_save(pa,filename=paste0("../Documents/acomp_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
-    pb <- tm_shape(est_comball %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(col="b",palette="viridis",n=8,size=0.3,colorNA="aquamarine",title=TeX("$\\beta$"),textNA = "Conditioning site") + tm_facets(by= c("cond_site","Year_range"))+  tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5)
+    pb <- tm_shape(est_comball %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(col="b",palette="viridis",breaks=seq(bmin,bmax,length.out=11),size=0.3,colorNA="aquamarine",title=TeX("$\\beta$"),textNA = "Conditioning site") + tm_facets(by= c("cond_site","Year_range"))+  tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5)
     tmap_save(pb,filename=paste0("../Documents/bcomp_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
     
     }
