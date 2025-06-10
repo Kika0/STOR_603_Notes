@@ -1,4 +1,4 @@
-library(copula)
+#library(copula)
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
@@ -47,59 +47,76 @@ sum(tmp$Wstar>0)
 
 # similar analysis for the vine copula models ----
 v <- 0.7
+j <- 1
 # transform to Laplace margins
 winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+pew <-  par_est(df=winter_lap,v=v,given=j,margin = "Normal", method = "sequential2")
+obsresw <- (observed_residuals(df = winter_lap,given = j,v = v,a = pew$a,b=pew$b) %>% apply(c(2),FUN=row_number))/(nrow(winter_lap)*(1-v)+1)
 
+pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequential2")
+obsress <- (observed_residuals(df = summer_lap,given = j,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
 # run the models from least to most restricted
 # 1. separate estimates for winter and summer residuals
 vcw1 <- VineCopula::RVineStructureSelect(data=obsresw,selectioncrit = "AIC")
 vcs1 <- VineCopula::RVineStructureSelect(data=obsress,selectioncrit = "AIC")
 
-# 2. winter with imposed summer structure
+# 2. winter with imposed summer tree structure
 vcw2 <- VineCopula::RVineCopSelect(data=obsresw,Matrix=vcs1$Matrix)
 
-# 3. winter with imposed summer
+# 3. winter with imposed summer tree and family
 vcw3 <- VineCopula::RVineSeqEst(data=obsresw,RVM = vcs1)
 
 # 4. joined data
-rvine_join <- VineCopula::RVineStructureSelect(data=rbind(obsresw,obsress)) 
+#rvine_join <- VineCopula::RVineStructureSelect(data=rbind(obsresw,obsress)) 
 # 4. joined data with imposed summer structure
 rvine_join <- VineCopula::RVineSeqEst(data=rbind(obsresw,obsress),RVM=vcw3) 
 
-cop_refit <- function(i,m1,level="l1") {
+cop_refit <- function(i,m1w,m1s,m2w,m2s,level="l1") {
   set.seed(i*12)
   # 1. simulate from both vine copulas
-  xw <- RVineSim(N=nrow(obsresw),RVM=m1)
-  xs <- RVineSim(N=nrow(obsress),RVM=m1)
+  xw <- RVineSim(N=nrow(obsresw),RVM=m1w)
+  xs <- RVineSim(N=nrow(obsress),RVM=m1s)
   # 2. refit model for summer and winter separately
-  # this part depends on the model comparison level
   if (level=="l1") {
-  refit_join <- RVineSeqEst(data = rbind(xw,xs),RVM=m1)
-  refitw <- RVineSeqEst(data=xw,RVM = vcw3)
-  refits <- RVineSeqEst(data=xs,RVM = vcw3)
+    refitm1 <- RVineSeqEst(data=rbind(xw,xs),RVM = m1w)
+    ll_m1w <- NA
+    ll_m1s <- NA
+    ll_m1 <- refitm1$logLik
+  } else {
+  refitm1w <- RVineSeqEst(data = xw,RVM=m1w)
+  refitm1s <- RVineSeqEst(data = xs,RVM=m1s)
   # 3a. record the likelihood under null hypothesis
-  ll_m1 <- refit_join$logLik
-  #ll_m1 <- RVineLogLik(data = rbind(xw,xs),RVM=rvine_join)$loglik
+  ll_m1w <- refitm1w$logLik
+  ll_m1s <- refitm1s$logLik
+  ll_m1 <- ll_m1w+ll_m1s
   }
+  refitw <- RVineSeqEst(data=xw,RVM = m2w)
+  refits <- RVineSeqEst(data=xs,RVM = m2s)
+
+  #ll_m1 <- RVineLogLik(data = rbind(xw,xs),RVM=rvine_join)$loglik
   # 3b. record likelihood under alternative hypothesis
    ll_m2w <- refitw$logLik
    ll_m2s <- refits$logLik
-  return(data.frame(ll_m1,ll_m2w,ll_m2s))
+   ll_m2 <- ll_m2w+ll_m2s
+  return(data.frame(ll_m1w,ll_m1s,ll_m1,ll_m2w,ll_m2s,ll_m2))
 }
 
 Nrep <- 500
 # select level of imposed structure for saving the plots
-l <- "l1"
+l <- "l3"
 start_time <- Sys.time() 
-tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1=rvine_join,level=l))
+#model comparison for each level
+#tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1w=rvine_join,m1s=rvine_join,m2w=vcw3,m2s=vcs1,level=l))
+#tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1w=vcw3,m1s=vcs1,m2w=vcw2,m2s=vcs1,level=l))
+tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1w=rvine_join,m1s=rvine_join,m2w=vcw1,m2s=vcs1,level=l))
 end_time <- Sys.time() 
 end_time - start_time
 
 # calculate the AIC
 npar1 <- 8
 npar2 <- 8
-tmp <- tmp %>% mutate(ll_m2=ll_m2w+ll_m2s)
+tmp <- tmp 
 tmp <- tmp %>% mutate(W=2*(ll_m2-ll_m1),AIC1=-2*ll_m1+2*npar1,AIC2=-2*ll_m2+2*npar2)
 tmp <- tmp %>% mutate(AICdiff=AIC2-AIC1)
 
