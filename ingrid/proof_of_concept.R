@@ -83,17 +83,27 @@ cop_refit <- function(i,m1w,m1s,m2w,m2s,level="l1") {
     ll_m1w <- NA
     ll_m1s <- NA
     ll_m1 <- refitm1$logLik
-  } else {
+    refitw <- RVineSeqEst(data=xw,RVM = m2w)
+    refits <- RVineSeqEst(data=xs,RVM = m2s)
+  } else if (level=="l2") {
   refitm1w <- RVineSeqEst(data = xw,RVM=m1w)
   refitm1s <- RVineSeqEst(data = xs,RVM=m1s)
   # 3a. record the likelihood under null hypothesis
   ll_m1w <- refitm1w$logLik
   ll_m1s <- refitm1s$logLik
   ll_m1 <- ll_m1w+ll_m1s
+  refitw <- RVineCopSelect(data=xw,Matrix = m2w$Matrix)
+  refits <- RVineCopSelect(data=xs,Matrix = m2s$Matrix)
+  } else if (level=="l3") {
+    refitm1w <- RVineCopSelect(data = xw,Matrix=m1w$Matrix)
+    refitm1s <- RVineCopSelect(data = xs,Matrix=m1s$Matrix)
+    # 3a. record the likelihood under null hypothesis
+    ll_m1w <- refitm1w$logLik
+    ll_m1s <- refitm1s$logLik
+    ll_m1 <- ll_m1w+ll_m1s
+    refitw <- RVineStructureSelect(data=xw)
+    refits <- RVineStructureSelect(data=xs)
   }
-  refitw <- RVineSeqEst(data=xw,RVM = m2w)
-  refits <- RVineSeqEst(data=xs,RVM = m2s)
-
   #ll_m1 <- RVineLogLik(data = rbind(xw,xs),RVM=rvine_join)$loglik
   # 3b. record likelihood under alternative hypothesis
    ll_m2w <- refitw$logLik
