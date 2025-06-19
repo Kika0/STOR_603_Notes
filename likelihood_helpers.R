@@ -64,6 +64,21 @@ Y_likelihoodGG <- function(theta,df=Y_given1extreme,given=1,sim=2,a_hat=NULL,b_h
   return(log_lik)
 }
 
+#' NLL for Gaussian
+#'
+#' @param x A numerical vector of data.
+#' @param theta A vector of parameters c(mu,sig,delta).
+#'
+#' @return A number of negative log-likelihood.
+#' @export
+#'
+#' @examples NLL_GenGaus(x=rnorm(50),theta=c(0,1,2))
+NLL_norm <- function(x,theta) {
+  mu <- theta[1]
+  sig <- theta[2]
+  if(sig<=0){return(10e10)}
+  return(-sum(dnorm(x,mean = mu,sd=sig,log=TRUE)))
+}
 
 #' NLL for generalized Gaussian
 #'
