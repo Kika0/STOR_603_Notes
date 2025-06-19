@@ -61,7 +61,7 @@ ggsave(p,filename="../Documents/condmodel_illustration.png",width=8,height=4)
 pn <- grid.arrange(p1n,p2n,ncol=2)
 ggsave(pn,filename="../Documents/condmodel_illustrationvL.png",width=8,height = 4)
 
-# 3. update density plot
+# 3a. update density plot -------
 v <- 0.7
 j <- 1
 # transform to Laplace margins
@@ -125,6 +125,47 @@ pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method))%>% filter
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
 ggsave(filename = "../Documents/AGG/density5.png",plot=pl1,height=5,width=8)
 
+# 3b. explore bootstrap of summer residuals
+Nrep <- 100
+for (i in 2:Nrep) {
+  set.seed(12*i)
+  # N <- 50000
+  # v <- 0.99 # threshold for conditioning variable
+  # sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  #   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+  #   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+  # pe <-  par_est(df=sims,v=v,given=j,margin = "Normal", method = "sequential2")
+  # obsr <- observed_residuals(df=sims,given=j,v=v,a=pe$a,b=pe$b)
+  obsr <- apply(obsress,MARGIN = 2,FUN = function(x) {sample(x,replace=TRUE)})
+  L1 <- res_margin_par_est(obs_res = obsr,method="Normal")
+  L2 <- res_margin_par_est(obs_res = obsr,method="GenGaus")
+  L3 <- res_margin_par_est(obs_res = obsr,method="AGGdelta")
+  L4 <- res_margin_par_est(obs_res = obsr,method="AGGsig")
+  L5 <- res_margin_par_est(obs_res = obsr,method="AGG")
+  
+  d <- ncol(sims)
+  L1 <- L1 %>% mutate(method="Normal",AIC=2*likres+2*2) %>% mutate(res=c(1:d)[-j]) %>% mutate(mu_agg=mu,sigl=sig,sigu=sig,deltal=2,deltau=2) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+  L2 <- L2 %>% mutate(method="GenGaus",AIC=2*likres+2*3) %>% mutate(res=c(1:d)[-j]) %>% mutate(sigl=sig_agg,sigu=sig_agg,deltal=delta,deltau=delta) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+  L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*likres+2*4) %>% mutate(res=c(1:d)[-j]) %>% mutate(sigl=sig_agg,sigu=sig_agg) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+  L4 <- L4 %>% mutate(method="AGGsig",AIC=2*likres+2*4) %>% mutate(res=c(1:d)[-j]) %>% mutate(deltal=delta,deltau=delta) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+  L5 <- L5 %>% mutate(method="AGG",AIC=2*likres+2*5) %>% mutate(res=c(1:d)[-j]) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+  
+  tmp1 <- rbind(L1,L2,L3,L4,L5) %>% mutate(given=j) %>%  mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
+tmp <- rbind(tmp,tmp1)
+}
+
+plottitle <- TeX("Conditioning on $Y_3> F^{-1}_{O_3} (0.7)$")
+# do a series of plots for the presentation
+pAIC1 <- ggplot(tmp %>% filter(given=="1") %>% filter(res %in% c("2"))) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + xlab("Residuals") + ggtitle(plottitle) + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE) + ylim(c(500,750))
+pAIC2 <- ggplot(tmp %>% filter(given=="1") %>% filter(res %in% c("2","3"))) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + xlab("Residuals") + ggtitle(plottitle) + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE) + ylim(c(500,750))
+pAIC3 <- ggplot(tmp %>% filter(given=="1") %>% filter(res%in% c("2","3","4"))) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + xlab("Residuals") + ggtitle(plottitle) + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE) + ylim(c(500,750))
+pAIC4 <- ggplot(tmp %>% filter(given=="1")) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + xlab("Residuals") + ggtitle(plottitle) + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE) + ylim(c(500,750))
+ggsave(filename = "../Documents/AGG/AICZ2.png",plot=pAIC1,height=5,width=6)
+ggsave(filename = "../Documents/AGG/AICZ3.png",plot=pAIC2,height=5,width=6)
+ggsave(filename = "../Documents/AGG/AICZ4.png",plot=pAIC3,height=5,width=6)
+ggsave(filename = "../Documents/AGG/AICZ5.png",plot=pAIC4,height=5,width=6)
+
+# 3c. 
 
 # 1. temperature large at Birmingham
 data_mod[data_mod]
