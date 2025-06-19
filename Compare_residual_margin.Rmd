@@ -46,12 +46,14 @@ Simulate a $n=50000$ sample from a logistic distribution.
 
 ```{r}
 # set.seed(12)
-N <- 50000
+N <- 5000
 v <- 0.99 # threshold for conditioning variable
+j <- 1 # conditioning variable
 sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-obsr <- observed_residuals(df=sims,given=1,v=v)
+pe <-  par_est(df=sims,v=v,given=j,margin = "Normal", method = "sequential2")
+obsr <- observed_residuals(df=sims,given=1,v=v,a=pe$a,b=pe$b)
 df <- data.frame(y=g_laplace(z=seq(-7.5,5,0.01),a=1/2),x=seq(-7.5,5,0.01))
 ggplot(obsr) + geom_density(mapping = aes(x=Z2)) + geom_line(data=df,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX("$Z_2$")) + ylab("Residual density function")
 ```
@@ -63,43 +65,46 @@ All of the methods use use sequential estimates for $\alpha$ and then $\beta$ wi
 Likelihood ratio test compares two models with confidence levels obtained from $\chi^2$ distribution. This restricts the analysis to a pairwise comparison. We use AIC and NLLH (no penalty for the number of parameters) as metrics for each of the models.
 
 ```{r}
-# L1 <- par_est(df=sims,v=v,given=c(1:5),margin = "Normal", method = "sequential2",keef_constraints = c(1,2))
-# L2 <- par_est(df=sims,v=v,given=c(1:5),margin = "GenGaus", method = "sequential2",keef_constraints = c(1,2))
-# L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGdelta", method = "sequential2",keef_constraints = c(1,2))
-# L4 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsig", method = "sequential2",keef_constraints = c(1,2))
-# L5 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
+L1 <- res_margin_par_est(obs_res = obsr,method="Normal")
+L2 <- res_margin_par_est(obs_res = obsr,method="GenGaus")
+L3 <- res_margin_par_est(obs_res = obsr,method="AGGdelta")
+L4 <- res_margin_par_est(obs_res = obsr,method="AGGsig")
+L5 <- res_margin_par_est(obs_res = obsr,method="AGG")
 ```
 
 Compare the likelihood values for each conditioning variable and for each conditioning site.
 
 ```{r}
-# L1 <- L1 %>% mutate(method="Normal",AIC=2*lik2+2*2)
-# L2 <- L2 %>% mutate(method="GenGaus",AIC=2*lik2+2*3)
-# L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
-# L4 <- L4 %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
-# L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
-# 
-# tmp <- rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
+d <- ncol(sims)
+L1 <- L1 %>% mutate(method="Normal",AIC=2*likres+2*2) %>% mutate(res=c(1:d)[-j]) %>% mutate(mu_agg=mu,sigl=sig,sigu=sig,deltal=2,deltau=2) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+L2 <- L2 %>% mutate(method="GenGaus",AIC=2*likres+2*3) %>% mutate(res=c(1:d)[-j]) %>% mutate(sigl=sig_agg,sigu=sig_agg,deltal=delta,deltau=delta) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*likres+2*4) %>% mutate(res=c(1:d)[-j]) %>% mutate(sigl=sig_agg,sigu=sig_agg) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+L4 <- L4 %>% mutate(method="AGGsig",AIC=2*likres+2*4) %>% mutate(res=c(1:d)[-j]) %>% mutate(deltal=delta,deltau=delta) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+L5 <- L5 %>% mutate(method="AGG",AIC=2*likres+2*5) %>% mutate(res=c(1:d)[-j]) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+
+tmp <- rbind(L1,L2,L3,L4,L5) %>% mutate(given=j) %>%  mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
 
 # explore fits in the first iteration
 tmp1giv2 <- tmp %>% filter(given=="1",res=="2")
 methods <- unique(tmp$method)
 tr1 <- data.frame(y=as.numeric(),x=as.numeric(),Method=as.character())
 nllv <- c()
-method_par <- data.frame("Normal" = c(as.numeric(tmp1giv2[1,7]),as.numeric(tmp1giv2[1,9]),as.numeric(tmp1giv2[1,9]),2,2),"GenGaus" = c(as.numeric(tmp1giv2[2,8]),as.numeric(tmp1giv2[2,10]),as.numeric(tmp1giv2[2,10]),as.numeric(tmp1giv2[2,13]),as.numeric(tmp1giv2[2,13])),"AGGdelta" = c(as.numeric(tmp1giv2[3,8]),as.numeric(tmp1giv2[3,10]),as.numeric(tmp1giv2[3,10]),as.numeric(tmp1giv2[3,14]),as.numeric(tmp1giv2[3,15])),"AGGsig" = c(as.numeric(tmp1giv2[4,8]),as.numeric(tmp1giv2[4,11]),as.numeric(tmp1giv2[4,12]),as.numeric(tmp1giv2[4,13]),as.numeric(tmp1giv2[4,13])),"AGG" = c(as.numeric(tmp1giv2[5,8]),as.numeric(tmp1giv2[5,11]),as.numeric(tmp1giv2[5,12]),as.numeric(tmp1giv2[5,14]),as.numeric(tmp1giv2[5,15])))
+method_par <- data.frame("Normal" = c(as.numeric(tmp1giv2[1,2:6])),"GenGaus" = c(as.numeric(tmp1giv2[2,2:6])),"AGGdelta" = c(as.numeric(tmp1giv2[3,2:6])),"AGGsig" = c(as.numeric(tmp1giv2[4,2:6])),"AGG" = c(as.numeric(tmp1giv2[5,2:6])))
 
+x <- seq(min(obsr[,1]),max(obsr[,1]),by=0.1)
 for (i in 1:5) {
   methodpar <- as.numeric(method_par[,i])
   tr1 <- rbind(tr1,data.frame(y=AGG_density(x=x,theta = methodpar),x=x,Method=names(method_par[i])))
 }
-a <- as.numeric(tmp1giv2[1,5])
-b <- as.numeric(tmp1giv2[1,6])
-Y_given1extreme <- sims %>% filter(sims[,1]>quantile(sims[,1],v))
-Y1 <- Y_given1extreme[,1]
-Y2 <- Y_given1extreme[,2]
-Z2 <- (Y2-a*Y1)/(Y1^b)
+# a <- as.numeric(pe[1,5])
+# b <- as.numeric(pe[1,6])
+# Y_given1extreme <- sims %>% filter(sims[,1]>quantile(sims[,1],v))
+# Y1 <- Y_given1extreme[,1]
+# Y2 <- Y_given1extreme[,2]
+# Z2 <- (Y2-a*Y1)/(Y1^b)
+Z2 <- as.numeric(unlist(obsr[,1]))
 
-pl <- ggplot(data.frame(x=Z2)) + geom_density(aes(x=x),linetype="dashed")
+pl <- ggplot(data.frame(x=Z2)) + geom_density(aes(x=Z2),linetype="dashed")
 pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)),aes(x=x,y=y,col=Method)) +
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
 ggsave(filename = "../Documents/AGG/density0.png",plot=pl1,height=5,width=8)
