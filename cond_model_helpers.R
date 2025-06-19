@@ -219,6 +219,9 @@ par_est <- function(df=sims,v=0.99,given=c(1),margin="AGG",method="two_step", a=
 
 # estimate residual margins
 res_margin_par_est <- function(obs_res,method="AGG") {
+  if (method=="Normal") {
+    tmp <- data.frame("likres"=numeric(),"mu"=numeric(),"sig"=numeric())
+  }
   if (method=="GenGaus") {
     tmp <- data.frame("likres"=numeric(),"mu_agg"=numeric(),"sig_agg"=numeric(),"delta"=numeric())
   }
@@ -233,7 +236,10 @@ res_margin_par_est <- function(obs_res,method="AGG") {
   }  
   for (i in 1:ncol(obs_res)) {
     Z2 <- as.numeric(unlist(obs_res[,i]))
-  
+  if (method=="Normal") {
+    opt <- optim(fn= NLL_norm,x=Z2,par=c(mean(Z2),sd(Z2)),control = list(maxit=2000),method = "Nelder-Mead")
+    tmp[nrow(tmp)+1,] <- c(opt$value,opt$par)
+    }
   if (method=="GenGaus") {
     opt <- optim(fn=NLL_GenGaus,x=Z2,par=c(mean(Z2),sd(Z2),1.5),control=list(maxit=2000),method = "SANN")
     tmp[nrow(tmp)+1,] <- c(opt$value,opt$par)
@@ -252,7 +258,7 @@ res_margin_par_est <- function(obs_res,method="AGG") {
     opt <- optim(fn=NLL_AGG,x=Z2,par=c(mean(Z2),sd(Z2),sd(Z2),1.2,1.8),control=list(maxit=2000),method = "Nelder-Mead")
     tmp[nrow(tmp)+1,] <- c(opt$value,opt$par)
   }
-  }
+  } # iteration over residual variables
   return(tmp)
 }
 
