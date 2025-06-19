@@ -165,7 +165,48 @@ ggsave(filename = "../Documents/AGG/AICZ3.png",plot=pAIC2,height=5,width=6)
 ggsave(filename = "../Documents/AGG/AICZ4.png",plot=pAIC3,height=5,width=6)
 ggsave(filename = "../Documents/AGG/AICZ5.png",plot=pAIC4,height=5,width=6)
 
-# 3c. 
+# 3c. likelihood ratio test
+#ablik <- c()
+GenGaus <- c()
+AGGsig <- c()
+AGGdelta <- c()
+AGGsigdelta <- c()
+res <- rep(c("Z2","Z3","Z4","Z5"),length(L1))
+for (i in 1:length(L1)) {
+  GenGaus <- tmp %>% filter(method=="GenGaus") %>% pull(likres)
+  AGGsig <- tmp %>% filter(method=="AGGsig") %>% pull(likres)  
+  AGGdelta <- tmp %>% filter(method=="AGGdelta") %>% pull(likres)
+  AGGsigdelta <- tmp %>% filter(method=="AGG") %>% pull(likres)
+}
+AGG_GG <- 2*((tmp %>% filter(method=="GenGaus",given=="1") %>% pull(likres))-(tmp %>% filter(method=="AGG",given=="1") %>% pull(likres)) )
+tmpagg <- data.frame(AGG_GG=AGG_GG,res=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(res),given=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(given))
+p1 <- ggplot(tmpagg,aes(x=res,y=AGG_GG))+
+  geom_boxplot() + xlab("Residuals") +
+  # ylab("Different scale vs shape")
+  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_l,\\hat{\\delta}_u)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$")) + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+  geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A") + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE)
+
+AGGsig_GG <- 2*((tmp %>% filter(method=="GenGaus",given=="1") %>% pull(likres))-(tmp %>% filter(method=="AGGsig",given=="1") %>% pull(likres)) )
+tmpagg <- data.frame(AGG_GG=AGGsig_GG,res=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(res),given=tmp %>% filter(method=="AGGsig",given=="1") %>% pull(given))
+p2 <- ggplot(tmpagg,aes(x=res,y=AGG_GG))+ 
+  geom_boxplot() + xlab("Residuals") +
+  # ylab("Different scale vs shape")
+  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_l,\\hat{\\sigma}_u,\\hat{\\delta}_c,\\hat{\\delta}_c)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$"))  + ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+  geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A") + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE)
+
+AGGdelta_GG <- 2*((tmp %>% filter(method=="GenGaus",given=="1") %>% pull(likres))-(tmp %>% filter(method=="AGGdelta",given=="1") %>% pull(likres)) )
+tmpagg <- data.frame(AGG_GG=AGGdelta_GG,res=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(res),given=tmp %>% filter(method=="GenGaus",given=="1") %>% pull(given))
+p3 <- ggplot(tmpagg,aes(x=res,y=AGG_GG))+
+  geom_boxplot() + xlab("Residuals") +
+  # ylab("Different scale vs shape")
+  ylab(TeX("$2(l_{AGG}(\\hat{\\mu},\\hat{\\sigma}_c,\\hat{\\sigma}_c,\\hat{\\delta}_l,\\hat{\\delta}_u)-l_{GG}(\\hat{\\mu},\\hat{\\sigma},\\hat{\\delta}))$"))+ ylim(c(0,max(2*(AGGsigdelta-GenGaus)))) +
+  geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A") + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE)
+p <- grid.arrange(p1,p2,p3,ncol=3)
+
+ggsave(filename = "../Documents/AGG/AGGmargin_likratiotest.png",plot=p,height=3,width=8)
+
+# 3c. count the minima of each method
+
 
 # 1. temperature large at Birmingham
 data_mod[data_mod]
