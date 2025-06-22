@@ -53,7 +53,7 @@ sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
 pe <-  par_est(df=sims,v=v,given=j,margin = "Normal", method = "sequential2")
-obsr <- observed_residuals(df=sims,given=1,v=v,a=pe$a,b=pe$b)
+obsr <- observed_residuals(df=sims,v=v,a=pe$a,b=pe$b)
 df <- data.frame(y=g_laplace(z=seq(-7.5,5,0.01),a=1/2),x=seq(-7.5,5,0.01))
 ggplot(obsr) + geom_density(mapping = aes(x=Z2)) + geom_line(data=df,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX("$Z_2$")) + ylab("Residual density function")
 ```
@@ -130,36 +130,40 @@ pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method))%>% filter
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
 ggsave(filename = "../Documents/AGG/density5.png",plot=pl1,height=5,width=8)
 
-
 ```
 
 Add 99 more iterations in a loop.
 
 ```{r}
-# for (i in 2:100) {
-# set.seed(12*i)
-# N <- 50000
-# v <- 0.99 # threshold for conditioning variable
-# sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
-#   link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
-#   apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
-# L1 <- par_est(df=sims,v=v,given=c(1:5),margin = "Normal", method = "sequential2",keef_constraints = c(1,2))
-# L2 <- par_est(df=sims,v=v,given=c(1:5),margin = "GenGaus", method = "sequential2",keef_constraints = c(1,2))
-# L3 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGdelta", method = "sequential2",keef_constraints = c(1,2))
-# L4 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGGsig", method = "sequential2",keef_constraints = c(1,2))
-# L5 <- par_est(df=sims,v=v,given=c(1:5),margin = "AGG", method = "sequential2",keef_constraints = c(1,2))
-# L1 <- L1 %>% mutate(method="Normal",AIC=2*lik2+2*2)
-# L2 <- L2 %>% mutate(method="GenGaus",AIC=2*lik2+2*3)
-# L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*lik2+2*4)
-# L4 <- L4 %>% mutate(method="AGGsig",AIC=2*lik2+2*4)
-# L5 <- L5 %>% mutate(method="AGG",AIC=2*lik2+2*5)
-# 
-# tmp <- rbind(tmp,rbind(L1,L2,L3,L4,L5) %>% mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res))))
-# 
-# }
+Nrep <- 5
+for (i in 2:Nrep) {
+set.seed(12*i)
+N <- 5000
+v <- 0.99 # threshold for conditioning variable
+sims <- generate_Y(N=N) %>% link_log(dep=1/2) %>%
+  link_log(dep=1/2) %>% link_log(dep=1/2) %>% link_log(dep=1/2) %>%
+  apply(c(1,2),FUN=frechet_laplace_pit) %>% as.data.frame()
+pe <-  par_est(df=sims,v=v,margin = "Normal", method = "sequential2")
+obsr <- observed_residuals(df=sims,v=v,a=pe$a,b=pe$b)
+
+L1 <- res_margin_par_est(obs_res = obsr,method="Normal")
+L2 <- res_margin_par_est(obs_res = obsr,method="GenGaus")
+L3 <- res_margin_par_est(obs_res = obsr,method="AGGdelta")
+L4 <- res_margin_par_est(obs_res = obsr,method="AGGsig")
+L5 <- res_margin_par_est(obs_res = obsr,method="AGG")
+
+d <- ncol(sims)
+L1 <- L1 %>% mutate(method="Normal",AIC=2*likres+2*2) %>% mutate(res=c(1:d)[-j]) %>% mutate(mu_agg=mu,sigl=sig,sigu=sig,deltal=2,deltau=2) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+L2 <- L2 %>% mutate(method="GenGaus",AIC=2*likres+2*3) %>% mutate(res=c(1:d)[-j]) %>% mutate(sigl=sig_agg,sigu=sig_agg,deltal=delta,deltau=delta) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+L3 <- L3 %>% mutate(method="AGGdelta",AIC=2*likres+2*4) %>% mutate(res=c(1:d)[-j]) %>% mutate(sigl=sig_agg,sigu=sig_agg) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+L4 <- L4 %>% mutate(method="AGGsig",AIC=2*likres+2*4) %>% mutate(res=c(1:d)[-j]) %>% mutate(deltal=delta,deltau=delta) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+L5 <- L5 %>% mutate(method="AGG",AIC=2*likres+2*5) %>% mutate(res=c(1:d)[-j]) %>% dplyr::select(c(likres,mu_agg,sigl,sigu,deltal,deltau,AIC,method,res))
+
+tmp <- rbind(L1,L2,L3,L4,L5) %>% mutate(given=j) %>%  mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
+}
 
 pAIC <- ggplot(tmp) + geom_boxplot(aes(y=AIC,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"))
-pNLL <- ggplot(tmp) + geom_boxplot(aes(y=lik2,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylab("Negative log-likelihood")
+pNLL <- ggplot(tmp) + geom_boxplot(aes(y=likres,x=res,col=method)) + facet_wrap(~given,nrow=1) + scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylab("Negative log-likelihood")
 pa <- ggplot(tmp) + geom_boxplot(aes(y=a,x=res)) + facet_wrap(~given,nrow=1)
 pb <- ggplot(tmp) + geom_boxplot(aes(y=b,x=res)) + facet_wrap(~given,nrow=1)
 psig <- ggplot(tmp %>% filter(given=="1")) + geom_boxplot(aes(y=sig_agg,x=res,col=method)) + facet_wrap(~given,nrow=1)
