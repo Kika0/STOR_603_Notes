@@ -4,6 +4,7 @@ library(sf) # for handling spatial sf objects
 library(tidyverse)
 library(latex2exp) # latex expressions for plot labels
 library(texmex) # for pollution data
+library(LaplacesDemon)
 
 theme_set(theme_bw())
 theme_replace(
@@ -50,12 +51,13 @@ Inverness_index <- find_site_index(site=Inverness,grid_uk = xyUK20_sf)
 tmp <- data_mod_Lap[,c(Birm_index,Glasgow_index,Inverness_index)]
 names(tmp) <- names(df_sites)[c(1,3,4)]
 q <- 0.9
+vL <- qlaplace(q)
 tmp$tf <- (tmp$London>vL)
 vL <- quantile(tmp[,1],q)
 p1 <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham),size=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-10,10) + ylim(-10,10) 
 p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness),size=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-10,10) + ylim(-10,10)  
-p1n <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham,col=tf),size=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-10,10) + ylim(-10,10) +geom_vline(xintercept=vL,color="#009ADA",linetype="dashed")
-p2n <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness,col=tf),size=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-10,10) + ylim(-10,10) +geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") 
+p1n <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham,col=tf),size=0.5) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-10,10) + ylim(-10,10) +geom_vline(xintercept=vL,color="#009ADA",linetype="dashed")
+p2n <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness,col=tf),size=0.5)  + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(-10,10) + ylim(-10,10) +geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") 
 p <- grid.arrange(p1,p2,ncol=2)
 ggsave(p,filename="../Documents/condmodel_illustration.png",width=8,height=4)
 pn <- grid.arrange(p1n,p2n,ncol=2)
@@ -63,7 +65,7 @@ ggsave(pn,filename="../Documents/condmodel_illustrationvL.png",width=8,height = 
 
 # 3a. update density plot -------
 v <- 0.7
-j <- 1
+j <- 2 # change j to repeat analysis cond. on other variables
 # transform to Laplace margins
 summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequential2")
@@ -87,7 +89,7 @@ L5 <- L5 %>% mutate(method="AGG",AIC=2*likres+2*5) %>% mutate(res=c(1:d)[-j]) %>
 tmp <- rbind(L1,L2,L3,L4,L5) %>% mutate(given=j) %>%  mutate(method=factor(method),given=factor(as.character(given)),res=factor(as.character(res)))
 
 # explore fits in the first iteration
-tmp1giv2 <- tmp %>% filter(given=="1",res=="2")
+tmp1giv2 <- tmp %>% filter(given==as.character(j),res==as.character(1))
 methods <- unique(tmp$method)
 tr1 <- data.frame(y=as.numeric(),x=as.numeric(),Method=as.character())
 nllv <- c()
@@ -102,28 +104,28 @@ for (i in 1:5) {
 pl <- ggplot(data.frame(x=Z2)) + geom_density(aes(x=Z2),linetype="dashed") + xlim(c(min(obsr[,1])-1,max(obsr[,1])+1))
 pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)),aes(x=x,y=y,col=Method)) +
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
-ggsave(filename = "../Documents/AGG/density0.png",plot=pl1,height=5,width=8)
+ggsave(filename = paste0("../Documents/AGG/density0_cond",j,".png"),plot=pl1,height=5,width=8)
 
 
 pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)) %>% filter(Method %in% c()),aes(x=x,y=y,col=Method)) +
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + ylim(c(0,0.5))
-ggsave(filename = "../Documents/AGG/density1.png",plot=pl1,height=5,width=8)
+ggsave(filename = paste0("../Documents/AGG/density1_cond",j,".png"),plot=pl1,height=5,width=8)
 
 pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)) %>% filter(Method %in% c("Normal")),aes(x=x,y=y,col=Method)) +
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + ylim(c(0,0.5))
-ggsave(filename = "../Documents/AGG/density2.png",plot=pl1,height=5,width=8)
+ggsave(filename = paste0("../Documents/AGG/density2_cond",j,".png"),plot=pl1,height=5,width=8)
 
 pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method))%>% filter(Method %in% c("Normal","GenGaus")),aes(x=x,y=y,col=Method)) +
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
-ggsave(filename = "../Documents/AGG/density3.png",plot=pl1,height=5,width=8)
+ggsave(filename = paste0("../Documents/AGG/density3_cond",j,".png"),plot=pl1,height=5,width=8)
 
 pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method))%>% filter(Method %in% c("Normal","GenGaus","AGGdelta")),aes(x=x,y=y,col=Method)) +
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
-ggsave(filename = "../Documents/AGG/density4.png",plot=pl1,height=5,width=8)
+ggsave(filename = paste0("../Documents/AGG/density4_cond",j,".png"),plot=pl1,height=5,width=8)
 
 pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method))%>% filter(Method %in% c("Normal","GenGaus","AGGdelta","AGGsig")),aes(x=x,y=y,col=Method)) +
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
-ggsave(filename = "../Documents/AGG/density5.png",plot=pl1,height=5,width=8)
+ggsave(filename = paste0("../Documents/AGG/density5_cond",j,".png"),plot=pl1,height=5,width=8)
 
 # 3b. explore bootstrap of summer residuals
 Nrep <- 100
@@ -154,16 +156,16 @@ for (i in 2:Nrep) {
 tmp <- rbind(tmp,tmp1)
 }
 
-plottitle <- TeX("Conditioning on $Y_3> F^{-1}_{O_3} (0.7)$")
+plottitle <- TeX("Conditioning on $O_3> F^{-1}_{O_3} (0.7)$")
 # do a series of plots for the presentation
 pAIC1 <- ggplot(tmp %>% filter(given=="1") %>% filter(res %in% c("2"))) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + xlab("Residuals") + ggtitle(plottitle) + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE) + ylim(c(500,750))
 pAIC2 <- ggplot(tmp %>% filter(given=="1") %>% filter(res %in% c("2","3"))) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + xlab("Residuals") + ggtitle(plottitle) + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE) + ylim(c(500,750))
 pAIC3 <- ggplot(tmp %>% filter(given=="1") %>% filter(res%in% c("2","3","4"))) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A"),drop=FALSE) + xlab("Residuals") + ggtitle(plottitle) + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE) + ylim(c(500,750))
 pAIC4 <- ggplot(tmp %>% filter(given=="1")) + geom_boxplot(aes(y=AIC,x=res,col=method)) +  scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + xlab("Residuals") + ggtitle(plottitle) + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE) + ylim(c(500,750))
-ggsave(filename = "../Documents/AGG/AICZ2.png",plot=pAIC1,height=5,width=6)
-ggsave(filename = "../Documents/AGG/AICZ3.png",plot=pAIC2,height=5,width=6)
-ggsave(filename = "../Documents/AGG/AICZ4.png",plot=pAIC3,height=5,width=6)
-ggsave(filename = "../Documents/AGG/AICZ5.png",plot=pAIC4,height=5,width=6)
+ggsave(filename = paste0("../Documents/AGG/AICZ2_cond",j,".png"),plot=pAIC1,height=5,width=6)
+ggsave(filename = paste0("../Documents/AGG/AICZ3_cond",j,".png"),plot=pAIC2,height=5,width=6)
+ggsave(filename = paste0("../Documents/AGG/AICZ4_cond",j,".png"),plot=pAIC3,height=5,width=6)
+ggsave(filename = paste0("../Documents/AGG/AICZ5_cond",j,".png"),plot=pAIC4,height=5,width=6)
 
 # 3c. likelihood ratio test
 #ablik <- c()
@@ -203,10 +205,18 @@ p3 <- ggplot(tmpagg,aes(x=res,y=AGG_GG))+
   geom_hline(yintercept = qchisq(0.95,2),linetype="dashed",col = "#66A64F") +  geom_hline(yintercept = qchisq(0.99,2),linetype="dashed", col= "#FDD10A") + scale_x_discrete(labels=c(TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$")),drop=FALSE)
 p <- grid.arrange(p1,p2,p3,ncol=3)
 
-ggsave(filename = "../Documents/AGG/AGGmargin_likratiotest.png",plot=p,height=3,width=8)
+ggsave(filename = paste0("../Documents/AGG/AGGmargin_likratiotest_cond",j,".png"),plot=p,height=3,width=8)
 
 # 3c. count the minima of each method
+label_legend <- c(TeX("$O_3$"),TeX("$NO_2$"),TeX("$NO$"),TeX("$SO_2$"),TeX("$PM_{10}$"))
+tmpc <- tmp %>% mutate(ite=rep(1:Nrep,each=20)) %>% group_by(ite,res) %>% slice(which.min(AIC))
+p <- ggplot(tmpc) + geom_bar(aes(x=method,fill=res)) +  scale_fill_manual(values=c("#C11432","#009ADA","#66A64F","#FDD10A"),labels=label_legend[-j],drop=FALSE) + labs(fill=c("Residual variable"))
+ggsave(filename = paste0("../Documents/AGG/countAIC_cond",j,".png"),plot=p,height=3,width=5)
 
+# 3d. combine AGG methods
+tmpc <- tmpc %>% mutate(method=recode(method,AGG="AGG",AGGsig="AGG",AGGdelta="AGG")) 
+p <- ggplot(tmpc) + geom_bar(aes(x=method,fill=res)) +  scale_fill_manual(values=c("#C11432","#009ADA","#66A64F","#FDD10A"),labels=label_legend[-j],drop=FALSE) + labs(fill=c("Residual variable"))
+ggsave(filename = paste0("../Documents/AGG/countAIC_AGGcond",j,".png"),plot=p,height=3,width=5)
 
 # 1. temperature large at Birmingham
-data_mod[data_mod]
+
