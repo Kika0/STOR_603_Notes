@@ -85,7 +85,7 @@ frechet_laplace_pit <- function(x) {
   return(y)
 }
 
-frechet_laplace_pit1 <- function(x) {
+frechet_laplace_pit <- function(x) {
   return(LaplacesDemon::qlaplace(evd::pfrechet(x))) 
 }
 
