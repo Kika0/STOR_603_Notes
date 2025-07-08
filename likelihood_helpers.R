@@ -341,12 +341,12 @@ Y_likelihood_fix_ab <- function(theta,a=1,b=0,df=Y_given_1_extreme,given=1,sim=2
 #' Currently under development of including constraints of Keef et al. (2013) on a,b.
 #'
 #' @param theta A set of 4 parameters: a,b,mu,sig.
-#' @param df A dataset with column names of paste0("Y",number).
+#' @param df A dataset with column names of paste0("Y",1:d).
 #' @param given A numeric specifying column name of cond. variable Y1.
 #' @param sim A numeric specifying column name of other variable Y2.
 #' @param v A numeric quantile threshold.
 #'
-#' @return Anumeric negative log-likelihood.
+#' @return A numeric negative log-likelihood.
 #' @export
 #'
 #' @examples
