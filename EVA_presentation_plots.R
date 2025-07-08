@@ -32,22 +32,18 @@ Dolgellau <- c(-3.8844362867080897,52.74213275545185)
 Bournemouth <- c(-1.8650607066137428,50.72173094587856)
 df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth)
 
-# 1. plot of Birmingham and Glasgow on original and on Laplace margins
+# 1. plot of London/Birmingham and London/Inverness on original margins -------
 Birm_index <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
-Glasgow_index <- find_site_index(site=Glasgow,grid_uk = xyUK20_sf)
-
-tmp <- data_mod[,c(Birm_index,Glasgow_index)]
-names(tmp) <- names(df_sites)[1:2]
-p1 <- ggplot(tmp) + geom_point(aes(x=Birmingham,y=Glasgow),size=0.5)
-tmpL <- data_mod_Lap[,c(Birm_index,Glasgow_index)]
-names(tmpL) <- names(df_sites)[1:2]
-p2 <- ggplot(tmpL) + geom_point(aes(x=Birmingham,y=Glasgow),size=0.5)
-p <- grid.arrange(p1,p2,ncol=2)
-ggsave(p,filename= "../Documents/Birmingham_Glasgow_original_Laplace.png",width=8,height=4)
-
-# 2. plot illustrating conditioning on a variable
 London_index <- find_site_index(site=London,grid_uk = xyUK20_sf)
 Inverness_index <- find_site_index(site=Inverness,grid_uk = xyUK20_sf)
+tmp <- data_mod[,c(Birm_index,Glasgow_index,Inverness_index)]
+names(tmp) <- names(df_sites)[c(1,3,4)]
+p1 <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham),size=0.5)
+p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness),size=0.5)
+p <- grid.arrange(p1,p2,ncol=2)
+ggsave(p,filename= "../Documents/London_Birmingham_Inverness_original.png",width=8,height=4)
+
+# 2. plot illustrating conditioning on a variable ------
 tmp <- data_mod_Lap[,c(Birm_index,Glasgow_index,Inverness_index)]
 names(tmp) <- names(df_sites)[c(1,3,4)]
 q <- 0.9
@@ -63,7 +59,25 @@ ggsave(p,filename="../Documents/condmodel_illustration.png",width=8,height=4)
 pn <- grid.arrange(p1n,p2n,ncol=2)
 ggsave(pn,filename="../Documents/condmodel_illustrationvL.png",width=8,height = 4)
 
-# 3a. update density plot -------
+# 3. illustrate pollution data for O3 conditioning on PM10 --------
+winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+vL <- quantile(winter$PM10,0.7)
+tmp <- winter %>% mutate(above_thres= as.character(winter$PM10>vL))
+vL1 <- quantile(summer$PM10,0.7)
+tmp1 <- summer %>% mutate(above_thres= as.character(summer$PM10>vL1))
+p <- grid.arrange(ggplot(tmp) + geom_point(aes(x=PM10,y=O3,col=above_thres),size=0.5,alpha=0.5) +
+                    scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
+                    geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
+                    xlab(TeX("$PM_{10}$")) + ylab(TeX("$O_3$"))+
+                    theme(legend.position = "none") ,
+                  ggplot(tmp1) + geom_point(aes(x=PM10,y=O3,col=above_thres),size=0.5,alpha=0.5) +
+                    scale_color_manual(values = c("FALSE"="black","TRUE" = "#C11432")) +
+                    geom_vline(xintercept=vL1,color="#C11432",linetype="dashed") +
+                    xlab(TeX("$PM_{10}$")) + ylab(TeX("$O_3$")) +
+                    theme(legend.position="none") ,ncol=2)
+ggsave(p,filename = "../Documents/PM10_O3_illustrate.png",height=3,width=6.5)
+
+# 4. density plot illustration for pollution data residual margins -------
 v <- 0.7
 j <- 4 # change j to repeat analysis cond. on other variables
 
@@ -72,24 +86,6 @@ summer_lap <- as.data.frame((summer %>% apply(c(2),FUN=row_number))/(nrow(summer
 pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequential2")
 obsress <- observed_residuals(df = summer_lap,given = j,v = v,a = pes$a,b=pes$b) 
 Z2 <- as.numeric(unlist(obsress[,1]))
-
-# illustrate data
-winter_lap <- as.data.frame((winter %>% apply(c(2),FUN=row_number))/(nrow(winter)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-vL <- quantile(winter$PM10,0.7)
-tmp <- winter %>% mutate(above_thres= as.character(winter$PM10>vL))
-vL1 <- quantile(summer$PM10,0.7)
-tmp1 <- summer %>% mutate(above_thres= as.character(summer$PM10>vL1))
-p <- grid.arrange(ggplot(tmp) + geom_point(aes(x=PM10,y=O3,col=above_thres),size=0.5,alpha=0.5) +
-               scale_color_manual(values = c("FALSE"="black","TRUE" = "#009ADA")) +
-               geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") +
-               xlab(TeX("$PM_{10}$")) + ylab(TeX("$O_3$"))+
-               theme(legend.position = "none") ,
-             ggplot(tmp1) + geom_point(aes(x=PM10,y=O3,col=above_thres),size=0.5,alpha=0.5) +
-               scale_color_manual(values = c("FALSE"="black","TRUE" = "#C11432")) +
-               geom_vline(xintercept=vL1,color="#C11432",linetype="dashed") +
-               xlab(TeX("$PM_{10}$")) + ylab(TeX("$O_3$")) +
-               theme(legend.position="none") ,ncol=2)
-ggsave(p,filename = "../Documents/PM10_O3_illustrate.png",height=3,width=6.5)
 
 # calculate parameters of each method
 L1 <- res_margin_par_est(obs_res = obsress,method="Normal")
@@ -148,7 +144,7 @@ pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method))%>% filter
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGGdelta"="#009ADA","AGGsig"="#66A64F","AGG"="#FDD10A")) + ylim(c(0,0.5))
 ggsave(filename = paste0("../Documents/AGG/density5_cond",j,".png"),plot=pl1,height=5,width=8)
 
-# 3b. explore bootstrap of summer residuals
+# 5a. explore bootstrap of summer residuals: boxplots of AIC --------
 Nrep <- 100
 for (i in 2:Nrep) {
   set.seed(12*i)
@@ -191,7 +187,7 @@ ggsave(filename = paste0("../Documents/AGG/AICZ3_cond",j,".png"),plot=pAIC2,heig
 ggsave(filename = paste0("../Documents/AGG/AICZ4_cond",j,".png"),plot=pAIC3,height=5,width=6)
 ggsave(filename = paste0("../Documents/AGG/AICZ5_cond",j,".png"),plot=pAIC4,height=5,width=6)
 
-# 3c. likelihood ratio test
+# 5b. likelihood ratio test ------
 #ablik <- c()
 GenGaus <- c()
 AGGsig <- c()
@@ -233,15 +229,12 @@ p <- grid.arrange(p1,p2,p3,ncol=3)
 
 ggsave(filename = paste0("../Documents/AGG/AGGmargin_likratiotest_cond",j,".png"),plot=p,height=3,width=8)
 
-# 3c. count the minima of each method
+# 5c. count the minima of each method ----
 tmpc <- tmp %>% mutate(ite=rep(1:Nrep,each=20)) %>% group_by(ite,res) %>% slice(which.min(AIC))
 p <- ggplot(tmpc) + geom_bar(aes(x=method,fill=res)) +  scale_fill_manual(values=c("#C11432","#009ADA","#66A64F","#FDD10A"),labels=label_residual_pollutant[-j],drop=FALSE) + labs(fill=c("Residual variable"))
 ggsave(filename = paste0("../Documents/AGG/countAIC_cond",j,".png"),plot=p,height=3,width=5)
 
-# 3d. combine AGG methods
+# 5d. combine AGG methods -----
 tmpc <- tmpc %>% mutate(method=recode(method,AGG="AGG",AGGsig="AGG",AGGdelta="AGG")) 
 p <- ggplot(tmpc) + geom_bar(aes(x=method,fill=res)) +  scale_fill_manual(values=c("#C11432","#009ADA","#66A64F","#FDD10A"),labels=label_residual_pollutant[-j],drop=FALSE) + labs(fill=c("Residual variable"))
 ggsave(filename = paste0("../Documents/AGG/countAIC_AGGcond",j,".png"),plot=p,height=3,width=5)
-
-# 1. temperature large at Birmingham
-
