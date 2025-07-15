@@ -179,6 +179,15 @@ qAGG <- function(p,theta) {
 }
 
 
+#' AGG density function
+#'
+#' @param x A vector of observed values.
+#' @param theta A vector of parameters of length 5.
+#'
+#' @returns A vector of density values.
+#' @export
+#'
+#' @examples
 AGG_density <- function(x,theta) {
   mu <- theta[1]
   sigl <- theta[2]
