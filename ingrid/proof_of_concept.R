@@ -17,7 +17,7 @@ theme_replace(
 # simulate from the copula
 cop_refit <- function(i) {
   set.seed(i*12)
-logistic <- evCopula(family = "tawn",param=c(1/2))
+logistic <- BiCop(family="104",par=1/2,par2=0)
 N <- 1000
 u <- copula::rCopula(copula = logistic,n = N)
 # record the likelihoods
@@ -95,31 +95,38 @@ cop_refit <- function(i,m1w,m1s,m2w,m2s,level="l1") {
   refitw <- RVineCopSelect(data=xw,Matrix = m2w$Matrix)
   refits <- RVineCopSelect(data=xs,Matrix = m2s$Matrix)
   } else if (level=="l3") {
+    # 3a. fit the simpler model M1
     refitm1w <- RVineCopSelect(data = xw,Matrix=m1w$Matrix)
     refitm1s <- RVineCopSelect(data = xs,Matrix=m1s$Matrix)
-    # 3a. record the likelihood under null hypothesis
+    # 3a. record the likelihood of the simpler model
     ll_m1w <- refitm1w$logLik
     ll_m1s <- refitm1s$logLik
     ll_m1 <- ll_m1w+ll_m1s
+    # 3b. fit the more complex model M2
     refitw <- RVineStructureSelect(data=xw)
     refits <- RVineStructureSelect(data=xs)
   }
   #ll_m1 <- RVineLogLik(data = rbind(xw,xs),RVM=rvine_join)$loglik
-  # 3b. record likelihood under alternative hypothesis
+  # 3b. record likelihood of the more complex model
    ll_m2w <- refitw$logLik
    ll_m2s <- refits$logLik
    ll_m2 <- ll_m2w+ll_m2s
   return(data.frame(ll_m1w,ll_m1s,ll_m1,ll_m2w,ll_m2s,ll_m2))
 }
 
-Nrep <- 500
-# select level of imposed structure for saving the plots
-l <- "l3"
+Nrep <- 50
+compare_levels <- function(Nrep=50,l="l3") {
 start_time <- Sys.time() 
 #model comparison for each level
-#tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1w=rvine_join,m1s=rvine_join,m2w=vcw3,m2s=vcs1,level=l))
-#tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1w=vcw3,m1s=vcs1,m2w=vcw2,m2s=vcs1,level=l))
+if (l=="l1") {
+tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1w=rvine_join,m1s=rvine_join,m2w=vcw3,m2s=vcs1,level=l))
+}
+if (l=="l2") {
+tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1w=vcw3,m1s=vcs1,m2w=vcw2,m2s=vcs1,level=l))
+}
+if (l=="l3") {
 tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1w=rvine_join,m1s=rvine_join,m2w=vcw1,m2s=vcs1,level=l))
+}
 end_time <- Sys.time() 
 end_time - start_time
 
@@ -148,4 +155,11 @@ pAIC <- ggplot(tmp) + geom_density(aes(x=AICdiff),fill="black",alpha=0.5) + xlab
 ggsave(p1,filename = paste0("../Documents/p1m",l,".png")) 
 ggsave(pW,filename = paste0("../Documents/pW",l,".png")) 
 ggsave(pAIC,filename = paste0("../Documents/pAICm",l,".png")) 
+}
 
+compare_levels(l="l3",Nrep = 100)
+
+# Analyse for one link: bivariate study ------------------------------------
+# simulate a sample from bivariate logistic
+
+BiCopS
