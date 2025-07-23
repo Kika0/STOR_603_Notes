@@ -4,6 +4,8 @@ library(latex2exp)
 library(gridExtra)
 library(VineCopula)
 library(texmex) # for pollution data
+library(copula)
+library(xtable)
 
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
@@ -14,10 +16,11 @@ theme_replace(
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
 
+# 0. proof of concept on the bivariate copula --------------------------
 # simulate from the copula
 cop_refit <- function(i) {
   set.seed(i*12)
-logistic <- BiCop(family="104",par=1/2,par2=0)
+logistic <- copula::evCopula(family = "huslerReiss",param=1/2)
 N <- 1000
 u <- copula::rCopula(copula = logistic,n = N)
 # record the likelihoods
@@ -45,7 +48,7 @@ ggsave(pAIC,filename = "../Documents/p4.png")
 
 sum(tmp$Wstar>0)
 
-# similar analysis for the vine copula models ----
+# 1. similar analysis for the vine copula models --------------------------------
 v <- 0.7
 j <- 1
 # transform to Laplace margins
@@ -137,7 +140,7 @@ tmp <- tmp
 tmp <- tmp %>% mutate(W=2*(ll_m2-ll_m1),AIC1=-2*ll_m1+2*npar1,AIC2=-2*ll_m2+2*npar2)
 tmp <- tmp %>% mutate(AICdiff=AIC2-AIC1)
 
-# improve the plots
+# plot log-likelihood comparison of M1 and M2, likelihood ratio test and AIC difference
 p1 <- ggplot(tmp %>% dplyr::select(c(ll_m2,ll_m1)) %>% pivot_longer(everything(),names_to = "Model")) + geom_density(aes(x=value,fill=Model),alpha=0.5)  +  scale_fill_manual(name="Model",
                       labels=c(TeX("$M_1$"),
                                TeX("$M_2$")),
@@ -160,6 +163,215 @@ ggsave(pAIC,filename = paste0("../Documents/pAICm",l,".png"))
 compare_levels(l="l3",Nrep = 100)
 
 # Analyse for one link: bivariate study ------------------------------------
-# simulate a sample from bivariate logistic
+# simulate a sample from bivariate Clayton
+Clay <- BiCop(family=3,par=1/2)
+N <- nrow(obsresw)
+x <- BiCopSim(N=N,family=3,par=1/2)
+# fit a copula with a fixed family
+m2 <- BiCopSelect(u1=x[,1],u2=x[,2])
+m1 <- BiCopSelect(u1=x[,1],u2=x[,2],familyset=c(3))
+# record the likelihood
+m1$logLik
+m2$logLik
+# explore all possible copulas
+BiCopCompare(u1=x[,1],u2=x[,2])
 
-BiCopS
+# repeat in a loop
+clay_comp <- function(i) {
+x <- BiCopSim(N=N,family=4,par=2)
+# fit a copula with a fixed family
+m2 <- BiCopSelect(u1=x[,1],u2=x[,2])
+m1 <- BiCopSelect(u1=x[,1],u2=x[,2],familyset=c(4))
+# record the likelihood
+return(c(m1$logLik,m2$logLik))
+}
+Nsim <- 1000
+X <- t(sapply(1:Nsim,clay_comp))
+X <- as.data.frame(X)
+names(X) <- c("ll_m1","ll_m2")
+tmp <- X %>% mutate(W=2*(ll_m1-ll_m2))
+pW <- ggplot(tmp[tmp$W!=0,]) + geom_density(aes(x=W),fill="black",alpha=0.5) + xlab("Likelihood ratio test")
+
+# as expected
+# perform considering different families
+
+
+cop_refit_l2study <- function(i,m1w,m1s,m2w,m2s,level="l1",tree=1) {
+  set.seed(i*12)
+  # 1. simulate from both vine copulas
+  xw <- RVineSim(N=nrow(obsresw),RVM=m1w)
+  xs <- RVineSim(N=nrow(obsress),RVM=m1s)
+  # 2. refit model for summer and winter separately
+    refitm1w <- RVineSeqEst(data = xw,RVM=m1w)
+    refitm1s <- RVineSeqEst(data = xs,RVM=m1s)
+    # 3a. record the likelihood under null hypothesis
+    ll_m1w <- refitm1w$pair.logLik
+    ll_m1s <- refitm1s$pair.logLik
+    ll_m1 <- ll_m1w+ll_m1s
+    refitw <- RVineCopSelect(data=xw,Matrix = m2w$Matrix, trunclevel = tree,selectioncrit = "logLik")
+    refits <- RVineCopSelect(data=xs,Matrix = m2s$Matrix, trunclevel = tree,selectioncrit = "logLik")
+  # 3b. record likelihood of the more complex model
+  ll_m2w <- refitw$pair.logLik
+  ll_m2s <- refits$pair.logLik
+  f_m2w <- refitw$family
+  f_m2s <- refits$family
+  ll_m2 <- ll_m2w+ll_m2s
+  return(list(ll_m1w,ll_m1s,ll_m1,ll_m2w,ll_m2s,ll_m2,f_m2w,f_m2s))
+}
+
+# testing inside the function
+# ll_m2-ll_m1
+# 
+# m1w <- vcw3
+# m1s <- vcs1
+# m2w <- vcw2
+# m2s <- vcs1
+
+# explore bivariate link
+b2s <- BiCopSelect(u1=xs[,3],u2=xs[,4],selectioncrit = "logLik")
+b1s <- BiCopSelect(u1=xs[,3],u2=xs[,4],familyset=c(20))
+b2w <- BiCopSelect(u1=xw[,3],u2=xw[,4],selectioncrit="logLik")
+b1w <- BiCopSelect(u1=xw[,3],u2=xw[,4],familyset=c(20))
+b1s$logLik
+b1w$logLik
+b2s$logLik
+b2w$logLik
+b1s$logLik+b1w$logLik
+
+# try only with the first tree
+# rerun the models from least to most restricted with truncation in T1
+# 1. separate estimates for winter and summer residuals
+vcw1 <- VineCopula::RVineStructureSelect(data=obsresw,selectioncrit = "AIC",trunclevel = 1)
+vcs1 <- VineCopula::RVineStructureSelect(data=obsress,selectioncrit = "AIC",trunclevel = 1)
+
+# 1a. separate estimates with iterative algorithm
+vcw1i <- VineCopula::RVineMLE(data=obsresw,RVM = vcw1)
+vcs1i <- VineCopula::RVineStructureSelect(data=obsress,selectioncrit = "AIC",trunclevel = 1)
+
+
+# 2. winter with imposed summer tree structure
+vcw2 <- VineCopula::RVineCopSelect(data=obsresw,Matrix=vcs1$Matrix,trunclevel=1)
+
+# 3. winter with imposed summer tree and family
+vcw3 <- VineCopula::RVineSeqEst(data=obsresw,RVM = vcs1)
+
+# 4. joined data
+#rvine_join <- VineCopula::RVineStructureSelect(data=rbind(obsresw,obsress)) 
+# 4. joined data with imposed summer structure
+rvine_join <- VineCopula::RVineSeqEst(data=rbind(obsresw,obsress),RVM=vcw3) 
+
+# explore truncated model simulation
+ll_m1w
+ll_m1s
+ll_m2w
+ll_m2s
+ll_m2-ll_m1
+
+# run may times
+Nrep <- 1000
+X <- lapply(1:Nrep,FUN=cop_refit_l2study,m1w=vcw3,m1s=vcs1,m2w=vcw2,m2s=vcs1,tree=1)
+# unlist to get the likelihoods of each link of both models
+m1w <- as.data.frame(t(sapply(X=X,FUN=function(x)x[[1]][4,1:3],simplify=TRUE)))
+m1s <- as.data.frame(t(sapply(X=X,FUN=function(x)x[[2]][4,1:3],simplify=TRUE)))
+m1sw <- as.data.frame(t(sapply(X=X,FUN=function(x)x[[3]][4,1:3],simplify=TRUE)))
+m2w <- as.data.frame(t(sapply(X=X,FUN=function(x)x[[4]][4,1:3],simplify=TRUE)))
+m2s <- as.data.frame(t(sapply(X=X,FUN=function(x)x[[5]][4,1:3],simplify=TRUE)))
+m2sw <- as.data.frame(t(sapply(X=X,FUN=function(x)x[[6]][4,1:3],simplify=TRUE)))
+fam2w <- as.data.frame(t(sapply(X=X,FUN=function(x)x[[7]][4,1:3],simplify=TRUE)))
+fam2s <- as.data.frame(t(sapply(X=X,FUN=function(x)x[[8]][4,1:3],simplify=TRUE)))
+names(m1w) <- names(m1s) <- names(m1sw) <- c("NO2_NO","NO2_PM10","SO2_PM10")
+names(m2w) <- names(m2s) <- names(m2sw) <- c("NO2_NO","NO2_PM10","SO2_PM10")
+names(fam2w) <- names(fam2s) <- c("NO2_NO","NO2_PM10","SO2_PM10")
+
+# plot log-likelihood difference
+tmpf <- rbind(fam2w,fam2s) %>% pivot_longer(cols = c("NO2_NO","NO2_PM10","SO2_PM10"),names_to = "link",values_to = "family_M2") %>% add_row(link=rep(NA,3*Nrep),family_M2=rep(NA,3*Nrep))
+tmp1 <- rbind(m1w %>% mutate(season="winter"),m1s %>% mutate(season="summer"),m1sw %>% mutate(season="both")) %>% pivot_longer(cols = c("NO2_NO","NO2_PM10","SO2_PM10"),names_to = "link",values_to = "llM1")
+tmp2 <- rbind(m2w,m2s,m2sw) %>% pivot_longer(cols = c("NO2_NO","NO2_PM10","SO2_PM10"),names_to = "link",values_to = "llM2")
+tmp <- cbind(tmp1,tmp2 %>% dplyr::select(-link),tmpf %>% dplyr::select(-link)) %>% mutate(W=2*(llM2-llM1))
+
+p1 <- ggplot(tmp) + geom_histogram(aes(x=W),fill="black",alpha=0.5) + xlab("Likelihood ratio test") + facet_wrap(c("season","link"))
+# plot only negative values
+p2 <- ggplot(tmp[tmp$W<(-10^(-6)),]) + geom_histogram(aes(x=W),fill="black",alpha=0.5) + xlab("Likelihood ratio test") + facet_wrap(c("season","link"))
+ggsave(p1,filename="../Documents/ratiotest_linkstudy.png")
+ggsave(p2,filename="../Documents/ratiotest_linkstudy_negative.png")
+
+# count zero likelihood difference
+xtable(tmp %>% filter(abs(W)<10^(-6)) %>% count(season,link))
+# count negative values
+xtable(tmp %>% filter((W)<(-10^(-6))) %>% count(season,link))
+
+# print the log-likelihoods of negative values
+tmp %>% filter(W<(-10^(-6))) %>% view()
+
+# plot a histogram of families
+p1 <- ggplot(tmp) + geom_bar(aes(x=factor(family_M2)),fill="black",alpha=0.5) + xlab("Likelihood ratio test") + facet_wrap(c("season","link"))
+
+# what families are picked for negative values?
+p1 <- ggplot(tmp %>% filter(W<(-10^(-6)),season !=c("both"))) + geom_bar(aes(x=factor(family_M2)),fill="black",alpha=0.5) + xlab("Counts of families for negative values of log-likelihood difference") + facet_wrap(c("link","season"),nrow=1)
+p1
+ggsave(p1,filename="../Documents/negativeis.png",height=3,width=10)
+which(tmp$W<(-10^(-6))) 
+
+
+# explore one index
+tmp <- tmp %>% mutate(iteration=rep(rep(1:Nrep,each=3),3))
+indeces <- tmp$iteration[(tmp$W<(-10^(-6)))]  
+#i <- indeces[1]
+i <- 806
+set.seed(i*12)
+m1w <- vcw3
+m1s <- vcs1
+m2w <- vcw2
+m2s <- vcs1
+# 1. simulate from both vine copulas
+xw <- RVineSim(N=nrow(obsresw),RVM=m1w)
+xs <- RVineSim(N=nrow(obsress),RVM=m1s)
+# 2. refit model for summer and winter separately
+refitm1w <- RVineSeqEst(data = xw,RVM=m1w)
+refitm1s <- RVineSeqEst(data = xs,RVM=m1s)
+# 3a. record the likelihood under null hypothesis
+ll_m1w <- refitm1w$pair.logLik
+ll_m1s <- refitm1s$pair.logLik
+ll_m1 <- ll_m1w+ll_m1s
+refitw <- RVineCopSelect(data=xw,Matrix = m2w$Matrix, trunclevel = tree,selectioncrit = "logLik")
+refits <- RVineCopSelect(data=xs,Matrix = m2s$Matrix, trunclevel = tree,selectioncrit = "logLik")
+# 3b. record likelihood of the more complex model
+ll_m2w <- refitw$pair.logLik
+ll_m2s <- refits$pair.logLik
+f_m2w <- refitw$family
+f_m2s <- refits$family
+ll_m2 <- ll_m2w+ll_m2s
+
+# explore the output
+refitm1w
+refitw
+ll_m2w
+ll_m1w
+refitm1s
+refits
+ll_m2s
+ll_m1s
+# explore bivariate link of mismatch
+b2s <- BiCopSelect(u1=xs[,1],u2=xs[,2],selectioncrit = "logLik")
+b1s <- BiCopSelect(u1=xs[,1],u2=xs[,2],familyset=c(214))
+b2s$logLik
+b1s$logLik
+# look at one more pair to verify
+b2w <- BiCopSelect(u1=xw[,1],u2=xw[,4],selectioncrit = "logLik")
+b1w <- BiCopSelect(u1=xw[,1],u2=xw[,4],familyset=c(214))
+b2w$logLik
+b1w$logLik
+
+# check where correct
+b2s <- BiCopSelect(u1=xs[,3],u2=xs[,4],selectioncrit = "logLik")
+b1s <- BiCopSelect(u1=xs[,3],u2=xs[,4],familyset=c(214))
+b2s$logLik
+b1s$logLik
+ll_m2s
+ll_m1s
+
+# as expected
+# explore index where both seasons fail
+
+
+
