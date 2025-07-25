@@ -474,6 +474,44 @@ ggplot() +
   ylab(TeX("$z_p$"))   
 ```
 
+### GPD return level plots
+
+```{r}
+f <- seq(0.999,0.01,-0.001)
+z <- GEV_inv(U=f,mle=fit$mle)
+df <- data.frame(p=f,z)
+#f <- p
+q <- gevq(fit$mle, 1 - f)
+d <- t(gev.rl.gradient(a = fit$mle, p = 1 - f))
+v <- apply(d, 1, q.form, m = fit$cov)
+CI <- data.frame(u= q + 1.96 * sqrt(v),l=q - 1.96 * sqrt(v))
+# add also 95% bootstrap interval
+ fit_boot <- data.frame(mu=numeric(),sig=numeric(),xi=numeric())
+ bf <- data.frame(f=f)
+  for (i in 1:100) {
+    # sample data
+    xs <- sample(x=x,size=length(x),replace=TRUE)
+    # fit GEV
+    fit <- gev.fit(x=xs,show=FALSE)
+    fit_boot[nrow(fit_boot) +1,] <- fit$mle
+    bf <- cbind(bf,GEV_inv(U=f,mle=fit$mle))
+  }
+zu <- as.numeric(bf[,2:101] %>% apply(c(1),FUN=function(x) {quantile(x=x,p=0.975)}))
+zl <- as.numeric(bf[,2:101] %>% apply(c(1),FUN=function(x) {quantile(x=x,p=0.025)}))
+df <- df %>% mutate(zu=zu,zl=zl)
+ggplot() +
+  geom_line(aes(x=-1/log(df$p),y=df$z)) +
+    geom_line(aes(x=-1/log(df$p),y=df$zu),col="#009ADA") +
+  geom_line(aes(x=-1/log(df$p),y=df$zl),col="#009ADA") +
+  geom_line(aes(x=-1/log(df$p),y=CI$u),col="#C11432",linetype="dashed") +
+  geom_line(aes(x=-1/log(df$p),y=CI$l),col="#C11432", linetype="dashed") +
+  geom_ribbon(aes(x=-1/log(df$p),ymin=CI$u,ymax=CI$l), fill="#C11432", alpha=0.2)+
+  geom_point(aes(x=-1/log(df1$q),y=df1$Data)) + coord_trans(x="log") +
+  scale_x_continuous( breaks=c(10,100,500,1000)) +
+  xlab("Return level (years)") +
+  ylab(TeX("$z_p$"))   
+```
+
 ### 5.2 Maxima of stationary sequences
 
 Simulate series $X_i=\max (Y_{i-1}, Y_i)$ where $Y$ has cdf $F_Y(y)= \exp \left\{ -\frac{1}{(a+1)y} \right\}$ for different values of $a$.
