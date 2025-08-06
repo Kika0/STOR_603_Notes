@@ -39,7 +39,7 @@ as_tibble(sims)
 
 ## Estimating parameters
 
-`margin="AGG"` means Normal distribution is used for the residual margin (estimates are columns `mu_agg`, `sig_l`, `sig_u`, `delta_l` and `delta_u`).
+`margin="Normal"` means Normal distribution is used for the residual margin as a temporary working assumption.
 
 `method=sequential2` mean that we fix $\beta=0$ and estimate $\hat{\alpha}$ (column `a` and `lika` for NLL (negative log-likelihood)), then fix $\alpha=\hat{\alpha}$ and estimate $\hat{\beta}$ (column `b` and `likb` for LL).
 
@@ -47,8 +47,14 @@ as_tibble(sims)
 
 `par_est()` function is from `cond_model_helpers.R` (a bit messy atm).
 
+`observed_residuals()` function is used to calculate the observed residuals using the data, threshold, index of conditioning variables and estimates of $\alpha$ and $\beta$ values.
+
+`res_margin_par_est()` function is used to estimate AGG parameters for an observed residual margin (estimates are columns `mu_agg`, `sig_l`, `sig_u`, `delta_l` and `delta_u`).
+
+`vinecop()` function from `rvinecopulib` package is used to fit a vine copula dependence structure to the observe dresiduals transformed onto uniform margins. 
+
 ```{r}
 par_est(df=sims,v=v,given=c(1),margin = "Normal", method = "sequential2", keef_constraints = c(1,2))
 ```
 
-
+## Simulating from the model

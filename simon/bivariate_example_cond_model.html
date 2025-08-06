@@ -384,24 +384,35 @@ as_tibble(sims)</code></pre>
 </div>
 <div id="estimating-parameters" class="section level2">
 <h2>Estimating parameters</h2>
-<p><code>margin=&quot;AGG&quot;</code> means Normal distribution is used for the
-residual margin (estimates are columns <code>mu_agg</code>,
-<code>sig_l</code>, <code>sig_u</code>, <code>delta_l</code> and
-<code>delta_u</code>).</p>
+<p><code>margin=&quot;Normal&quot;</code> means Normal distribution is used for
+the residual margin as a temporary working assumption.</p>
 <p><code>method=sequential2</code> mean that we fix <span class="math inline">\(\beta=0\)</span> and estimate <span class="math inline">\(\hat{\alpha}\)</span> (column <code>a</code> and
 <code>lika</code> for NLL (negative log-likelihood)), then fix <span class="math inline">\(\alpha=\hat{\alpha}\)</span> and estimate <span class="math inline">\(\hat{\beta}\)</span> (column <code>b</code> and
 <code>likb</code> for LL).</p>
 <p><code>keef_constraints=c(1,2)</code> means we use both Keef
 constraints as upper bound on <span class="math inline">\(\beta\)</span>, i.e. <span class="math inline">\(\beta_{max} = \min \left\{
-\beta_{constraint1},\beta_{constraint2} \right\}\)</span>.</p>
+\beta_{constraint1},\beta_{constraint2}  \right\}\)</span>.</p>
 <p><code>par_est()</code> function is from
 <code>cond_model_helpers.R</code> (a bit messy atm).</p>
+<p><code>observed_residuals()</code> function is used to calculate the
+observed residuals using the data, threshold, index of conditioning
+variables and estimates of <span class="math inline">\(\alpha\)</span>
+and <span class="math inline">\(\beta\)</span> values.</p>
+<p><code>res_margin_par_est()</code> function is used to estimate AGG
+parameters for an observed residual margin (estimates are columns
+<code>mu_agg</code>, <code>sig_l</code>, <code>sig_u</code>,
+<code>delta_l</code> and <code>delta_u</code>).</p>
+<p><code>vinecop()</code> function from <code>rvinecopulib</code>
+package is used to fit a vine copula dependence structure to the observe
+dresiduals transformed onto uniform margins.</p>
 <pre class="r"><code>par_est(df=sims,v=v,given=c(1),margin = &quot;Normal&quot;, method = &quot;sequential2&quot;, keef_constraints = c(1,2))</code></pre>
-<pre><code>## [[1]]
-##   lik     lika     likb     lik2         a         b         mu mu_agg
-## 1  NA 732.9798 732.0193 732.0193 0.9197428 0.1154856 -0.2414197     NA
-##         sig sig_agg sigl sigu delta deltal deltau given res
-## 1 0.9439742      NA   NA   NA    NA     NA     NA     1   2</code></pre>
+<pre><code>##   lik     lika     likb    lik2         a         b         mu mu_agg       sig
+## 1  NA 722.6254 722.0466 722.043 0.9163652 0.1024361 -0.2427542     NA 0.9361802
+##   sig_agg sigl sigu delta deltal deltau given res
+## 1      NA   NA   NA    NA     NA     NA     1   2</code></pre>
+</div>
+<div id="simulating-from-the-model" class="section level2">
+<h2>Simulating from the model</h2>
 </div>
 
 
