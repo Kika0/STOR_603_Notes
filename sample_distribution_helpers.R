@@ -85,9 +85,19 @@ frechet_laplace_pit <- function(x) {
   return(y)
 }
 
+#' @title PIT tranform
+#'
+#'
+#' @param x A numeric vector sampled from Fréchet distribution.
+#'
+#' @returns A numeric vector.
+#' @export
+#'
+#' @examples frechet_laplace_pit(x=c(1,2))
 frechet_laplace_pit <- function(x) {
   return(LaplacesDemon::qlaplace(evd::pfrechet(x))) 
 }
+
 
 empirical_laplace_pit2 <- function(x) {
   return(LaplacesDemon::qlaplace(rank(x)/(N+1))) 
