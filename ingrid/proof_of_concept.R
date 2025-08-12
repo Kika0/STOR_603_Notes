@@ -267,8 +267,8 @@ ll_m2w
 ll_m2s
 ll_m2-ll_m1
 
-# run may times
-Nrep <- 1000
+# run Nrep times
+Nrep <- 100
 X <- lapply(1:Nrep,FUN=cop_refit_l2study,m1w=vcw3,m1s=vcs1,m2w=vcw2,m2s=vcs1,tree=1)
 # unlist to get the likelihoods of each link of both models
 m1w <- as.data.frame(t(sapply(X=X,FUN=function(x)x[[1]][4,1:3],simplify=TRUE)))
@@ -316,6 +316,7 @@ which(tmp$W<(-10^(-6)))
 # explore one index
 tmp <- tmp %>% mutate(iteration=rep(rep(1:Nrep,each=3),3))
 indeces <- tmp$iteration[(tmp$W<(-10^(-6)))]  
+indeces
 #i <- indeces[1]
 i <- 806
 set.seed(i*12)
