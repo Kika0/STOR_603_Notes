@@ -1,6 +1,6 @@
-res_margin_par_est_ite <- function(df=Z,given=cond_site,N=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init,deltal_init=NULL,deltau_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
-  d <- ncol(df)
-  nv <- nrow(df)
+res_margin_par_est_ite <- function(data=Z,given=cond_site,N=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init,deltal_init=NULL,deltau_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
+  d <- ncol(data)
+  nv <- nrow(data)
   res <- 1:d
   mu_agg <- sigl <- sigu <- deltal <- deltau <- data.frame(matrix(ncol=(N+1),nrow = d))
   # calculate a with initial values for mu and sigma
@@ -23,14 +23,14 @@ res_margin_par_est_ite <- function(df=Z,given=cond_site,N=10, show_ite=FALSE,mu_
 
   for (i in 1:N) {
     for (j in 1:d) {
-      Z2 <- as.numeric(unlist(Z[,j]))
+      Z2 <- as.numeric(unlist(data[,j]))
       opt <- optim(fn=NLL_AGG,x=Z2,deltal_hat=as.numeric(deltal[1,i]),deltau_hat=as.numeric(deltau[1,i]),par=c(mean(Z2),sd(Z2),sd(Z2)),control=list(maxit=2000),method = "Nelder-Mead")
       mu_agg[j,i+1] <- opt$par[1]
       sigl[j,i+1] <- opt$par[2]
       sigu[j,i+1] <- opt$par[3]
     }
     # calculate deltal and deltau
-      opt <- optim(fn=NLL_AGG_deltas,df = Z,mu1=as.numeric(mu_agg[,i+1]),sigl1=as.numeric(sigl[,i+1]),sigu1=as.numeric(sigu[,i+1]),control=list(maxit=2000),par = c(as.numeric(deltal[1,i]),as.numeric(deltau[1,i])),method = "Nelder-Mead")
+      opt <- optim(fn=NLL_AGG_deltas,df = data,mu1=as.numeric(mu_agg[,i+1]),sigl1=as.numeric(sigl[,i+1]),sigu1=as.numeric(sigu[,i+1]),control=list(maxit=2000),par = c(as.numeric(deltal[1,i]),as.numeric(deltau[1,i])),method = "Nelder-Mead")
       deltal[,i+1] <- opt$par[1]
       deltau[,i+1] <- opt$par[2]
   }
@@ -126,7 +126,7 @@ t <- tmpsf %>% dplyr::select(sigu,sigu_ite) %>% pivot_longer(cols=c(sigu,sigu_it
 tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/sigma_upper_",cond_site_name,".png"),width=8,height=6)
 
 # write into a function ----------------------------------------------------
-iter_delta_site <- function(j,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf) {
+iter_delta_site <- function(j,Nite=50,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf) {
   q <- 0.9
   cond_site_name <- names(sites)[j]  
   est_site <- par_est %>% filter(cond_site==cond_site_name)
@@ -135,8 +135,7 @@ iter_delta_site <- function(j,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,pa
   Z <- observed_residuals(df = data, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
   
   # estimate parameters iteratively --------------------------------------------
-  Nite <- 50
-  tmp <- res_margin_par_est_ite(df=Z,show_ite = TRUE,N=Nite)
+  tmp <- res_margin_par_est_ite(data=Z,show_ite = TRUE,N=Nite)
   # plot delta estimates
   tmp_delta <- rbind(data.frame(delta=as.numeric(unlist(tmp[[4]][1,])),iteration=1:(Nite+1),parameter = "delta_lower"),
                      data.frame(delta=as.numeric(unlist(tmp[[5]][1,])),iteration=1:(Nite+1),parameter = "delta_upper"))
@@ -193,12 +192,17 @@ iter_delta_site_wrapper <- function(i) {
 sapply(10,iter_delta_site,simplify=FALSE)
 result <- sapply(1:ncol(df_sites),iter_delta_site,simplify = FALSE)
 
-deltal <- c()
+deltal <- deltau <-  c()
 for (i in 1:12) {
-  deltal[i] <- result[,i]$deltal_ite[1]
+  deltal[i] <- result[[i]]$deltal_ite[1]
+  deltau[i] <- result[[i]]$deltau_ite[1]
 }
 
-deltau <- c()
-
+deltaldf <- cbind(data.frame(value=deltal),as.data.frame(t(df_sites))) %>% mutate(parameter="deltal")
+deltaudf <- cbind(data.frame(value=deltau),as.data.frame(t(df_sites))) %>% mutate(parameter="deltau")
+deltasf <- st_as_sf(rbind(deltaldf,deltaudf),coords =c(2:3))
 # plot deltas on a spatial scale
-
+st_crs(deltasf) <- st_crs(est_all_sf)
+t <- tm_shape(est_all_sf) + tm_dots(size=0.2,fill_alpha=0.3) +  tm_shape(deltasf) + tm_dots(fill="value",size=1) + tm_facets(by="parameter") +
+tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/all_deltas.png"),width=8,height=6)
