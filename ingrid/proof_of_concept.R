@@ -20,8 +20,6 @@ theme_replace(
 # simulate from the copula
 cop_refit <- function(i) {
   set.seed(i*12)
-logistic <- copula::evCopula(family = "huslerReiss",param=1/2)
-reprod <- BiCop(family= c(214), par=2.47,par2=0.73)
 N <- round(nrow(winter)*0.3)
 u <- BiCopSim(N=N,family=c(214),par=2.47,par2=0.73)
 # record the likelihoods
@@ -39,10 +37,34 @@ return(data.frame(llm1=llm1,family1=f1,llm1r=llm1r,family1rotfalse=f1r,llm2=llm2
 Nrep <- 1000
 tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit))
 
+# repeat with another link
+cop_refit <- function(i) {
+  set.seed(i*12)
+  N <- round(nrow(winter)*0.3)
+  u <- BiCopSim(N=N,family=c(5),par=3.08)
+  # record the likelihoods
+  m1 <- BiCopSelect(u1=u[,1],u2=u[,2],selectioncrit = "logLik",familyset = c(5))
+  m1r <- BiCopSelect(u1=u[,1],u2=u[,2],selectioncrit = "logLik",familyset = c(5),rotations=FALSE)
+  m2 <- BiCopSelect(u1=u[,1],u2=u[,2],selectioncrit = "logLik")
+  llm1 <- m1$logLik
+  f1 <- m1$familyname
+  llm1r <- m1r$logLik
+  f1r <- m1r$familyname
+  llm2 <- m2$logLik
+  f2 <- m2$familyname
+  t <- cor(u,method = "kendall")[1,2]
+  return(data.frame("tau"=t,llm1=llm1,family1=f1,llm1r=llm1r,family1rotfalse=f1r,llm2=llm2,family2=f2))
+}
+Nrep <- 1000
+tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit))
+
 # visualise the results
 tmp <- tmp %>% mutate(m2m1=(llm2-llm1),m2m1r=llm2-llm1r)
 summary(tmp)
-tmp %>% filter(m2m1r<0) %>% view()
+library(xtable)
+xtable(tmp %>% filter(m2m1r<0))
+xtable(tmp %>% filter(m2m1r<0))
+
 
 pll <- ggplot(tmp) + geom_histogram(aes(x=ll)) + xlab("Log likelihood of fitted parameter")
 plltrue <- ggplot(tmp) + geom_histogram(aes(x=lltrue)) + xlab("Log likelihood of true parameter")
