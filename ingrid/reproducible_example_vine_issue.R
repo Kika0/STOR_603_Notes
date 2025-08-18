@@ -225,7 +225,7 @@ ll_m2w
 
 # 3. verify bivariate link estimation for the link in the first tree ---
 b2w <- BiCopSelect(u1=xw[,1],u2=xw[,2],selectioncrit = "logLik")
-b1w <- BiCopSelect(u1=xw[,1],u2=xw[,2],familyset=c(214))
+b1w <- BiCopSelect(u1=xw[,1],u2=xw[,2],familyset=c(214),rotations=FALSE)
 BiCopCompare(u1=xw[,1],u2=xw[,2])
 b2w
 b1w
@@ -238,7 +238,7 @@ b1w$logLik
 # using vine copulas should give us the same answer
 x <- matrix(c(2,1,0,1),ncol=2)
 m2 <- VineCopula::RVineCopSelect(data=xw[,1:2],selectioncrit = "logLik",Matrix=x)
-m2a <- VineCopula::RVineCopSelect(data=xw[,1:2],selectioncrit = "logLik",Matrix=x,familyset = c(214))
+m2a <- VineCopula::RVineCopSelect(data=xw[,1:2],selectioncrit = "logLik",Matrix=x,familyset = c(214),rotations = FALSE)
 m1 <- VineCopula::RVineSeqEst(data=xw[,1:2],RVM = m2a)
 m2$logLik
 m2a$logLik
