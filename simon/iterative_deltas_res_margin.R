@@ -206,3 +206,88 @@ st_crs(deltasf) <- st_crs(est_all_sf)
 t <- tm_shape(est_all_sf) + tm_dots(size=0.2,fill_alpha=0.3) +  tm_shape(deltasf) + tm_dots(fill="value",size=1) + tm_facets(by="parameter") +
 tm_layout(legend.position=c("right","top"),legend.height = 12)
 tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/all_deltas.png"),width=8,height=6)
+
+# explore points above and below a line -----------------------
+is_above <- function(x,y,x1,x2,y1,y2) { y>(y2-y1)/(x2-x1)*(x-x1)+y1
+}
+plot_is_above <- function(x1,x2,y1,y2,cond_var) {
+  sites <- c("Birmingham", "Glasgow", "London")
+  df <- data.frame(x=d[[cond_var]],y=x[[cond_var]],z=as.character(is_above(d[[cond_var]],x[[cond_var]],x1=x1,x2=x2,y1=y1,y2=y2)))
+  p <- ggplot(df) + 
+    geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
+    geom_point(aes(x=x,y=y,colour=factor(z))) + 
+    ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(sites[cond_var])
+  return(p)
+}
+sigu_above_below <- function(cond_site_name = "Birmingham",result.=result,x1,x2,y1,y2) {
+  # filter conditioning site
+  cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+  cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
+ tmpsf <- result.[[ which(names(df_sites)==cond_site_name) ]]
+  
+  sigud <- data.frame(sigu=tmpsf$sigu_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% mutate(is.above=is_above(x=dist,y=sigu,x1=x1,y1=y1,x2=x2,y2=y2))
+ p <- ggplot(sigud) + 
+   geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
+   geom_point(aes(x=dist,y=sigu,colour=factor(is.above))) + 
+   ylab(TeX("$\\sigma_u$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(cond_site_name)
+   ggsave(p,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_sigu_distance_",cond_site_name,".png")) 
+  # plot also spatially
+   sigusf <- cbind(tmpsf,sigud %>% select(dist,is.above))
+   t <- tm_shape(sigusf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name)
+   tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_sigu_map_",cond_site_name,".png")) 
+   # plot also distance as control?
+}
+
+x1 <- 0
+x2 <- 600000
+y1 <- 0
+y2 <- 5
+
+# look at a few sites
+sigu_above_below(cond_site_name = "Birmingham",x1=0,x2=600000,y1=0.5,y2=3)
+sigu_above_below(cond_site_name = "Glasgow",x1=0,x2=600000,y1=1,y2=2.2)
+sigu_above_below(cond_site_name = "London",x1=0,x2=600000,y1=0.5,y2=2.5)
+sigu_above_below(cond_site_name = "Inverness",x1=0,x2=600000,y1=0.8,y2=1.5)
+sigu_above_below(cond_site_name = "Lancaster",x1=0,x2=600000,y1=1,y2=2.2)
+sigu_above_below(cond_site_name = "Newcastle",x1=0,x2=600000,y1=1,y2=1.5)
+sigu_above_below(cond_site_name = "Cromer",x1=0,x2=600000,y1=1.2,y2=1.1)
+sigu_above_below(cond_site_name = "Hull",x1=0,x2=600000,y1=1,y2=1.05)
+sigu_above_below(cond_site_name = "Lowestoft",x1=0,x2=800000,y1=1.35,y2=1.25)
+sigu_above_below(cond_site_name = "Truro",x1=0,x2=900000,y1=1.1,y2=1.8)
+sigu_above_below(cond_site_name = "Dolgellau",x1=0,x2=600000,y1=0.9,y2=2.5)
+sigu_above_below(cond_site_name = "Bournemouth",x1=0,x2=600000,y1=1.5,y2=2)
+
+
+
+# repeat for beta
+beta_above_below <- function(cond_site_name = "Birmingham",est_all_sf.=est_all_sf,x1,x2,y1,y2) {
+  # filter conditioning site
+  cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+  cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
+  tmpsf <- est_all_sf %>% filter(cond_site==cond_site_name)
+  
+  betad <- data.frame(b=tmpsf$b,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% mutate(is.above=is_above(x=dist,y=b,x1=x1,y1=y1,x2=x2,y2=y2))
+  p <- ggplot(betad) + 
+    geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
+    geom_point(aes(x=dist,y=b,colour=factor(is.above))) + 
+    ylab(TeX("$\\beta$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(cond_site_name)
+  ggsave(p,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_beta_distance_",cond_site_name,".png")) 
+  # plot also spatially
+  betasf <- cbind(tmpsf,betad %>% select(dist,is.above))
+  t <- tm_shape(betasf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name)
+  tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_beta_map_",cond_site_name,".png")) 
+}
+
+
+beta_above_below(cond_site_name = "Birmingham",x1=0,x2=600000,y1=0.2,y2=0.5)
+beta_above_below(cond_site_name = "Glasgow",x1=0,x2=600000,y1=0.2,y2=0.5)
+beta_above_below(cond_site_name = "London",x1=0,x2=600000,y1=0.2,y2=0.5)
+beta_above_below(cond_site_name = "Inverness",x1=0,x2=600000,y1=0.2,y2=0.5)
+beta_above_below(cond_site_name = "Lancaster",x1=0,x2=600000,y1=0.3,y2=0.4)
+beta_above_below(cond_site_name = "Newcastle",x1=0,x2=600000,y1=0.3,y2=0.4)
+beta_above_below(cond_site_name = "Cromer",x1=0,x2=600000,y1=0.2,y2=0.5)
+beta_above_below(cond_site_name = "Hull",x1=0,x2=600000,y1=0.25,y2=0.3)
+beta_above_below(cond_site_name = "Lowestoft",x1=0,x2=800000,y1=0.3,y2=0.4)
+beta_above_below(cond_site_name = "Truro",x1=0,x2=900000,y1=0.3,y2=0.4)
+beta_above_below(cond_site_name = "Dolgellau",x1=0,x2=600000,y1=0.2,y2=0.5)
+beta_above_below(cond_site_name = "Bournemouth",x1=0,x2=600000,y1=0.25,y2=0.5)
