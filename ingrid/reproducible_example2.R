@@ -15,7 +15,7 @@ theme_replace(
   panel.border = element_rect(colour = "black", fill = NA) )
 
 # proof of concept on the bivariate copula --------------------------
-# 1. try with one link
+# 1. try with one link (VineCopula)
 cop_refit <- function(i) {
   set.seed(i*12)
   N <- round(nrow(winter)*0.3)
@@ -32,16 +32,16 @@ cop_refit <- function(i) {
   f2 <- m2$familyname
   return(data.frame(llm1=llm1,family1=f1,llm1r=llm1r,family1rotfalse=f1r,llm2=llm2,family2=f2))
 }
-Nrep <- 10
+Nrep <- 1000
 tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit))
 
-# repeat with another link
+# 2a. repeat with another link (VineCopula)-------------------------------
 cop_refit <- function(i) {
   set.seed(i*12)
   N <- round(nrow(winter)*0.3)
   u <- BiCopSim(N=N,family=c(5),par=3.08)
   # record the likelihoods
-  m1 <- BiCopSelect(u1=u[,1],u2=u[,2],selectioncrit = "logLik",familyset = c(5))
+  m1 <- BiCopSelect(u1=u[,1],u2=u[,2],selectioncrit = "logLik",familyset = c(5),indeptest = TRUE)
   m1r <- BiCopSelect(u1=u[,1],u2=u[,2],selectioncrit = "logLik",familyset = c(5),rotations=FALSE)
   m2 <- BiCopSelect(u1=u[,1],u2=u[,2],selectioncrit = "logLik")
   llm1 <- m1$logLik
@@ -55,24 +55,21 @@ cop_refit <- function(i) {
 }
 
 tmp1 <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit))
-
 # visualise the results
 tmp1 <- tmp1 %>% mutate(m2m1=(llm2-llm1),m2m1r=llm2-llm1r)
 summary(tmp1)
-library(xtable)
-xtable(tmp1 %>% filter(m2m1r<0))
-xtable(tmp1 %>% filter(m2m1r<0))
-tmp1[tmp$family1==c("indep"),]
 
-# repeat with rvinecopulib package
+tmp1 %>% filter(m2m1r<0)
+
+# 2b. repeat with rvinecopulib package------------------------------------
 cop_refit <- function(i) {
   set.seed(i*12)
   N <- round(nrow(winter)*0.3)
   u <- BiCopSim(N=N,family=c(5),par=3.08)
   # record the likelihoods
-  m1 <- bicop(data=u,selcrit = "loglik",family_set = "frank")
-  m1r <- bicop(data=u,selcrit = "loglik",family_set = "frank",allow_rotations=FALSE)
-  m2 <- bicop(data=u,selcrit = "loglik",family_set = c("onepar","twopar"))
+  m1 <- bicop(data=u,selcrit = "loglik",family_set = "frank",presel = FALSE)
+  m1r <- bicop(data=u,selcrit = "loglik",family_set = "frank")
+  m2 <- bicop(data=u,selcrit = "loglik",family_set = c("onepar","twopar","threepar"))
   llm1 <- m1$loglik
   f1 <- m1$family
   llm1r <- m1r$loglik
@@ -86,9 +83,11 @@ cop_refit <- function(i) {
 
 tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit))
 
-# visualise the results
+# show the results
 tmp <- tmp %>% mutate(m2m1=(llm2-llm1),m2m1r=llm2-llm1r)
 summary(tmp)
-library(xtable)
-xtable(tmp[tmp1$m2m1r<0,])
+tmp[tmp1$m2m1r<0,]
+# check also the other way around
+tmp1[tmp$family1==c("indep"),]
+tmp[tmp$family1rotfalse=="indep",]
 
