@@ -8,6 +8,9 @@ library(copula)
 library(xtable)
 library(rvinecopulib)
 
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
+
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
 theme_replace(
@@ -467,21 +470,14 @@ all_c_vine_matrices <- function(d)
   
   matrix.list
 }
-all_c_vine_matrices(4)
+
 # keep reverse for now as a check
 giventree_fitfamilies <- function(data=obsresw,tree_struc) {
-  # define matrix with default order
-  dvine_default <- matrix(data=c(1,0,0,0,4,2,0,0,3,4,3,0,2,3,4,4),nrow=4,byrow = TRUE)
-  cvine_default <- all_c_vine_matrices(4)[[1]]
-    # order the elements
-  cvine_mat <- matrix(case_match(as.numeric(cvine_default),1~tree1[1],2~tree1[2],3~tree1[3],4~tree1[4],0~0),nrow = 4)
   # estimate the family and parameters for dvine_mat tree structure
  y <-  VineCopula::RVineCopSelect(data=data,Matrix=tree_struc,selectioncrit = "logLik")
  return(list(vc=y,ll=y$logLik))
 }
 # print all possible c vines and d vines
-
-
 all_d_vine_matrices <- function(d=4) {
   # define matrix with default natural order
   dvine_default <- matrix(data=c(1,0,0,0,4,2,0,0,3,4,3,0,2,3,4,4),nrow=4,byrow = TRUE)
@@ -496,7 +492,7 @@ cvines <- all_c_vine_matrices(4)
 dvines <- all_d_vine_matrices(4)
 allvines <- c(cvines,dvines)
 
-dvine_winter <- lapply(all_tree1s,MARGIN = c(1),FUN = giventree_fitfamilies,data=obsresw)
+dvine_winter <- lapply(allvines,FUN = giventree_fitfamilies,data=obsresw)
 # print log-likelihood of each permutation
 loglikw <- sapply(X=dvine_winter,FUN=function(x)x[[2]],simplify=TRUE)
 
@@ -505,7 +501,7 @@ vcw1 <- VineCopula::RVineStructureSelect(data=obsresw,selectioncrit = "logLik")
 dvine_winter[[2]]
 
 # repeat for summer
-dvine_summer <- apply(all_tree1s,MARGIN = c(1),FUN = giventree_fitfamilies,data=obsress)
+dvine_summer <- lapply(allvines,FUN = giventree_fitfamilies,data=obsresw)
 # print log-likelihood of each permutation
 logliks <- sapply(X=dvine_summer,FUN=function(x)x[[2]],simplify=TRUE)
 
@@ -518,7 +514,7 @@ dvine_summer[[8]]
 # print best fitting tree structure for summer and winter
 
 # compare with joint fit and separate fits
-tree_select <- function(j,winterlap=winter_lap,summerlap=summer_lap) {
+tree_select <- function(j,winterlap=winter_lap,summerlap=summer_lap,vines=allvines) {
   # calculate the observed residuals
   v <- 0.7
   pew <-  par_est(df=winterlap,v=v,given=j,margin = "Normal", method = "sequential2")
@@ -527,34 +523,39 @@ tree_select <- function(j,winterlap=winter_lap,summerlap=summer_lap) {
   pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequential2")
   obsress <- (observed_residuals(df = summerlap,given = j,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summerlap)*(1-v)+1)
   # fit overall vine copula
-  dvine_winter <- apply(all_tree1s,MARGIN = c(1),FUN = giventree_fitfamilies,data=obsresw)
+  vine_winter <- lapply(vines,FUN = giventree_fitfamilies,data=obsresw)
   # print log-likelihood of each permutation
-  loglikw <- sapply(X=dvine_winter,FUN=function(x)x[[2]],simplify=TRUE)
+  loglikw <- sapply(X=vine_winter,FUN=function(x)x[[2]],simplify=TRUE)
   
   # repeat for summer
-  dvine_summer <- apply(all_tree1s,MARGIN = c(1),FUN = giventree_fitfamilies,data=obsress)
-  # print log-likelihood of each permutation
-  logliks <- sapply(X=dvine_summer,FUN=function(x)x[[2]],simplify=TRUE)
+  vine_summer <- lapply(vines,FUN = giventree_fitfamilies,data=obsress)
+  logliks <- sapply(X=vines,FUN=function(x)x[[2]],simplify=TRUE)
   
  i <-  which.max(loglikw+logliks)
- for i in (1:24) {
+ vine_winter_order <- c()
+ for (i in c(1:24)) {
    num <- c(1:24)[(loglikw+logliks)== sort(loglikw+logliks,decreasing=TRUE)[i]]
- dvine_winter[[ ]]
-   
+ vine_winter_order[[i]] <- vine_winter[[ num]]
  }
   
- vc_ws <-  dvine_winter[[i]]
+ vc_ws <-  vine_winter[[i]]
  
- # compare with winter fitted vine copulas
-vcw <- VineCopula::RVineStructureSelect(data=obsresw,selectioncrit = "logLik")
- vcwd <- dvine_winter[[which.max(loglikw)]]
+ vcwd <- vine_winter[[which.max(loglikw)]]
+ vcw <- VineCopula::RVineStructureSelect(data=obsresw,selectioncrit = "logLik")
+ 
  vcs <- VineCopula::RVineStructureSelect(data=obsress,selectioncrit = "logLik")
- vc_join <- VineCopula::RVineStructureSelect(data=rbind(obsresw,obsress)) 
-  return(list(vcw,vcwd,vcs,vc_ws,vc_join))
+ vcsd <- vine_summer[[which.max(logliks)]]
+  vc_join <- VineCopula::RVineStructureSelect(data=rbind(obsresw,obsress)) 
+  return(list(vcw,vcwd,vcs,vc_ws,vc_join,vine_winter_order))
 }
 
-x <- tree_select(j=5)
+j <- 3
+x <- tree_select(j=j)
+# compare with winter fitted vine copulas
+vcw <- VineCopula::RVineStructureSelect(data=obsresw,selectioncrit = "logLik")
+
 x[[1]]
 x[[1]]$logLik
 x[[2]]
 x[[3]]
+
