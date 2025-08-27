@@ -228,13 +228,13 @@ sigu_above_below <- function(cond_site_name = "Birmingham",result.=result,x1,x2,
   sigud <- data.frame(sigu=tmpsf$sigu_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% mutate(is.above=is_above(x=dist,y=sigu,x1=x1,y1=y1,x2=x2,y2=y2))
  p <- ggplot(sigud) + 
    geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
-   geom_point(aes(x=dist,y=sigu,colour=factor(is.above))) + 
-   ylab(TeX("$\\sigma_u$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(cond_site_name)
-   ggsave(p,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_sigu_distance_",cond_site_name,".png")) 
+   geom_point(aes(x=dist,y=sigu,col=factor(is.above)),size=0.5) + 
+   ylab(TeX("$\\sigma_u$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(cond_site_name) + guides(col="none")
+   ggsave(p,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_sigu_distance_",cond_site_name,".png"),width=4,height=4) 
   # plot also spatially
    sigusf <- cbind(tmpsf,sigud %>% select(dist,is.above))
-   t <- tm_shape(sigusf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name)
-   tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_sigu_map_",cond_site_name,".png")) 
+   t <- tm_shape(sigusf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name) + tm_layout(legend.position=c("right","top"),legend.height = 12) 
+   tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_sigu_map_",cond_site_name,".png"),width=3,height=6) 
    # plot also distance as control?
 }
 
@@ -257,9 +257,7 @@ sigu_above_below(cond_site_name = "Truro",x1=0,x2=900000,y1=1.1,y2=1.8)
 sigu_above_below(cond_site_name = "Dolgellau",x1=0,x2=600000,y1=0.9,y2=2.5)
 sigu_above_below(cond_site_name = "Bournemouth",x1=0,x2=600000,y1=1.5,y2=2)
 
-
-
-# repeat for beta
+# repeat for beta ------------------------------------------------
 beta_above_below <- function(cond_site_name = "Birmingham",est_all_sf.=est_all_sf,x1,x2,y1,y2) {
   # filter conditioning site
   cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
@@ -269,14 +267,18 @@ beta_above_below <- function(cond_site_name = "Birmingham",est_all_sf.=est_all_s
   betad <- data.frame(b=tmpsf$b,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% mutate(is.above=is_above(x=dist,y=b,x1=x1,y1=y1,x2=x2,y2=y2))
   p <- ggplot(betad) + 
     geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
-    geom_point(aes(x=dist,y=b,colour=factor(is.above))) + 
-    ylab(TeX("$\\beta$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(cond_site_name)
-  ggsave(p,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_beta_distance_",cond_site_name,".png")) 
+    geom_point(aes(x=dist,y=b,col=factor(is.above)),size=0.5) + 
+    ylab(TeX("$\\beta$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(cond_site_name) + guides(col="none")
+  ggsave(p,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_beta_distance_",cond_site_name,".png"),width=4,height=4) 
   # plot also spatially
   betasf <- cbind(tmpsf,betad %>% select(dist,is.above))
-  t <- tm_shape(betasf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name)
-  tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_beta_map_",cond_site_name,".png")) 
-}
+  t <- tm_shape(betasf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name) + tm_layout(legend.position=c("right","top"),legend.height = 12) 
+    tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_beta_map_",cond_site_name,".png"),width=3,height=6) 
+
+    t <- tm_shape(betasf) + tm_dots(fill="b",size=0.6)  + tm_title(cond_site_name) + tm_layout(legend.position=c("right","top"),legend.height = 12) 
+    tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/beta_map_",cond_site_name,".png"),width=3,height=6) 
+    
+    }
 
 
 beta_above_below(cond_site_name = "Birmingham",x1=0,x2=600000,y1=0.2,y2=0.5)
@@ -291,3 +293,6 @@ beta_above_below(cond_site_name = "Lowestoft",x1=0,x2=800000,y1=0.3,y2=0.4)
 beta_above_below(cond_site_name = "Truro",x1=0,x2=900000,y1=0.3,y2=0.4)
 beta_above_below(cond_site_name = "Dolgellau",x1=0,x2=600000,y1=0.2,y2=0.5)
 beta_above_below(cond_site_name = "Bournemouth",x1=0,x2=600000,y1=0.25,y2=0.5)
+
+# save the estimates to pass into iterative sigma_u
+save(result, file="data_processed/iterative_delta_estimates.RData")
