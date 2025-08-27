@@ -1,4 +1,4 @@
-res_margin_par_est_ite <- function(data=Z,given=cond_site,N=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init,deltal_init=NULL,deltau_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
+res_margin_par_est_ite <- function(data=Z,given=cond_site,N=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init=NULL,deltal_init=NULL,deltau_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
   d <- ncol(data)
   nv <- nrow(data)
   res <- 1:d
@@ -13,7 +13,7 @@ res_margin_par_est_ite <- function(data=Z,given=cond_site,N=10, show_ite=FALSE,m
     sigl[,1] <- 1
     sigu[,1] <- 1
   }
-  if (is.numeric(deltau_init) & is.numeric(deltau_init)) {
+  if (is.numeric(deltal_init) & is.numeric(deltau_init)) {
     deltal[,1] <- deltal_init
     deltau[,1] <- deltau_init
   } else {
