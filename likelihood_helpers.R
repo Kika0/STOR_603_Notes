@@ -225,9 +225,9 @@ NLL_expalpha_HT <- function(phi,df = Y_given1extreme, d1j. = d1j,mu1=as.numeric(
   return(log_lik)
 }
 
-NLL_exp_sigmau <- function(phi,x = Z, d1j, muagg1=as.numeric(unlist(mu_agg[,1])),sigl1=as.numeric(unlist(sigl[,1])),deltal=2,deltau=2,d.=d) {
-  nv <- nrow(df)
-  mu1 <- rep(muagg1,each=nv)
+NLL_exp_sigmau <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),sigl1=as.numeric(unlist(sigl[,1])),deltal=2,deltau=2,d.=d) {
+  nv <- nrow(x)
+  mu1 <- rep(mu1,each=nv)
   sigl1 <- rep(sigl1,each=nv)
   z <- as.numeric(unlist(x))
   dij. <- rep(d1j,each=nv)
@@ -236,18 +236,18 @@ NLL_exp_sigmau <- function(phi,x = Z, d1j, muagg1=as.numeric(unlist(mu_agg[,1]))
   C_AGG <-  (sigl1/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
 
   log_lik[x<mu1] <- log(C_AGG[x<mu1])-((mu1[x<mu1]-x[x<mu1])/sigl1[x<mu1])^deltal 
-  log_lik[x>=mu1] <- log(C_AGG[x>=mu1])-((x[x>=mu1]-mu1[x>=mu1])/sigu[x>=mu1])^deltau }
-  return(log_lik)
+  log_lik[x>=mu1] <- log(C_AGG[x>=mu1])-((x[x>=mu1]-mu1[x>=mu1])/sigu[x>=mu1])^deltau 
+  return(-sum(log_lik))
 }
 
-NLL_AGG_deltas <- function(theta,df = Z,mu1=as.numeric(unlist(mu_agg[,1])),sigl1=as.numeric(unlist(sigl[,1])),sigu1=as.numeric(unlist(sigu[,1]))) {
-  nv <- nrow(df)
+NLL_AGG_deltas <- function(theta,x = Z,mu1=as.numeric(unlist(mu_agg[,1])),sigl1=as.numeric(unlist(sigl[,1])),sigu1=as.numeric(unlist(sigu[,1]))) {
+  N <- nrow(x)
   deltal <- theta[1]
   deltau <- theta[2]
-  mu1 <- rep(mu1,each=nv)
-  sigl1 <- rep(sigl1,each=nv)
-  sigu1 <- rep(sigu1,each=nv)
-  z <- as.numeric(unlist(df))
+  mu1 <- rep(mu1,each=N)
+  sigl1 <- rep(sigl1,each=N)
+  sigu1 <- rep(sigu1,each=N)
+  z <- as.numeric(unlist(x))
   log_lik <- rep(NA,length(z))
   # calculate the constant
   C_AGG <-  (sigl1/deltal*gamma(1/deltal) + sigu1/deltau*gamma(1/deltau)  )^(-1)
