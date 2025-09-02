@@ -186,7 +186,7 @@ NLL_AGG <- function(x,theta,mu_hat=NULL,sigl_hat=NULL,sigu_hat=NULL,deltal_hat=N
   deltal <- theta[4]
   deltau <- theta[5]
   z <- c()
-  if(sigl<=0 | sigu<=0 | deltal<=0 |deltau<=0 ){return(10e10)}
+  if(sigl<=0 | sigu<=0 | deltal<=1 |deltau<=1 ){return(10e10)}
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
   for (i in 1:length(x)) {
     if (x[i]<mu) {
@@ -244,6 +244,7 @@ NLL_AGG_deltas <- function(theta,x = Z,mu1=as.numeric(unlist(mu_agg[,1])),sigl1=
   N <- nrow(x)
   deltal <- theta[1]
   deltau <- theta[2]
+  if(deltal<=1 |deltau<=1 ){return(10e10)}
   mu1 <- rep(mu1,each=N)
   sigl1 <- rep(sigl1,each=N)
   sigu1 <- rep(sigu1,each=N)
