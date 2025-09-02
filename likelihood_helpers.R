@@ -226,15 +226,14 @@ NLL_expalpha_HT <- function(phi,df = Y_given1extreme, d1j. = d1j,mu1=as.numeric(
 }
 
 NLL_exp_sigmau <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),sigl1=as.numeric(unlist(sigl[,1])),deltal=2,deltau=2,d.=d) {
-  nv <- nrow(x)
-  mu1 <- rep(mu1,each=nv)
-  sigl1 <- rep(sigl1,each=nv)
+  N <- nrow(x)
+  mu1 <- rep(mu1, each = N)
+  sigl1 <- rep(sigl1, each = N)
   z <- as.numeric(unlist(x))
-  dij. <- rep(d1j,each=nv)
+  dij. <- rep(d1j, each = N)
   log_lik <- rep(NA,length(z))
   sigu <- phi[1]*(1-exp(-(phi[2]*dij.)))
   C_AGG <-  (sigl1/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
-
   log_lik[x<mu1] <- log(C_AGG[x<mu1])-((mu1[x<mu1]-x[x<mu1])/sigl1[x<mu1])^deltal 
   log_lik[x>=mu1] <- log(C_AGG[x>=mu1])-((x[x>=mu1]-mu1[x>=mu1])/sigu[x>=mu1])^deltau 
   return(-sum(log_lik))
