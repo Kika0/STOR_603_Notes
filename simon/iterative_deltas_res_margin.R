@@ -81,7 +81,7 @@ est_all <- as.data.frame(est_all_sf)
 cond_site_name <- "Newcastle"
 cond_site_coord <- df_sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
 cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
-Z <- observed_residuals(df = data, given = cond_site, v = q,a= discard(as.numeric(est_all$a),is.na),b = discard(as.numeric(est_all$b),is.na))
+Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_all$a),is.na),b = discard(as.numeric(est_all$b),is.na))
 
 # estimate parameters iteratively --------------------------------------------
 Nite <- 20
