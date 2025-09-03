@@ -165,12 +165,14 @@ t <- tmpsf %>% dplyr::select(sigu_ite,sigu_ite_sigu,sigudiff) %>% pivot_longer(c
 tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin/sigma_upper_",cond_site_name,".png"),width=8,height=6)
 
 # repeat for all other sites
-iter_sigmau_site <- function(j,Nite=10,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf) {
+iter_sigmau_site <- function(j,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf,ite_delta = result) {
   q <- 0.9
   cond_site_name <- names(sites)[j]  
   est_site <- par_est %>% filter(cond_site==cond_site_name)
   cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
   cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
+  tmpsf <- ite_delta[[ which(names(df_sites)==cond_site_name) ]]
+  est_site <- par_est %>% filter(cond_site==cond_site_name)
   Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
   # calculate distance from the conditioning site
   dist_tmp <- as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))
@@ -183,9 +185,9 @@ iter_sigmau_site <- function(j,Nite=10,sites=df_sites,grid=xyUK20_sf,data=data_m
   # explore estimates
   # plot delta estimates
   tmp_phi <- rbind(data.frame("phi"=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi0"),
-                   data.frame("phi"=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "delta_upper"))
-  pphi <- ggplot(tmp_phi) + geom_point(aes(x=iteration,y=phi,col=parameter))
-  ggsave(pd,filename=paste0("../Documents/iterative_sigmas_res_margin/deltas_",cond_site_name,".png"))
+                   data.frame("phi"=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "phi1"))
+  pphi <- ggplot(tmp_phi) + geom_point(aes(x=iteration,y=phi,col=parameter)) + scale_color_manual(values = c("#009ADA","#66A64F"), breaks = c("phi0","phi1"),labels = c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))) + ylab("")
+  ggsave(pd,filename=paste0("../Documents/iterative_sigmas_res_margin/phi_",cond_site_name,".png"))
   
   # plot also for a random site as a check for convergence
   # plot across iterations for a selected site
@@ -193,12 +195,12 @@ iter_sigmau_site <- function(j,Nite=10,sites=df_sites,grid=xyUK20_sf,data=data_m
   tmp_all <- rbind(data.frame(delta=as.numeric(unlist(tmp[[1]][random_site,])),iteration=1:(Nite+1),parameter = "mu_agg"),
                    data.frame(delta=as.numeric(unlist(tmp[[2]][random_site,])),iteration=1:(Nite+1),parameter = "sigma_lower"),
                    data.frame(delta=as.numeric(unlist(tmp[[3]][random_site,])),iteration=1:(Nite+1),parameter = "sigma_upper"),
-                   data.frame(delta=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "delta_lower"),
-                   data.frame(delta=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "delta_upper")
+                   data.frame(delta=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi0"),
+                   data.frame(delta=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "phi1")
                    
   )
   # plot the final iteration
-  p1 <- ggplot(tmp_all) + geom_point(aes(x=iteration,y=delta,col=parameter))
+  p1 <- ggplot(tmp_all) + geom_point(aes(x=iteration,y=delta,col=parameter)) + ylab("")
   ggsave(p1,filename=paste0("../Documents/iterative_sigmas_res_margin/random_site_par_",cond_site_name,".png"))
   
   # explore also spatial parameters
@@ -210,35 +212,34 @@ iter_sigmau_site <- function(j,Nite=10,sites=df_sites,grid=xyUK20_sf,data=data_m
   mud <- data.frame(mu=tmpsf$mu_agg_ite_sigu,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=mu,x=dist))
   ggsave(mud,filename=paste0("../Documents/iterative_sigmas_res_margin/muagg_distance_",cond_site_name,".png")) 
   
-  sigld <- data.frame(sigl=tmpsf$sigl_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigl,x=dist))
+  sigld <- data.frame(sigl=tmpsf$sigl_ite_sigu,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigl,x=dist))
   ggsave(sigld,filename=paste0("../Documents/iterative_sigmas_res_margin/sigl_distance_",cond_site_name,".png")) 
   
-  sigud <- data.frame(sigu=tmpsf$sigu_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigu,x=dist))
+  sigud <- data.frame(sigu=tmpsf$sigu_ite_sigu,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigu,x=dist))
   ggsave(sigud,filename=paste0("../Documents/iterative_sigmas_res_margin/sigu_distance_",cond_site_name,".png")) 
   
 
   tmpsf <- tmpsf %>% mutate(mudiff = mu_agg_ite - mu_agg_ite_sigu, sigldiff = sigl_ite - sigl_ite_sigu, sigudiff = sigu_ite - sigu_ite_sigu)
-  t <- tmpsf %>% dplyr::select(mu_agg_ite,mu_agg_ite_sigu,mudiff) %>% pivot_longer(cols=c(mu_agg_ite,mu_agg_ite_sigu,mudiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu")) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 12) 
+  toplabel <- c(TeX("Iterative $\\delta$s method"),TeX("Iterative $\\sigma_u (d_j)$ method"),"Difference")
+  t <- tmpsf %>% dplyr::select(mu_agg_ite,mu_agg_ite_sigu,mudiff) %>% pivot_longer(cols=c(mu_agg_ite,mu_agg_ite_sigu,mudiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel) 
   
   tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin/mu_agg_",cond_site_name,".png"),width=8,height=6)
   
-  t <- tmpsf %>% dplyr::select(sigl_ite,sigl_ite_sigu,sigldiff) %>% pivot_longer(cols=c(sigl_ite,sigl_ite_sigu,sigldiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="brewer.blues")) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 12) 
+  t <- tmpsf %>% dplyr::select(sigl_ite,sigl_ite_sigu,sigldiff) %>% pivot_longer(cols=c(sigl_ite,sigl_ite_sigu,sigldiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel) 
   tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin/sigma_lower_",cond_site_name,".png"),width=8,height=6)
   
-  t <- tmpsf %>% dplyr::select(sigu_ite,sigu_ite_sigu,sigudiff) %>% pivot_longer(cols=c(sigu_ite,sigu_ite_sigu,sigudiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="brewer.blues")) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 12) 
+  t <- tmpsf %>% dplyr::select(sigu_ite,sigu_ite_sigu,sigudiff) %>% pivot_longer(cols=c(sigu_ite,sigu_ite_sigu,sigudiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\sigma_u$"))) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel) 
   tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin/sigma_upper_",cond_site_name,".png"),width=8,height=6)
   
   return(tmpsf)
 }
 
-iter_sigmau_site_wrapper <- function(i) {
-  iter_sigmau_site(j=i)
-}
+result <- sapply(1:ncol(df_sites),iter_sigmau_site,simplify = FALSE)
 
-result <- sapply(1:ncol(df_sites),iter_delta_site,simplify = FALSE)
+# separate diagnostics to allow for common scale of paramters across conditioning sites
 
 deltal <- deltau <-  c()
 for (i in 1:12) {
