@@ -236,27 +236,17 @@ sigu_above_below <- function(cond_site_name = "Birmingham",sites=df_sites,result
    sigusf <- cbind(tmpsf,sigud %>% select(dist,is.above))
    t <- tm_shape(sigusf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name) + tm_layout(legend.position=c("right","top"),legend.height = 12) 
    tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_sigu_map_",cond_site_name,".png"),width=3,height=6) 
-   # plot also distance as control?
+   return(sigud$is.above)
 }
 
-x1 <- 0
-x2 <- 600000
-y1 <- 0
-y2 <- 5
 
-# look at a few sites
-sigu_above_below(cond_site_name = "Birmingham",x1=0,x2=600000,y1=0.5,y2=3)
-sigu_above_below(cond_site_name = "Glasgow",x1=0,x2=600000,y1=1,y2=2.2)
-sigu_above_below(cond_site_name = "London",x1=0,x2=600000,y1=0.5,y2=2.5)
-sigu_above_below(cond_site_name = "Inverness",x1=0,x2=600000,y1=0.8,y2=1.5)
-sigu_above_below(cond_site_name = "Lancaster",x1=0,x2=600000,y1=1,y2=2.2)
-sigu_above_below(cond_site_name = "Newcastle",x1=0,x2=600000,y1=1,y2=1.5)
-sigu_above_below(cond_site_name = "Cromer",x1=0,x2=600000,y1=1.2,y2=1.1)
-sigu_above_below(cond_site_name = "Hull",x1=0,x2=600000,y1=1,y2=1.05)
-sigu_above_below(cond_site_name = "Lowestoft",x1=0,x2=800000,y1=1.35,y2=1.25)
-sigu_above_below(cond_site_name = "Truro",x1=0,x2=900000,y1=1.1,y2=1.8)
-sigu_above_below(cond_site_name = "Dolgellau",x1=0,x2=600000,y1=0.9,y2=2.5)
-sigu_above_below(cond_site_name = "Bournemouth",x1=0,x2=600000,y1=1.5,y2=2)
+x1 <- rep(0,12)
+x2 <- c(rep(600000,8),800000,900000,600000,600000)
+y1 <- c(0.5,1,0.5,0.8,1,1,1.2,1,1.35,1.1,0.9,1.5)
+y2 <- c(3,2.2,2.5,1.5,2.2,1.5,1.1,1.05,1.25,1.8,2.5,2)
+# look at all sites
+sapply(1:ncol(df_sites),FUN = function(i) {sigu_above_below(cond_site_name = names(df_sites)[i], x1 = x1[i], x2 = x2[i], y1 = y1[i], y2 = y2[i])})
+
 
 # repeat for beta ------------------------------------------------
 beta_above_below <- function(cond_site_name = "Birmingham",est_all_sf.=est_all_sf,x1,x2,y1,y2) {
@@ -281,19 +271,12 @@ beta_above_below <- function(cond_site_name = "Birmingham",est_all_sf.=est_all_s
     
     }
 
-
-beta_above_below(cond_site_name = "Birmingham",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Glasgow",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "London",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Inverness",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Lancaster",x1=0,x2=600000,y1=0.3,y2=0.4)
-beta_above_below(cond_site_name = "Newcastle",x1=0,x2=600000,y1=0.3,y2=0.4)
-beta_above_below(cond_site_name = "Cromer",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Hull",x1=0,x2=600000,y1=0.25,y2=0.3)
-beta_above_below(cond_site_name = "Lowestoft",x1=0,x2=800000,y1=0.3,y2=0.4)
-beta_above_below(cond_site_name = "Truro",x1=0,x2=900000,y1=0.3,y2=0.4)
-beta_above_below(cond_site_name = "Dolgellau",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Bournemouth",x1=0,x2=600000,y1=0.25,y2=0.5)
+# look at all sites
+x1 <- rep(0,ncol(df_sites))
+x2 <- c(rep(60000,8),800000,900000,600000,600000)
+y1 <- c(0.2,0.2,0.2,0.2,0.3,0.3,0.2,0.25,0.3,0.3,0.2,0.25)
+y2 <- c(0.5,0.5,0.5,0.5,0.4,0.4,0.5,0.3,0.4,0.4,0.5,0.5)
+sapply(1:ncol(df_sites),FUN = function(i) {beta_above_below(cond_site_name = names(df_sites)[i], x1 = x1[i], x2 = x2[i], y1 = y1[i], y2 = y2[i])})
 
 # save the estimates to pass into iterative sigma_u
 save(result, file="data_processed/iterative_delta_estimates.RData")

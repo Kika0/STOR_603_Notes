@@ -92,7 +92,7 @@ dist_tmp <- as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))
 # remove zero distance
 dist_tmp <- dist_tmp[dist_tmp>0]
 # normalise distance
-distnorm <- dist_tmp/max(dist_tmp)
+distnorm <- dist_tmp/100000
 # check also whether units affect phi estimates
 opt <- optim(fn=NLL_exp_sigmau,x = data,d1j=distnorm,mu1=as.numeric(mu_agg[,i]),sigl1=as.numeric(sigl[,i]),deltal=deltal[1],deltau=deltau[1],control=list(maxit=2000),par = phi_init,method = "Nelder-Mead")
 # look into the log-likelihood function
@@ -103,20 +103,13 @@ Nite <- 50
 tmp <- sigmau_par_est_ite(data = Z, given = cond_site, cond_site_dist = distnorm, Nite = Nite, show_ite = TRUE, mu_init = discard(as.numeric(tmpsf$mu_agg_ite),is.na), sigl_init = discard(as.numeric(tmpsf$sigl_ite),is.na), sigu_init = discard(as.numeric(tmpsf$sigu_ite),is.na), deltal = as.numeric(tmpsf$deltal_ite[1]), deltau = as.numeric(tmpsf$deltau_ite[1]))
 
 # explore estimates
-# plot delta estimates
-tmp_phi <- rbind(data.frame("phi"=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi0"),
-                   data.frame("phi"=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "delta_upper"))
-pphi <- ggplot(tmp_phi) + geom_point(aes(x=iteration,y=phi,col=parameter))
-ggsave(pd,filename=paste0("../Documents/iterative_sigmas_res_margin/deltas_",cond_site_name,".png"))
-
-# plot also for a random site as a check for convergence
-# plot across iterations for a selected site
+# plot for a random site as a check for convergence
 random_site <- 100
 tmp_all <- rbind(data.frame(delta=as.numeric(unlist(tmp[[1]][random_site,])),iteration=1:(Nite+1),parameter = "mu_agg"),
                  data.frame(delta=as.numeric(unlist(tmp[[2]][random_site,])),iteration=1:(Nite+1),parameter = "sigma_lower"),
                  data.frame(delta=as.numeric(unlist(tmp[[3]][random_site,])),iteration=1:(Nite+1),parameter = "sigma_upper"),
-                 data.frame(delta=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "delta_lower"),
-                 data.frame(delta=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "delta_upper")
+                 data.frame(delta=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi0"),
+                 data.frame(delta=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "phi1")
                  
 )
 # plot the final iteration
@@ -179,16 +172,16 @@ iter_sigmau_site <- function(j,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mo
   dist_tmp <- as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))
   # remove zero distance
   dist_tmp <- dist_tmp[dist_tmp>0]
-  # normalise distance
-  distnorm <- dist_tmp/max(dist_tmp)
+  # normalise distance using a common constant
+  distnorm <- dist_tmp/1000000
   tmp <- sigmau_par_est_ite(data = Z, given = cond_site, cond_site_dist = distnorm, Nite = Nite, show_ite = TRUE, mu_init = discard(as.numeric(tmpsf$mu_agg_ite),is.na), sigl_init = discard(as.numeric(tmpsf$sigl_ite),is.na), sigu_init = discard(as.numeric(tmpsf$sigu_ite),is.na), deltal = as.numeric(tmpsf$deltal_ite[1]), deltau = as.numeric(tmpsf$deltau_ite[1]))
   
   # explore estimates
-  # plot delta estimates
+  # plot phi estimates
   tmp_phi <- rbind(data.frame("phi"=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi0"),
                    data.frame("phi"=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "phi1"))
   pphi <- ggplot(tmp_phi) + geom_point(aes(x=iteration,y=phi,col=parameter)) + scale_color_manual(values = c("#009ADA","#66A64F"), breaks = c("phi0","phi1"),labels = c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))) + ylab("")
-  ggsave(pd,filename=paste0("../Documents/iterative_sigmas_res_margin/phi_",cond_site_name,".png"))
+  ggsave(pphi,filename=paste0("../Documents/iterative_sigmas_res_margin/phi_",cond_site_name,".png"))
   
   # plot also for a random site as a check for convergence
   # plot across iterations for a selected site
@@ -237,14 +230,29 @@ iter_sigmau_site <- function(j,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mo
   
   return(tmpsf)
 }
+Nite <- 5
+tmp <- sapply(1:ncol(df_sites),iter_sigmau_site, Nite = 5, simplify = FALSE)
 
-result <- sapply(1:ncol(df_sites),iter_sigmau_site,simplify = FALSE)
+# separate diagnostics to allow for common scale of parameters across conditioning sites
+  phi0 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][1,34])))
+  phi1 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][1,35])))
 
-# separate diagnostics to allow for common scale of paramters across conditioning sites
-
-deltal <- deltau <-  c()
-for (i in 1:12) {
-  deltal[i] <- result[[i]]$deltal_ite[1]
-  deltau[i] <- result[[i]]$deltau_ite[1]
+# plot spatially
+# get indeces of conditioning sites
+get_site_index <- function(j, grid = xyUK20_sf, sites= df_sites) {
+  cond_site_name <- names(sites)[j]  
+  est_site <- par_est %>% filter(cond_site==cond_site_name)
+  cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+ return(find_site_index(cond_site_coord,grid_uk = grid))
 }
 
+cond_site_indeces <- sapply(1:ncol(df_sites), get_site_index)
+# get the point
+phi0tmp <- rep(NA,nrow(xyUK20_sf))
+phi1tmp <- rep(NA, nrow(xyUK20_sf))
+phi0tmp[cond_site_indeces] <- phi0
+phi1tmp[cond_site_indeces] <- phi1
+est_phi <- xyUK20_sf[cond_site_indeces,] %>% mutate(phi0=phi0,phi1 = phi1)
+
+tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 2) 
+tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 2) 
