@@ -159,25 +159,25 @@ t <- tmpsf %>% dplyr::select(sigu_ite,sigu_ite_sigu,sigudiff) %>% pivot_longer(c
 tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin/sigma_upper_",cond_site_name,".png"),width=8,height=6)
 
 # repeat for all other sites
-iter_sigmau_site <- function(j,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf,ite_delta = result,index_outliers = NULL) {
+iter_sigmau_site <- function(i,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf,ite_delta = result,index_outliers = NULL) {
   q <- 0.9
-  cond_site_name <- names(sites)[j] 
+  cond_site_name <- names(sites)[i] 
   cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
   cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
   
-  if (index_outliers==NULL) {
+  if (is.null(index_outliers)) {
   est_site <- par_est %>% filter(cond_site==cond_site_name)
   tmpsf <- ite_delta[[ which(names(df_sites)==cond_site_name) ]]
 } else {
     # change NA to FALSE for subsetting the points
     index_outliers[is.na(index_outliers)] <- FALSE
     est_site <- par_est %>% filter(cond_site==cond_site_name)
-    est_site <- est_site[!index_outliers] 
-    tmpsf <- ite_delta[[ which(names(df_sites)==cond_site_name) ]][!index_outliers]
+    est_site <- est_site[!index_outliers,] 
+    tmpsf <- ite_delta[[ which(names(df_sites)==cond_site_name) ]][!index_outliers,]
     # subset data
-    data_mod_Lap <- data_mod_Lap[!index_outliers]
+    data_mod_Lap <- data_mod_Lap[,!index_outliers]
     # subset grid
-    xyUK20_sf <- xyUK20_sf[!index_outliers]
+    xyUK20_sf <- xyUK20_sf[!index_outliers,]
   }
   
   Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
@@ -267,10 +267,20 @@ phi0tmp[cond_site_indeces] <- phi0
 phi1tmp[cond_site_indeces] <- phi1
 est_phi <- xyUK20_sf[cond_site_indeces,] %>% mutate(phi0=phi0,phi1 = phi1)
 
-tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 2) 
+toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))
+tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi %>% pivot_longer(cols = c(phi0,phi1),names_to = "parameter", values_to = "value")) + tm_dots(fill="value",size = 2) + tm_facets(by = "parameter") + tm_layout(legend.position=c("right","top"),legend.height = 12,panels.label=toplabel)
 tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 2) 
 
-# consider the analysis with outliers removed
+deltaldf <- cbind(data.frame(value=deltal),as.data.frame(t(df_sites))) %>% mutate(parameter="deltal")
+deltaudf <- cbind(data.frame(value=deltau),as.data.frame(t(df_sites))) %>% mutate(parameter="deltau")
+deltasf <- st_as_sf(rbind(deltaldf,deltaudf),coords =c(2:3))
+
+t <- tm_shape(est_all_sf) + tm_dots(size=0.2,fill_alpha=0.3) +  tm_shape(deltasf) + tm_dots(fill="value",size=1) + tm_facets(by="parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/all_deltas.png"),width=8,height=6)
+
+
+# consider the analysis with outliers removed ---------------------------------
 x1 <- rep(0,12)
 x2 <- c(rep(600000,8),800000,900000,600000,600000)
 y1 <- c(0.5,1,0.5,0.8,1,1,1.2,1,1.35,1.1,0.9,1.5)
@@ -278,11 +288,6 @@ y2 <- c(3,2.2,2.5,1.5,2.2,1.5,1.1,1.05,1.25,1.8,2.5,2)
 iterative_sigmau_no_outliers <- function(i) {
   # extract indeces of outliers
  index_outliers <- sigu_above_below(cond_site_name = names(df_sites)[i], x1 = x1[i], x2 = x2[i], y1 = y1[i], y2 = y2[i])
-  # remove NA for subsetting residuals
- index_outliers_narm <- index_outliers[!is.na(index_outliers)]
- 
-  # change NA to FALSE for subsetting the points
-  index_outliers[is.na(index_outliers)] <- FALSE
-  
-  # repeat parameter estimation
+ iter_sigmau_site(i=i,index_outliers = index_outliers)
 }
+iterative_sigmau_no_outliers(i=1)
