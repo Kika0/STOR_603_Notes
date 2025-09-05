@@ -159,14 +159,27 @@ t <- tmpsf %>% dplyr::select(sigu_ite,sigu_ite_sigu,sigudiff) %>% pivot_longer(c
 tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin/sigma_upper_",cond_site_name,".png"),width=8,height=6)
 
 # repeat for all other sites
-iter_sigmau_site <- function(j,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf,ite_delta = result) {
+iter_sigmau_site <- function(j,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf,ite_delta = result,index_outliers = NULL) {
   q <- 0.9
-  cond_site_name <- names(sites)[j]  
-  est_site <- par_est %>% filter(cond_site==cond_site_name)
+  cond_site_name <- names(sites)[j] 
   cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
   cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
-  tmpsf <- ite_delta[[ which(names(df_sites)==cond_site_name) ]]
+  
+  if (index_outliers==NULL) {
   est_site <- par_est %>% filter(cond_site==cond_site_name)
+  tmpsf <- ite_delta[[ which(names(df_sites)==cond_site_name) ]]
+} else {
+    # change NA to FALSE for subsetting the points
+    index_outliers[is.na(index_outliers)] <- FALSE
+    est_site <- par_est %>% filter(cond_site==cond_site_name)
+    est_site <- est_site[!index_outliers] 
+    tmpsf <- ite_delta[[ which(names(df_sites)==cond_site_name) ]][!index_outliers]
+    # subset data
+    data_mod_Lap <- data_mod_Lap[!index_outliers]
+    # subset grid
+    xyUK20_sf <- xyUK20_sf[!index_outliers]
+  }
+  
   Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
   # calculate distance from the conditioning site
   dist_tmp <- as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))
@@ -181,7 +194,7 @@ iter_sigmau_site <- function(j,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mo
   tmp_phi <- rbind(data.frame("phi"=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi0"),
                    data.frame("phi"=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "phi1"))
   pphi <- ggplot(tmp_phi) + geom_point(aes(x=iteration,y=phi,col=parameter)) + scale_color_manual(values = c("#009ADA","#66A64F"), breaks = c("phi0","phi1"),labels = c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))) + ylab("")
-  ggsave(pphi,filename=paste0("../Documents/iterative_sigmas_res_margin/phi_",cond_site_name,".png"))
+  ggsave(pphi,filename=paste0("../Documents/iterative_sigmas_res_margin/phi_",cond_site_name,".png"),width=5,height=5)
   
   # plot also for a random site as a check for convergence
   # plot across iterations for a selected site
@@ -195,7 +208,7 @@ iter_sigmau_site <- function(j,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mo
   )
   # plot the final iteration
   p1 <- ggplot(tmp_all) + geom_point(aes(x=iteration,y=delta,col=parameter)) + ylab("")
-  ggsave(p1,filename=paste0("../Documents/iterative_sigmas_res_margin/random_site_par_",cond_site_name,".png"))
+  ggsave(p1,filename=paste0("../Documents/iterative_sigmas_res_margin/random_site_par_",cond_site_name,".png"),width=5,height=5)
   
   # explore also spatial parameters
   est_ite <- tmp[[6]] %>% add_row(.before=cond_site)
@@ -256,3 +269,20 @@ est_phi <- xyUK20_sf[cond_site_indeces,] %>% mutate(phi0=phi0,phi1 = phi1)
 
 tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 2) 
 tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 2) 
+
+# consider the analysis with outliers removed
+x1 <- rep(0,12)
+x2 <- c(rep(600000,8),800000,900000,600000,600000)
+y1 <- c(0.5,1,0.5,0.8,1,1,1.2,1,1.35,1.1,0.9,1.5)
+y2 <- c(3,2.2,2.5,1.5,2.2,1.5,1.1,1.05,1.25,1.8,2.5,2)
+iterative_sigmau_no_outliers <- function(i) {
+  # extract indeces of outliers
+ index_outliers <- sigu_above_below(cond_site_name = names(df_sites)[i], x1 = x1[i], x2 = x2[i], y1 = y1[i], y2 = y2[i])
+  # remove NA for subsetting residuals
+ index_outliers_narm <- index_outliers[!is.na(index_outliers)]
+ 
+  # change NA to FALSE for subsetting the points
+  index_outliers[is.na(index_outliers)] <- FALSE
+  
+  # repeat parameter estimation
+}
