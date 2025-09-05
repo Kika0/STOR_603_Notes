@@ -291,3 +291,11 @@ iterative_sigmau_no_outliers <- function(i) {
  iter_sigmau_site(i=i,index_outliers = index_outliers)
 }
 iterative_sigmau_no_outliers(i=1)
+
+# look for maxima and minima to set for breaks
+summary(est_all_sf[,11:16])
+sig_u <- c()
+for (i in 1:12) {
+  sig_u <- append(sig_u,result[[i]]$mu_agg_ite)
+}
+min(sig_u,na.rm = TRUE)
