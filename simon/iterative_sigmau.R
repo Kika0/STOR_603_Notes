@@ -84,7 +84,6 @@ iter_sigmau_site <- function(i,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mo
   q <- 0.9
   cond_site_name <- names(sites)[i] 
   cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
-  cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
   
   if (is.null(index_outliers)) {
   est_site <- par_est %>% filter(cond_site==cond_site_name)
@@ -100,7 +99,7 @@ iter_sigmau_site <- function(i,Nite=5,sites=df_sites,grid=xyUK20_sf,data=data_mo
     # subset grid
     grid <- grid[!index_outliers,]
   }
-  
+  cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
   Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
   # calculate distance from the conditioning site
   dist_tmp <- as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))
@@ -191,16 +190,10 @@ est_phi <- xyUK20_sf[cond_site_indeces,] %>% mutate(phi0=phi0,phi1 = phi1)
 
 toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))
 tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi %>% pivot_longer(cols = c(phi0,phi1),names_to = "parameter", values_to = "value")) + tm_dots(fill="value",size = 2) + tm_facets(by = "parameter") + tm_layout(legend.position=c("right","top"),legend.height = 12,panels.label=toplabel)
-tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 2) 
-
-deltaldf <- cbind(data.frame(value=deltal),as.data.frame(t(df_sites))) %>% mutate(parameter="deltal")
-deltaudf <- cbind(data.frame(value=deltau),as.data.frame(t(df_sites))) %>% mutate(parameter="deltau")
-deltasf <- st_as_sf(rbind(deltaldf,deltaudf),coords =c(2:3))
-
-t <- tm_shape(est_all_sf) + tm_dots(size=0.2,fill_alpha=0.3) +  tm_shape(deltasf) + tm_dots(fill="value",size=1) + tm_facets(by="parameter") +
-  tm_layout(legend.position=c("right","top"),legend.height = 12)
-tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/all_deltas.png"),width=8,height=6)
-
+tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 2, fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 2, fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+t <- tmap_arrange(tmphi0,tmphi1,ncol=2)
+tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin_all/all_phis.png"),width=8,height=6)
 
 # consider the analysis with outliers removed ---------------------------------
 x1 <- rep(0,12)
@@ -212,7 +205,24 @@ iterative_sigmau_no_outliers <- function(i) {
  index_outliers <- sigu_above_below(cond_site_name = names(df_sites)[i], x1 = x1[i], x2 = x2[i], y1 = y1[i], y2 = y2[i])
  iter_sigmau_site(i=i,index_outliers = index_outliers)
 }
-iterative_sigmau_no_outliers(i=1)
+tmp <- sapply(1:ncol(df_sites),iterative_sigmau_no_outliers, simplify = FALSE)
+
+# explore phi spatially again
+phi0 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][1,34])))
+phi1 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][1,35])))
+phi0tmp <- rep(NA,nrow(xyUK20_sf))
+phi1tmp <- rep(NA, nrow(xyUK20_sf))
+phi0tmp[cond_site_indeces] <- phi0
+phi1tmp[cond_site_indeces] <- phi1
+est_phi <- xyUK20_sf[cond_site_indeces,] %>% mutate(phi0=phi0,phi1 = phi1)
+
+toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))
+phi1_limits <- c(10,60)
+tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi %>% pivot_longer(cols = c(phi0,phi1),names_to = "parameter", values_to = "value")) + tm_dots(fill="value",size = 2) + tm_facets(by = "parameter") + tm_layout(legend.position=c("right","top"),legend.height = 12,panels.label=toplabel)
+tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 2, fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 2, fill.legend = tm_legend(title = TeX("$\\phi_1$")),fill.scale = tm_scale_continuous(limits=phi1_limits)) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+t <- tmap_arrange(tmphi0,tmphi1,ncol=2)
+tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin/all_phis.png"),width=8,height=6)
 
 # look for maxima and minima to set for breaks
 summary(est_all_sf[,11:16])
