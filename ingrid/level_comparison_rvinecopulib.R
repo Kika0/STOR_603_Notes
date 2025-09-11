@@ -28,7 +28,7 @@ obsresw <- (observed_residuals(df = winter_lap,given = j,v = v,a = pew$a,b=pew$b
 pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequential2")
 obsress <- (observed_residuals(df = summer_lap,given = j,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summer_lap)*(1-v)+1)
 
-# fit all vine copula models for each level ---------------------------------
+# fit vine copula models for each level ---------------------------------
 # 1. separate estimates for winter and summer residuals
 vcw1 <- rvinecopulib::vinecop(data=obsresw,selcrit = "aic")
 vcs1 <- rvinecopulib::vinecop(data=obsress,selcrit = "aic")
@@ -45,7 +45,7 @@ rvine_join <- rvinecopulib::vinecop(data=rbind(obsresw,obsress),vinecop_object =
 
 # rewrite function with rvinecopulib functions
 cop_refit <- function(i,m1w,m1s,m2w,m2s,level="l1") {
-  set.seed(i*12)
+  set.seed(i*13)
   # 1. simulate from both vine copulas
   xw <- rvinecopulib::rvinecop(n = nrow(obsresw),vine = m1w)
   xs <- rvinecopulib::rvinecop(n = nrow(obsress),vine=m1s)
@@ -55,6 +55,7 @@ cop_refit <- function(i,m1w,m1s,m2w,m2s,level="l1") {
     ll_m1w <- NA
     ll_m1s <- NA
     ll_m1 <- refitm1$loglik
+    npar1 <- refitm1$npars
     refitw <- rvinecopulib::vinecop(data=xw,vinecop_object = m2w, presel = FALSE)
     refits <- rvinecopulib::vinecop(data=xs,vinecop_object = m2s, presel = FALSE)
   } else if (level=="l2") {
@@ -64,6 +65,7 @@ cop_refit <- function(i,m1w,m1s,m2w,m2s,level="l1") {
     ll_m1w <- refitm1w$loglik
     ll_m1s <- refitm1s$loglik
     ll_m1 <- ll_m1w+ll_m1s
+    npar1 <- refitm1w$npars + refitm1s$npars
     refitw <- rvinecopulib::vinecop(data=xw,structure = m2w$structure, selcrit = "loglik", presel = FALSE,family_set = c("onepar","twopar","threepar"))
     refits <- rvinecopulib::vinecop(data=xs,structure = m2s$structure, selcrit = "loglik", presel = FALSE,family_set = c("onepar","twopar","threepar"))
   } else if (level=="l3") {
@@ -74,6 +76,7 @@ cop_refit <- function(i,m1w,m1s,m2w,m2s,level="l1") {
     ll_m1w <- refitm1w$loglik
     ll_m1s <- refitm1s$loglik
     ll_m1 <- ll_m1w+ll_m1s
+    npar1 <- refitm1w$npars + refitm1s$npars
     # 3b. fit the more complex model M2
     refitw <- rvinecopulib::vinecop(data=xw, selcrit = "loglik", presel = FALSE,family_set = c("onepar","twopar","threepar"))
     refits <- rvinecopulib::vinecop(data=xs, selcrit = "loglik", presel = FALSE,family_set = c("onepar","twopar","threepar"))
@@ -82,7 +85,14 @@ cop_refit <- function(i,m1w,m1s,m2w,m2s,level="l1") {
   ll_m2w <- refitw$loglik
   ll_m2s <- refits$loglik
   ll_m2 <- ll_m2w+ll_m2s
-  return(data.frame(ll_m1w,ll_m1s,ll_m1,ll_m2w,ll_m2s,ll_m2))
+  # check positive log-likleihood difference in level 1
+  npar2 <- refitw$npars + refits$npars
+  if (level == "l1") {
+    ll_m1pair <- summary(refitm1)$loglik
+    ll_m2pair <- summary(refits)$loglik + summary(refitw)$loglik
+    if (sum(ll_m2pair[1:3]<ll_m1pair[1:3]-10^(-6))>=1) {return(i)}
+  }
+  return(data.frame(ll_m1w,ll_m1s,ll_m1,ll_m2w,ll_m2s,ll_m2,npar1,npar2))
 }
 
 compare_levels <- function(Nrep=50,l="l3") {
@@ -98,19 +108,16 @@ compare_levels <- function(Nrep=50,l="l3") {
     tmp <- do.call(rbind,lapply(1:Nrep,FUN=cop_refit,m1w=rvine_join,m1s=rvine_join,m2w=vcw1,m2s=vcs1,level=l))
   }
   end_time <- Sys.time() 
-  end_time - start_time
+  print(end_time - start_time)
   
   # calculate the AIC
-  npar1 <- 8
-  npar2 <- 8
   tmp <- tmp 
   tmp <- tmp %>% mutate(W=2*(ll_m2-ll_m1),AIC1=-2*ll_m1+2*npar1,AIC2=-2*ll_m2+2*npar2)
   tmp <- tmp %>% mutate(AICdiff=AIC2-AIC1)
   
   # plot log-likelihood comparison of M1 and M2, likelihood ratio test and AIC difference
   p1 <- ggplot(tmp %>% dplyr::select(c(ll_m2,ll_m1)) %>% pivot_longer(everything(),names_to = "Model")) + geom_density(aes(x=value,fill=Model),alpha=0.5)  +  scale_fill_manual(name="Model",
-                                                                                                                                                                                labels=c(TeX("$M_1$"),
-                                                                                                                                                                                         TeX("$M_2$")),
+                                                                                                                                                                                labels=c(TeX("$M_1$"),                                                                                                                                                                                     TeX("$M_2$")),
                                                                                                                                                                                 values=c("black","#C11432")) +
     xlab("Log-likelihood")
   
@@ -122,31 +129,53 @@ compare_levels <- function(Nrep=50,l="l3") {
   #pW <- ggplot(tmp) + geom_density(aes(x=W)) + xlab("Likelihood ratio test")
   #pAIC <- ggplot(tmp) + geom_histogram(aes(x=AICdiff)) + xlab("AIC difference")
   
-  ggsave(p1,filename = paste0("../Documents/p1m",l,".png")) 
-  ggsave(pW,filename = paste0("../Documents/pW",l,".png")) 
-  ggsave(pAIC,filename = paste0("../Documents/pAICm",l,".png")) 
+  ggsave(p1,filename = paste0("../Documents/p1m",l,".png"))
+  ggsave(pW,filename = paste0("../Documents/pW",l,".png"))
+  ggsave(pAIC,filename = paste0("../Documents/pAICm",l,".png"))
+  return(tmp)
 }
 
-compare_levels(l="l1",Nrep = 100)
-compare_levels(l="l2",Nrep = 100)
-compare_levels(l="l3",Nrep = 100)
+tmp <- compare_levels(l="l1",Nrep = 100) # setting Nrep = 1000 (time to compute cca 2mins) leads to two such replications when this occurs
+# both have negative difference in joe copula tree 2 edge 2
+
 
 # see what is going on:l1
 m1w <- rvine_join # imposed tree, family and parameters
 m1s <- rvine_join
 m2w <- vcw3 # imposed tree and family
 m2s <- vcs1
+# explore an example of negative log-likelihood difference
+tmp[tmp$W<0,]
+i <- 27 # pick the index to reproduce the example
+# i <- 288 # shows an iteration with negative log-likelihood difference in tree 1 edge 3
+set.seed(i*13)
+# 1. simulate from both vine copulas
+xw <- rvinecopulib::rvinecop(n = nrow(obsresw),vine = m1w)
+xs <- rvinecopulib::rvinecop(n = nrow(obsress),vine=m1s)
+# 2. refit model for summer and winter separately
 
-# see what is going on:l2
-m1w <- vcw3 # imposed tree and family
-m1s <- vcs1
-m2w <- vcw2 # imposed tree
-m2s <- vcs1
+  refitm1 <- rvinecopulib::vinecop(data=rbind(xw,xs),vinecop_object = m1w,presel = FALSE)
+  ll_m1w <- NA
+  ll_m1s <- NA
+  ll_m1 <- refitm1$loglik
+  npar1 <- refitm1$npars
+  refitw <- rvinecopulib::vinecop(data=xw,vinecop_object = m2w, presel = FALSE)
+  refits <- rvinecopulib::vinecop(data=xs,vinecop_object = m2s, presel = FALSE)
 
-# see what is going on:l2
-m1w <- vcw2 # imposed tree 
-m1s <- vcs1
-m2w <- vcw1 
-m2s <- vcs1
+# 3b. record likelihood of the more complex model
+ll_m2w <- refitw$loglik
+ll_m2s <- refits$loglik
+ll_m2 <- ll_m2w+ll_m2s
 
+summary(refitm1)
+summary(refitw)
+summary(refits)
+refitm1$loglik
+refitw$loglik
+refits$loglik
+refitm1
+refitw
+refits
+data.frame(llm1=summary(refitm1)$loglik,llm2=summary(refits)$loglik + summary(refitw)$loglik,llm2s= summary(refits)$loglik,llm2w = summary(refitw)$loglik)
+# line 5 corresponds to tree 2 edge 2 joe copula
 
