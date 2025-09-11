@@ -501,7 +501,7 @@ vcw1 <- VineCopula::RVineStructureSelect(data=obsresw,selectioncrit = "logLik")
 dvine_winter[[2]]
 
 # repeat for summer
-dvine_summer <- lapply(allvines,FUN = giventree_fitfamilies,data=obsresw)
+dvine_summer <- lapply(allvines,FUN = giventree_fitfamilies,data=obsress)
 # print log-likelihood of each permutation
 logliks <- sapply(X=dvine_summer,FUN=function(x)x[[2]],simplify=TRUE)
 
@@ -509,6 +509,12 @@ which.max(loglikw+logliks)
 
 dvine_winter[[8]]
 dvine_summer[[8]]
+
+plot(sort(loglikw))
+plot(sort(logliks))
+plot(sort(loglikw+logliks))
+
+
 
 # check structure for each conditioning pollutant variable -------------------
 # print best fitting tree structure for summer and winter
