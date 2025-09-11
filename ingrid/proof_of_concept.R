@@ -433,11 +433,16 @@ b1s$logLik
 ll_m2s
 ll_m1s
 
-# consider all possible matrices
-# start with the winter matrix
-vcs1$Matrix
+# consider all possible matrices --------------------------------------------
 
-# extract all possible permutations
+#' All permutations (reverse order discarded)
+#'
+#' @param n An integer of dimension
+#'
+#' @returns A dataframe where each permutation is one row.
+#' @export 
+#'
+#' @examples permutations(n=3)
 permutations <- function(n){
   if(n==1){
     return(matrix(1))
@@ -451,6 +456,7 @@ permutations <- function(n){
     return(A)
   }
 }
+
 library(combinat)
 all_c_vine_matrices <- function(d)
 {
@@ -474,8 +480,8 @@ all_c_vine_matrices <- function(d)
 # keep reverse for now as a check
 giventree_fitfamilies <- function(data=obsresw,tree_struc) {
   # estimate the family and parameters for dvine_mat tree structure
- y <-  VineCopula::RVineCopSelect(data=data,Matrix=tree_struc,selectioncrit = "logLik")
- return(list(vc=y,ll=y$logLik))
+ y <-  rvinecopulib::vinecop(data=data,structure = tree_struc[nrow(tree_struc):1,],selcrit = "loglik")
+ return(list(vc=y,ll=y$loglik))
 }
 # print all possible c vines and d vines
 all_d_vine_matrices <- function(d=4) {
@@ -496,24 +502,25 @@ dvine_winter <- lapply(allvines,FUN = giventree_fitfamilies,data=obsresw)
 # print log-likelihood of each permutation
 loglikw <- sapply(X=dvine_winter,FUN=function(x)x[[2]],simplify=TRUE)
 
-# compare with winter fitted vine copula as a check
-vcw1 <- VineCopula::RVineStructureSelect(data=obsresw,selectioncrit = "logLik")
-dvine_winter[[2]]
+# compare with winter fitted vine copula
+vcw1 <- rvinecopulib::vinecop(data=obsresw,selcrit = "loglik")
+
 
 # repeat for summer
 dvine_summer <- lapply(allvines,FUN = giventree_fitfamilies,data=obsress)
 # print log-likelihood of each permutation
 logliks <- sapply(X=dvine_summer,FUN=function(x)x[[2]],simplify=TRUE)
+# compare with summer fitted copula
+vcs1 <- rvinecopulib::vinecop(data=obsress,selcrit = "loglik")
 
 which.max(loglikw+logliks)
-
-dvine_winter[[8]]
-dvine_summer[[8]]
 
 plot(sort(loglikw))
 plot(sort(logliks))
 plot(sort(loglikw+logliks))
 
+# aim is to explore if dismann structure is among top trees
+plot(x=c(vcs1$logl),y=1)
 
 
 # check structure for each conditioning pollutant variable -------------------
