@@ -121,3 +121,40 @@ sigmau_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, s
   } else {return(par_sum)}
 }
 
+sigmal_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init=NULL,deltal,deltau,sigu)  {
+  d <- ncol(data)
+  N <- nrow(data)
+  res <- 1:d
+  mu_agg <- sigl <- data.frame(matrix(ncol=(Nite+1),nrow = d))
+  # calculate a with initial values for mu and sigma
+  if (is.numeric(mu_init) & is.numeric(sigl_init) & is.numeric(sigl_init)) {
+    mu_agg[,1] <- mu_init
+    sigl[,1] <- sigl_init
+  } else {
+    mu_agg[,1] <- 0
+    sigl[,1] <- 1
+  }
+  phi2. <- phi3. <- c(1) 
+  for (i in 1:Nite) {
+    # estimate sigu parameters phi0 and phi1
+    phi_init <- c(phi2.[i],phi3.[i])
+    opt <- optim(fn=NLL_exp_sigmal,x = data,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,i]),sigl1=as.numeric(sigl[,i]),deltal=deltal,deltau=deltau,sigu=sigu,control=list(maxit=2000),par = phi_init,method = "Nelder-Mead")
+    phi2 <- opt$par[1]
+    phi3 <- opt$par[2]
+    phi2. <- append(phi0.,phi0)
+    phi3. <- append(phi1.,phi1)
+    sigl[,i+1] <- phi2*(1-exp(-phi3*cond_site_dist))
+    # estimate sigl and mu_agg for each site separately
+    for (j in 1:d) {
+      Z2 <- as.numeric(unlist(data[,j]))
+      opt <- optim(fn=NLL_AGG,x=Z2,sigu_hat = as.numeric(unlist(sigu[,i+1])),deltal_hat=deltal,deltau_hat = deltau,par=c(mean(Z2),sd(Z2),sd(Z2)),control=list(maxit=2000),method = "Nelder-Mead")
+      mu_agg[j,i+1] <- opt$par[1]
+    }
+    
+  }
+  par_sum <- data.frame("mu_agg" = as.numeric(mu_agg[,Nite+1]),"sigl" = as.numeric(sigl[,Nite+1]),"phi2" = phi2.[Nite+1], "phi3" = phi3.[Nite+1])
+  if (show_ite == TRUE) {
+    return(list(mu_agg,sigl,phi2.,phi3.,par_sum))
+  } else {return(par_sum)}
+}
+
