@@ -182,6 +182,8 @@ p <- ggplot(tmp_sigu) + geom_point(aes(y=sigu,x=dist,col=cond_site)) + scale_col
 ggsave(p,filename=paste0("../Documents/iterative_sigmas_res_margin/sigu_distance_all.png"),width=10,height=7) 
 
 # save these estimates
+iterative_sigmau_estimates <- tmp
+save(iterative_sigmau_estimates,file="data_processed/iterative_sigmau_estimates.R")
 
 # consider the analysis with outliers removed ---------------------------------
 x1 <- rep(0,12)
