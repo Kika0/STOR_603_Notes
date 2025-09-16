@@ -183,7 +183,7 @@ ggsave(p,filename=paste0("../Documents/iterative_sigmas_res_margin/sigu_distance
 
 # save these estimates
 iterative_sigmau_estimates <- tmp
-save(iterative_sigmau_estimates,file="data_processed/iterative_sigmau_estimates.R")
+save(iterative_sigmau_estimates,file="data_processed/iterative_sigmau_estimates.RData")
 
 # consider the analysis with outliers removed ---------------------------------
 x1 <- rep(0,12)
@@ -223,7 +223,4 @@ for (i in 1:12) {
 min(sig_u,na.rm = TRUE)
 max(sig_u,na.rm = TRUE)
 
-
-
-# save these estimates
 
