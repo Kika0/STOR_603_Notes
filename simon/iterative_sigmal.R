@@ -101,16 +101,16 @@ iter_sigmal_site <- function(i,Nite=5,file_folder="iterative_sigmal_res_margin",
   ggsave(sigld,filename=paste0("../Documents/",file_folder,"/sigl_distance_",cond_site_name,".png")) 
   
  
-  tmpsf <- tmpsf %>% mutate(mudiff = mu_agg_ite_sigu - mu_agg_ite_sigl, sigldiff = sigl_ite_sigu - sigl_ite_sigl)
+  tmpsf <- tmpsf %>% mutate(mudiff = mu_agg_ite_sigu - mu_agg_ite_sigl, sigldiff = sigl_ite_sigl - sigl_ite_sigu)
   toplabel <- c(TeX("Iterative $\\sigma_u (d_j)$ method"),TeX("Iterative $\\sigma_l (d_j)$ method"),"Difference")
   mu_limits <- c(-1.75,1.79)
-  t <- tmpsf %>% dplyr::select(mu_agg_ite_sigu,mu_agg_ite_sigl,mudiff) %>% pivot_longer(cols=c(mu_agg_ite_sigu,mu_agg_ite_sigl,mudiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu",limits=mu_limits),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
+  t <- tmpsf %>% dplyr::select(mu_agg_ite_sigu,mu_agg_ite_sigl,mudiff) %>% pivot_longer(cols=c(mu_agg_ite_sigu,mu_agg_ite_sigl,mudiff),names_to = "parameter", values_to = "value") %>% mutate(parameter=factor(parameter,levels=c("mu_agg_ite_sigu","mu_agg_ite_sigl","mudiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu",limits=mu_limits),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
     tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel) 
   
   tmap_save(t,filename=paste0("../Documents/",file_folder,"/mu_agg_",cond_site_name,".png"),width=8,height=6)
   
   sigma_limits <- c(-1.32,2.3)
-  t <- tmpsf %>% dplyr::select(sigl_ite_sigu,sigl_ite_sigl,sigldiff) %>% pivot_longer(cols=c(sigl_ite_sigu,sigl_ite_sigl,sigldiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu",limits=sigma_limits),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
+  t <- tmpsf %>% dplyr::select(sigl_ite_sigu,sigl_ite_sigl,sigldiff) %>% pivot_longer(cols=c(sigl_ite_sigu,sigl_ite_sigl,sigldiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("sigl_ite_sigu","sigl_ite_sigl","sigldiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu",limits=sigma_limits),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
     tm_layout(legend.position=c("right","top"),legend.height = 9, panel.labels = toplabel) 
   tmap_save(t,filename=paste0("../Documents/",file_folder,"/sigma_lower_",cond_site_name,".png"),width=8,height=6)
   
