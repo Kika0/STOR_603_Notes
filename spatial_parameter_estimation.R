@@ -158,3 +158,18 @@ sigmal_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, s
   } else {return(par_sum)}
 }
 
+#' Get index of a conditioning site
+#'
+#' @param j Column index of sites
+#' @param grid An sf object of site points grid
+#' @param sites A dataframe of conditioning sites df_sites
+#'
+#' @return An index on the grid of a conditioning site j
+#' @export
+#'
+#' @examples
+get_site_index <- function(j, grid = xyUK20_sf, sites= df_sites) {
+  cond_site_name <- names(sites)[j]  
+  cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+  return(find_site_index(cond_site_coord,grid_uk = grid))
+}
