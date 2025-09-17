@@ -121,13 +121,13 @@ sigmau_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, s
   } else {return(par_sum)}
 }
 
-sigmal_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init=NULL,deltal,deltau,sigu)  {
+sigmal_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,deltal,deltau,sigu)  {
   d <- ncol(data)
   N <- nrow(data)
   res <- 1:d
   mu_agg <- sigl <- data.frame(matrix(ncol=(Nite+1),nrow = d))
   # calculate a with initial values for mu and sigma
-  if (is.numeric(mu_init) & is.numeric(sigl_init) & is.numeric(sigl_init)) {
+  if (is.numeric(mu_init) & is.numeric(sigl_init) ) {
     mu_agg[,1] <- mu_init
     sigl[,1] <- sigl_init
   } else {
@@ -138,16 +138,16 @@ sigmal_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, s
   for (i in 1:Nite) {
     # estimate sigu parameters phi0 and phi1
     phi_init <- c(phi2.[i],phi3.[i])
-    opt <- optim(fn=NLL_exp_sigmal,x = data,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,i]),sigl1=as.numeric(sigl[,i]),deltal=deltal,deltau=deltau,sigu=sigu,control=list(maxit=2000),par = phi_init,method = "Nelder-Mead")
+    opt <- optim(fn=NLL_exp_sigmal,x = data,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,i]),sigu1=sigu,deltal=deltal,deltau=deltau,control=list(maxit=2000),par = phi_init,method = "Nelder-Mead")
     phi2 <- opt$par[1]
     phi3 <- opt$par[2]
-    phi2. <- append(phi0.,phi0)
-    phi3. <- append(phi1.,phi1)
+    phi2. <- append(phi2.,phi2)
+    phi3. <- append(phi3.,phi3)
     sigl[,i+1] <- phi2*(1-exp(-phi3*cond_site_dist))
     # estimate sigl and mu_agg for each site separately
     for (j in 1:d) {
       Z2 <- as.numeric(unlist(data[,j]))
-      opt <- optim(fn=NLL_AGG,x=Z2,sigu_hat = as.numeric(unlist(sigu[,i+1])),deltal_hat=deltal,deltau_hat = deltau,par=c(mean(Z2),sd(Z2),sd(Z2)),control=list(maxit=2000),method = "Nelder-Mead")
+      opt <- optim(fn=NLL_AGG,x=Z2,sigl_hat = as.numeric(unlist(sigl[,i+1])),sigu_hat = sigu,deltal_hat=deltal,deltau_hat = deltau,par=c(mean(Z2),sd(Z2)),control=list(maxit=2000),method = "Nelder-Mead")
       mu_agg[j,i+1] <- opt$par[1]
     }
     
