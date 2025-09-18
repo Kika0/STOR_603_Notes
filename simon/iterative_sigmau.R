@@ -147,9 +147,8 @@ phi1tmp[cond_site_indeces] <- phi1
 est_phi <- xyUK20_sf[cond_site_indeces,] %>% mutate(phi0=phi0,phi1 = phi1)
 
 toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))
-tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi %>% pivot_longer(cols = c(phi0,phi1),names_to = "parameter", values_to = "value")) + tm_dots(fill="value",size = 2) + tm_facets(by = "parameter") + tm_layout(legend.position=c("right","top"),legend.height = 12,panels.label=toplabel)
-tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 2, fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
-tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 2, fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 2, fill.scale =tm_scale_continuous(values="Blues"),fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 2, fill.scale =tm_scale_continuous(values="Blues"),fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
 t <- tmap_arrange(tmphi0,tmphi1,ncol=2)
 tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin_all/all_phis.png"),width=8,height=6)
 

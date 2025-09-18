@@ -119,3 +119,53 @@ iter_sigmal_site <- function(i,Nite=5,file_folder="iterative_sigmal_res_margin",
 
 Nite <- 5
 tmp <- sapply(1:ncol(df_sites),iter_sigmal_site, Nite = 5, simplify = FALSE)
+
+# separate diagnostics to allow for common phi parameters across conditioning sites ------------------------------------------------------------
+phi2 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][1,41])))
+phi3 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][1,42])))
+# plot spatially
+cond_site_indeces <- sapply(1:ncol(df_sites), get_site_index)
+# get the point
+phi2tmp <- rep(NA,nrow(xyUK20_sf))
+phi3tmp <- rep(NA, nrow(xyUK20_sf))
+phi2tmp[cond_site_indeces] <- phi2
+phi3tmp[cond_site_indeces] <- phi3
+est_phi <- xyUK20_sf[cond_site_indeces,] %>% mutate(phi2=phi2,phi3 = phi3)
+
+toplabel <- c(TeX("$\\phi_2$"),TeX("$\\phi_3$"))
+phi2_limits <- c(0.55,1.8)
+tmphi2 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi2",size = 2, fill.scale =tm_scale_continuous(values="Blues",limits=phi2_limits),fill.legend = tm_legend(title = TeX("$\\phi_2$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi3 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi3",size = 2, fill.scale =tm_scale_continuous(values="Blues"), fill.legend = tm_legend(title = TeX("$\\phi_3$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+t <- tmap_arrange(tmphi2,tmphi3,ncol=2)
+tmap_save(t,filename=paste0("../Documents/iterative_sigmal_res_margin/all_phis.png"),width=8,height=6)
+
+# plot sigma_u against distance for all sites
+get_sigmal_distance <- function(i, grid = xyUK20_sf,sites=df_sites) {
+  sigl <- tmp[[i]]$sigl_ite_sigl
+  cond_site_index <- get_site_index(i)
+  dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index,],grid)))
+  sigld <- data.frame(sigl=sigl,dist=dist_cond_site) 
+  return(sigld %>% mutate(cond_site = names(sites)[i]))
+}
+
+tmp_sigl <- do.call(rbind,lapply(1:ncol(df_sites),FUN=get_sigmal_distance)) 
+c18 <- c(
+  "#009ADA", "#C11432", # red
+               "#66A64F",
+               "#6A3D9A", # purple
+               "#FF7F00", # orange
+               "black", "#FDD10A",
+               "#FB9A99", # lt pink
+               "palegreen2",
+               "#CAB2D6", # lt purple
+               "gray70", 
+               "maroon","deeppink1", "blue1",
+               "darkturquoise", "green1", "yellow4",
+               "darkorange4"
+)
+p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = sample(c18,ncol(df_sites))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+ggsave(p,filename=paste0("../Documents/iterative_sigmal_res_margin/sigl_distance_all.png"),width=10,height=7) 
+
+# save these estimates
+iterative_sigmal_estimates <- tmp
+save(iterative_sigmal_estimates,file="data_processed/iterative_sigmal_estimates.RData")
