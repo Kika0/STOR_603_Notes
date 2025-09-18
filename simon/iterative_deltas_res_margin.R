@@ -1,46 +1,3 @@
-res_margin_par_est_ite <- function(data=Z,given=cond_site,N=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init=NULL,deltal_init=NULL,deltau_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
-  d <- ncol(data)
-  nv <- nrow(data)
-  res <- 1:d
-  mu_agg <- sigl <- sigu <- deltal <- deltau <- data.frame(matrix(ncol=(N+1),nrow = d))
-  # calculate a with initial values for mu and sigma
-  if (is.numeric(mu_init) & is.numeric(sigl_init) & is.numeric(sigl_init)) {
-    mu_agg[,1] <- mu_init
-    sigl[,1] <- sigl_init
-    sigu[,1] <- sigu_init
-  } else {
-    mu_agg[,1] <- 0
-    sigl[,1] <- 1
-    sigu[,1] <- 1
-  }
-  if (is.numeric(deltal_init) & is.numeric(deltau_init)) {
-    deltal[,1] <- deltal_init
-    deltau[,1] <- deltau_init
-  } else {
-    deltal[,1] <- 2
-    deltau[,1] <- 2
-  }
-
-  for (i in 1:N) {
-    for (j in 1:d) {
-      Z2 <- as.numeric(unlist(data[,j]))
-      opt <- optim(fn=NLL_AGG,x=Z2,deltal_hat=as.numeric(deltal[1,i]),deltau_hat=as.numeric(deltau[1,i]),par=c(mean(Z2),sd(Z2),sd(Z2)),control=list(maxit=2000),method = "Nelder-Mead")
-      mu_agg[j,i+1] <- opt$par[1]
-      sigl[j,i+1] <- opt$par[2]
-      sigu[j,i+1] <- opt$par[3]
-    }
-    # calculate deltal and deltau
-      opt <- optim(fn=NLL_AGG_deltas,df = data,mu1=as.numeric(mu_agg[,i+1]),sigl1=as.numeric(sigl[,i+1]),sigu1=as.numeric(sigu[,i+1]),control=list(maxit=2000),par = c(as.numeric(deltal[1,i]),as.numeric(deltau[1,i])),method = "Nelder-Mead")
-      deltal[,i+1] <- opt$par[1]
-      deltau[,i+1] <- opt$par[2]
-  }
-  par_sum <- data.frame("mu_agg" = as.numeric(mu_agg[,N+1]),"sigl" = as.numeric(sigl[,N+1]),"sigu" = as.numeric(sigu[,N+1]),"deltal" = as.numeric(deltal[,N+1]), "deltau" = as.numeric(deltau[,N+1]))
-  if (show_ite == TRUE) {
-return(list(mu_agg,sigl,sigu,deltal,deltau,par_sum))
-  } else {return(par_sum)}
-}
-
-
 library(tmap) # spatial map plots
 library(sf) # for handling spatial sf objects
 library(viridis)
@@ -70,7 +27,8 @@ Lowestoft <- c(1.72431,52.48435)
 Truro <- c(-5.05125342465549,50.263075821232704)
 Dolgellau <- c(-3.8844362867080897,52.74213275545185)
 Bournemouth <- c(-1.8650607066137428,50.72173094587856)
-df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth)
+Leeds <- c(-1.5410242288355958,53.80098118214994)
+df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth,Leeds)
 #spatial_par_est saves parameter estimates as est_all_sf sf object in ../Documents folder
 q <- 0.9 # quantile threshold
 # load all three parameter estimates sf objects
@@ -132,7 +90,7 @@ iter_delta_site <- function(j,Nite=50,sites=df_sites,grid=xyUK20_sf,data=data_mo
   est_site <- par_est %>% filter(cond_site==cond_site_name)
   cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
   cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
-  Z <- observed_residuals(df = data, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
+  Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
   
   # estimate parameters iteratively --------------------------------------------
   tmp <- res_margin_par_est_ite(data=Z,show_ite = TRUE,N=Nite)
@@ -235,27 +193,17 @@ sigu_above_below <- function(cond_site_name = "Birmingham",sites=df_sites,result
    sigusf <- cbind(tmpsf,sigud %>% select(dist,is.above))
    t <- tm_shape(sigusf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name) + tm_layout(legend.position=c("right","top"),legend.height = 12) 
    tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/abovebelow_sigu_map_",cond_site_name,".png"),width=3,height=6) 
-   # plot also distance as control?
+   return(sigud$is.above)
 }
 
-x1 <- 0
-x2 <- 600000
-y1 <- 0
-y2 <- 5
 
-# look at a few sites
-sigu_above_below(cond_site_name = "Birmingham",x1=0,x2=600000,y1=0.5,y2=3)
-sigu_above_below(cond_site_name = "Glasgow",x1=0,x2=600000,y1=1,y2=2.2)
-sigu_above_below(cond_site_name = "London",x1=0,x2=600000,y1=0.5,y2=2.5)
-sigu_above_below(cond_site_name = "Inverness",x1=0,x2=600000,y1=0.8,y2=1.5)
-sigu_above_below(cond_site_name = "Lancaster",x1=0,x2=600000,y1=1,y2=2.2)
-sigu_above_below(cond_site_name = "Newcastle",x1=0,x2=600000,y1=1,y2=1.5)
-sigu_above_below(cond_site_name = "Cromer",x1=0,x2=600000,y1=1.2,y2=1.1)
-sigu_above_below(cond_site_name = "Hull",x1=0,x2=600000,y1=1,y2=1.05)
-sigu_above_below(cond_site_name = "Lowestoft",x1=0,x2=800000,y1=1.35,y2=1.25)
-sigu_above_below(cond_site_name = "Truro",x1=0,x2=900000,y1=1.1,y2=1.8)
-sigu_above_below(cond_site_name = "Dolgellau",x1=0,x2=600000,y1=0.9,y2=2.5)
-sigu_above_below(cond_site_name = "Bournemouth",x1=0,x2=600000,y1=1.5,y2=2)
+x1 <- rep(0,12)
+x2 <- c(rep(600000,8),800000,900000,600000,600000)
+y1 <- c(0.5,1,0.5,0.8,1,1,1.2,1,1.35,1.1,0.9,1.5)
+y2 <- c(3,2.2,2.5,1.5,2.2,1.5,1.1,1.05,1.25,1.8,2.5,2)
+# look at all sites
+sapply(1:ncol(df_sites),FUN = function(i) {sigu_above_below(cond_site_name = names(df_sites)[i], x1 = x1[i], x2 = x2[i], y1 = y1[i], y2 = y2[i])})
+
 
 # repeat for beta ------------------------------------------------
 beta_above_below <- function(cond_site_name = "Birmingham",est_all_sf.=est_all_sf,x1,x2,y1,y2) {
@@ -280,19 +228,12 @@ beta_above_below <- function(cond_site_name = "Birmingham",est_all_sf.=est_all_s
     
     }
 
-
-beta_above_below(cond_site_name = "Birmingham",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Glasgow",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "London",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Inverness",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Lancaster",x1=0,x2=600000,y1=0.3,y2=0.4)
-beta_above_below(cond_site_name = "Newcastle",x1=0,x2=600000,y1=0.3,y2=0.4)
-beta_above_below(cond_site_name = "Cromer",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Hull",x1=0,x2=600000,y1=0.25,y2=0.3)
-beta_above_below(cond_site_name = "Lowestoft",x1=0,x2=800000,y1=0.3,y2=0.4)
-beta_above_below(cond_site_name = "Truro",x1=0,x2=900000,y1=0.3,y2=0.4)
-beta_above_below(cond_site_name = "Dolgellau",x1=0,x2=600000,y1=0.2,y2=0.5)
-beta_above_below(cond_site_name = "Bournemouth",x1=0,x2=600000,y1=0.25,y2=0.5)
+# look at all sites
+x1 <- rep(0,ncol(df_sites))
+x2 <- c(rep(60000,8),800000,900000,600000,600000)
+y1 <- c(0.2,0.2,0.2,0.2,0.3,0.3,0.2,0.25,0.3,0.3,0.2,0.25)
+y2 <- c(0.5,0.5,0.5,0.5,0.4,0.4,0.5,0.3,0.4,0.4,0.5,0.5)
+sapply(1:ncol(df_sites),FUN = function(i) {beta_above_below(cond_site_name = names(df_sites)[i], x1 = x1[i], x2 = x2[i], y1 = y1[i], y2 = y2[i])})
 
 # save the estimates to pass into iterative sigma_u
 save(result, file="data_processed/iterative_delta_estimates.RData")
