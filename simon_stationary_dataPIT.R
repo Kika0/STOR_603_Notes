@@ -150,18 +150,30 @@ for (i in 1:length(files_subset1)) {
 
 i    <- which(trunc(data01$time)==2020 & data01$doy==205 & data01$class=='obs')
 k    <- which(trunc(data01$time)==2079 & data01$doy==205 & data01$class=='mod')
-
+i1    <- which(trunc(data01$time)==1960 & data01$doy==205 & data01$class=='obs')
+k1    <- which(trunc(data01$time)==1981 & data01$doy==205 & data01$class=='mod')
 glimpse(list_of_files[[1]]$threshold[i])
 # setup for par_est
 thresCPM <- thresobs <- c()
+thresCPM1 <- thresobs1 <- c()
+
 for (j in 1: length(list_of_files)) {
 thresCPM[j] <-   list_of_files[[j]]$threshold[k]
 thresobs[j] <-   list_of_files[[j]]$threshold[i]
+thresCPM1[j] <-   list_of_files[[j]]$threshold[k1]
+thresobs1[j] <-   list_of_files[[j]]$threshold[i1]
 }
 tmap_mode("plot")
 tm_thres <- xyUK20_sf %>% mutate("CPM" =thresCPM, "observed"=thresobs) %>% pivot_longer(cols=c("CPM","observed"),values_to = "temperature", names_to = "data_source")
-t <- tm_shape(tm_thres) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+t <- tm_shape(tm_thres) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE)
 # save map
 tmap_save(t,filename=paste0("../Documents/threshold_explore.png"),width=8,height=6)
+
+# plot differences
+tm_thres <- xyUK20_sf %>% mutate("CPM_diff" =thresCPM-thresCPM1, "observed_diff"=thresobs-thresobs1) %>% pivot_longer(cols=c("CPM_diff","observed_diff"),values_to = "temperature", names_to = "data_source")
+t <- tm_shape(tm_thres) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE)
+# save map
+tmap_save(t,filename=paste0("../Documents/threshold_explore_difference.png"),width=8,height=6)
+
 
 # add this to object of analysis data to be potentially used as a covariate
