@@ -159,6 +159,11 @@ NLL_AGGsig <- function(x,theta) {
 #'
 #' @param x A numerical vector of data.
 #' @param theta A vector of parameters c(mu,sigl,sigu,deltal,deltau).
+#' @param mu_hat Optional fixed mu parameter
+#' @param sigl_hat Optional fixed sigl parameter
+#' @param sigu_hat Optional fixed sigu parameter
+#' @param deltal_hat Optional fixed deltal parameter
+#' @param deltau_hat Optional fixed deltau parameter
 #'
 #' @return A number of negative log-likelihood.
 #' @export
@@ -196,6 +201,68 @@ NLL_AGG <- function(x,theta,mu_hat=NULL,sigl_hat=NULL,sigu_hat=NULL,deltal_hat=N
     else 
       #   z[i] <- C_AGG*exp(-abs((x[i]-mu)/sigu)^deltau)
     {z[i] <- log(C_AGG)-((x[i]-mu)/sigu)^deltau }
+  }
+  return(-sum(z))
+}
+
+#' One-step estimation of a,b and AGG parameters
+#'
+#' @param x 
+#' @param theta 
+#' @param a_hat Optional fixed a parameter
+#' @param b_hat Optional fixed b parameter
+#' @param mu_hat Optional fixed mu parameter
+#' @param sigl_hat Optional fixed sigl parameter
+#' @param sigu_hat Optional fixed sigu parameter
+#' @param deltal_hat Optional fixed deltal parameter
+#' @param deltau_hat Optional fixed deltau parameter
+#'
+#' @return
+#' @export
+#'
+#' @examples
+NLL_AGG_onestep <- function(x,theta) {
+  if (is.null(a_hat)==FALSE) {
+    theta <- append(theta,a_hat,after=0)
+  }
+  if (is.null(b_hat)==FALSE) {
+    theta <- append(theta,b_hat,after=1)
+  }
+  if (is.null(mu_hat)==FALSE) {
+    theta <- append(theta,mu_hat,after=2)
+  }
+  if (is.null(sigl_hat)==FALSE) {
+    theta <- append(theta,sigl_hat,after=3)
+  } 
+  if (is.null(sigu_hat)==FALSE) {
+    theta <- append(theta,sigu_hat,after=4)
+  }
+  if (is.null(deltal_hat)==FALSE) {
+    theta <- append(theta,deltal_hat,after=5)
+  } 
+  if (is.null(deltau_hat)==FALSE) {
+    theta <- append(theta,deltau_hat,after=6)
+  } 
+  a <- theta[1]
+  b <- theta[2]
+  mu <- theta[3]
+  sigl <- theta[4]
+  sigu <- theta[5]
+  deltal <- theta[6]
+  deltau <- theta[7]
+  Y1 <- x[,1]
+  Y2 <- x[,2]
+  obs_res <- (Y2-a*Y1)/(Y1^b)
+  if(sigl<=0 | sigu<=0 | deltal<=1 |deltau<=1 ){return(10e10)}
+  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  z <- c()
+  for (i in 1:length(obs_res)) {
+    if (obs_res[i]<mu) {
+      z[i] <- log(C_AGG)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sigl)^deltal
+    }
+    else {
+      z[i] <- log(C_AGG)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sigu)^deltau
+    }
   }
   return(-sum(z))
 }
