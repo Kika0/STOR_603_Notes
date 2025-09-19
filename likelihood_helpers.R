@@ -360,10 +360,12 @@ NLL_AGGdelta_onestep <- function(x,theta,a_hat=NULL,b_hat=NULL) {
   if (is.null(b_hat)==FALSE) {
     b <- b_hat
   } else {theta <- append(theta,b,after=1)}
-  mu <- theta[1]
-  sig <- theta[2]
-  deltal <- theta[3]
-  deltau <- theta[4]
+  a <- theta[1]
+  b <- theta[2]
+  mu <- theta[3]
+  sig <- theta[4]
+  deltal <- theta[5]
+  deltau <- theta[6]
   Y1 <- x[,1]
   Y2 <- x[,2]
   obs_res <- (Y2-a*Y1)/(Y1^b)
