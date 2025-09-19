@@ -27,7 +27,7 @@ xcoord_o         <- xcoord_m
 ycoord_o         <- ycoord_m + obs_cpm_offset_y
 
 ### OBS 5km
-obs_example  <- '../luna/kristina/UKgrid5km/tasmax_rcp85_land-cpm_uk_5km_01_ann_206012-208011.nc'
+obs_example  <- '../luna/kristina_old/UKgrid5km/tasmax_rcp85_land-cpm_uk_5km_01_ann_206012-208011.nc'
 nc1      <- nc_open(obs_example)
 vlist    <- nc1$var
 shape.o  <- vlist$tasmax$size
@@ -133,3 +133,35 @@ data_mod_Lap <- as.data.frame((data_mod %>% apply(c(2),FUN=row_number))/(nrow(da
 
 # save as R object for further analysis
 save(data_obs,data_obs_Lap,data_mod,data_mod_Lap,file = "data_processed/temperature_data.RData")
+
+# explore other datasets
+files <- list.files("../luna/kristina/MSGpdParam_CPM5km_member1_20x20/scratch/hadsx/heatwave/HadUKGrid/dur-clim/CPM5km/v2kristina/UK/01/MakeStationary/MSGpdParam/")
+list_of_files <- list() #create empty list
+# only subset for x in x20 and y in y20
+files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],".MSGpdParam.2025-02-26.RData")})
+#loop through the files
+files_subset1 <- files_subset[files_subset %in% files]
+# could take only x and y divisible by 4 to subset and speed up data loading
+for (i in 1:length(files_subset1)) {
+  print(files_subset1[i])
+  load(paste0("../luna/kristina/MSGpdParam_CPM5km_member1_20x20/scratch/hadsx/heatwave/HadUKGrid/dur-clim/CPM5km/v2kristina/UK/01/MakeStationary/MSGpdParam/", files_subset1[i]))
+  list_of_files[[i]] <- gpdpar #add files to list position
+}
+
+i    <- which(trunc(data01$time)==2020 & data01$doy==205 & data01$class=='obs')
+k    <- which(trunc(data01$time)==2079 & data01$doy==205 & data01$class=='mod')
+
+glimpse(list_of_files[[1]]$threshold[i])
+# setup for par_est
+thresCPM <- thresobs <- c()
+for (j in 1: length(list_of_files)) {
+thresCPM[j] <-   list_of_files[[j]]$threshold[k]
+thresobs[j] <-   list_of_files[[j]]$threshold[i]
+}
+tmap_mode("plot")
+tm_thres <- xyUK20_sf %>% mutate("CPM" =thresCPM, "observed"=thresobs) %>% pivot_longer(cols=c("CPM","observed"),values_to = "temperature", names_to = "data_source")
+t <- tm_shape(tm_thres) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+# save map
+tmap_save(t,filename=paste0("../Documents/threshold_explore.png"),width=8,height=6)
+
+# add this to object of analysis data to be potentially used as a covariate
