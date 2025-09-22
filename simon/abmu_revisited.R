@@ -41,4 +41,43 @@ load("data_processed/iterative_sigmal_estimates.RData")
 spatial_par_est_abmu(data_Lap = data_mod_Lap,cond_sites = df_sites,res_margin_est = iterative_sigmal_estimates,dayshift = 0,v=q,Ndays_season = 90,title = paste0("abmu_revisited",q*100))
 
 # examine the output
-load("data_processed/.RData")
+load("data_processed/N9000_abmu_revisited90.RData")
+summary(est_all_sf)
+est_all_sf <- est_all_sf %>% mutate(cond_site=factor(cond_site,levels=names(df_sites)))
+est_all_sf <- est_all_sf[-which.max(est_all_sf$a),]
+# map parameter estimates for each site
+map_param_abmu <- function(tmp_est,facet_var = "cond_site",title_map="") {
+  misscol <- "aquamarine"
+    Nsites <- max(tmp_est$res, tmp_est$given,na.rm=TRUE)
+    if (identical(facet_var,"cond_site")) {
+      Nfacet <- length(unique(tmp_est$cond_site))
+      facet_label <- unique(tmp_est$cond_site)
+      nrow_facet <- ceiling(length(unique(tmp_est$cond_site))/3)
+      legend_outside_size <- 0.3
+    } 
+    rep_Nsites <- nrow(tmp_est)/Nsites
+    uk_tmp1 <- tmp_est 
+
+      lims <- seq(min(as.numeric(uk_tmp1$a),na.rm = TRUE),max(as.numeric(uk_tmp1$a),na.rm = TRUE),length.out=5)
+      pa <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+      lims <- seq(min(as.numeric(uk_tmp1$b),na.rm = TRUE),max(as.numeric(uk_tmp1$b),na.rm = TRUE),length.out=6)
+      pb <- tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+      lims <- seq(min(as.numeric(uk_tmp1$mu),na.rm = TRUE),max(as.numeric(uk_tmp1$mu),na.rm = TRUE),length.out=6)
+      pmu <- tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+      tmap_save(pa,filename="../Documents/a_all_abmu_revisited.png")
+      
+      return(list(pa,pb,pmu)) 
+}
+
+testmap <- map_param_abmu(tmp_est = est_all_sf)
+testmap[[3]]
+
+# examine outlier
+load("data_processed/N9000_abmu_revisited90.RData")
+summary(est_all_sf)
+est_all_sf <- est_all_sf %>% mutate(cond_site=factor(cond_site,levels=names(df_sites)))
+est_all_sfout <- est_all_sf[which.max(est_all_sf$a),]
+est_all_sfout
+# what about Hull?
+summary(est_all_sf %>% filter(cond_site=="Hull"))
+
