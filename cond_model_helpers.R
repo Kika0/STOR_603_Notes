@@ -382,6 +382,53 @@ observed_residuals <- function(df=sims,given=1,v=0.99,a=NULL,b=NULL) {
   return(Z)
 }
 
+#' Estimate a,b,mu for each residual site with fixed sigl, sigu, deltal, deltau parameters
+#'
+#' @param df A dataframe of data on Laplace scale Y
+#' @param v A quantile threshold
+#' @param given A column index of a conditioning variable
+#' @param res_margin_est A list of residual parameters sigl,sigu,deltal,deltau
+#'
+#' @return A dataframe of parameter estimates plus a few extra columns
+#' @export
+#'
+#' @examples
+par_est_abmu <- function(df=sims,v=0.99,given=c(1),res_margin_est = res_margin_est) {
+  lik <- a_hat <- b_hat <- mu_hat <- res_var <- c()
+  names(df) <- paste0("Y",1:ncol(df))
+  d <- ncol(df)
+  for (j in given) {
+    Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+    res <- c(1:d)[-j]
+    init_par <- c()
+    init_lik <- c()
+    sigl <- res_margin_est$sigl
+    sigu <- res_margin_est$sigu
+    deltal <- res_margin_est$deltal
+    deltau <- res_margin_est$deltau
+    for (i in 2:d) {
+      # optimise using the initial parameters
+      Y1 <- Y_given1extreme[,j]
+      Y2 <- Y_given1extreme[,res[i-1]]
+      init_par <- c(0.8,0.2,0)
+      opt <- optim(fn=NLL_AGG_onestep,x=data.frame(Y1,Y2),sigl_hat = sigl[i-1], sigu_hat = sigu[i-1], deltal_hat = deltal, deltau_hat = deltau,par=init_par,control=list(maxit=2000))
+      a_hat <- append(a_hat,opt$par[1])
+      b_hat <- append(b_hat,opt$par[2])
+      mu_hat <- append(mu_hat,opt$par[3])
+      lik <- append(lik,opt$value)
+      res_var <- append(res_var,res[i-1])
+    }
+  }
+  nas <- rep(NA,length(a_hat)) # NA values for parameters not used by a given method
+    par_sum <- data.frame("lik"=lik, 
+                          "a" = a_hat,"b" = b_hat,
+                          "mu" = mu_hat,
+                          "sigl" = sigl,"sigu" = sigu,
+                          "deltal" = deltal,"deltau" = deltau,
+                          "given" = rep(given,each=(d-1)),"res" = res_var)  
+  
+  return(par_sum)
+}
 
 plot_simulated <- function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
   df <- sims %>% dplyr::select(starts_with("Y"))
