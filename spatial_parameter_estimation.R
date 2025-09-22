@@ -173,3 +173,46 @@ get_site_index <- function(j, grid = xyUK20_sf, sites= df_sites) {
   cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
   return(find_site_index(cond_site_coord,grid_uk = grid))
 }
+
+#' Estimate conditional model parameters for spatio-temporal data
+#'
+#' `spatial_par_est_abmu()` estimates $\alpha$, $\beta$ and $\mu$ parameters,
+#'  and links back to spatial locations
+#'
+#' @param data_Lap A dataframe of data on Laplace scale Y
+#' @param cond_sites A dataframe of conditioning sites ((a subset of) df_sites)
+#' @param dayshift A numeric vector of temporal lags (days)
+#' @param Ndays_season A number of days in a season (90 for CPM data)
+#' @param v A quantile threshold
+#' @param res_margin_est A list of residual parameter estimates sigl,sigu,deltal,deltau
+#' @param grid_uk An sf point object of site locations
+#' @param title A character string added to end of filename of .RData
+#'
+#' @return `spatial_par_est()` returns an sf object of spatial points with parameter estimates
+#' @export
+#'
+#' @examples
+spatial_par_est_abmu <- function(data_Lap,cond_sites,dayshift=c(0),Ndays_season=90,v=0.9,res_margin_est,grid_uk=xyUK20_sf,title="") {
+  est_all <- data.frame("lik" = numeric(), 
+                        "a" = numeric(), "b" = numeric(),
+                        "mu" = numeric(),
+                        "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
+  for (i in 1:ncol(cond_sites)) {
+    cond_site <- find_site_index(as.numeric(cond_sites[,i]),grid_uk = grid_uk)
+    parest_site <- st_drop_geometry(res_margin_est[[i]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
+    residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
+                          sigu = parest_site$sigu_ite_sigu,
+                          deltal = parest_site$deltal_ite[1],
+                          deltau = parest_site$deltau_ite[1])
+    
+    for (j in 1:length(dayshift)) {
+      sims_tau <- shift_time(sims=data_Lap,cond_site=cond_site,tau=dayshift[j],Ndays_season = Ndays_season)
+      pe <- par_est_abmu(df=sims_tau,v=q,given=cond_site,res_margin_est = residual_pars)
+      # estimate residual margin parameters
+      est_all <- rbind(est_all,pe %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(cond_sites[i]),tau=as.character(dayshift[j])))
+    }
+  }
+  est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(dayshift))) %>% mutate(cond_site=factor(cond_site))
+  est_all_sf <- est_join_spatial(tmp_est=est_all,grid_uk=grid_uk)
+  save(est_all_sf,file=paste0("data_processed/N",nrow(data_Lap),"_",title,".RData"))
+}
