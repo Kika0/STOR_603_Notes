@@ -27,7 +27,7 @@ Truro <- c(-5.05125342465549,50.263075821232704)
 Dolgellau <- c(-3.8844362867080897,52.74213275545185)
 Bournemouth <- c(-1.8650607066137428,50.72173094587856)
 df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth)
-#spatial_par_est saves parameter estimates as est_all_sf sf object in ../Documents folder
+#spatial_par_est saves parameter estimates as est_all_sf sf object in data_processed folder
 q <- 0.98 # quantile threshold
 # spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites",q*100))
 # spatial_par_est(data_Lap = data_mod_Lap[1:3600,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("first40_12sites",q*100))
