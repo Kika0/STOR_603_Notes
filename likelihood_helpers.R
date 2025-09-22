@@ -221,7 +221,7 @@ NLL_AGG <- function(x,theta,mu_hat=NULL,sigl_hat=NULL,sigu_hat=NULL,deltal_hat=N
 #' @export
 #'
 #' @examples
-NLL_AGG_onestep <- function(x,theta) {
+NLL_AGG_onestep <- function(x,theta,a_hat = NULL, b_hat = NULL, mu_hat = NULL, sigl_hat = NULL, sigu_hat = NULL, deltal_hat = NULL, deltau_hat = NULL) {
   if (is.null(a_hat)==FALSE) {
     theta <- append(theta,a_hat,after=0)
   }
