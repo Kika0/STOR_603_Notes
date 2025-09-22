@@ -253,7 +253,7 @@ NLL_AGG_onestep <- function(x,theta,a_hat = NULL, b_hat = NULL, mu_hat = NULL, s
   Y1 <- x[,1]
   Y2 <- x[,2]
   obs_res <- (Y2-a*Y1)/(Y1^b)
-  if(a<-1 | a>1 | b<0 | b>1 ){return(10e10)}
+  if(a<=-1 | a>1 | b<0 | b>1 ){return(10e10)}
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
   z <- c()
   for (i in 1:length(obs_res)) {
