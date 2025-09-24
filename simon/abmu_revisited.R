@@ -45,7 +45,7 @@ load("data_processed/N9000_abmu_revisited90.RData")
 summary(est_all_sf)
 est_all_sf <- est_all_sf %>% mutate(cond_site=factor(cond_site,levels=names(df_sites)))
 # map parameter estimates for each site
-map_param_abmu <- function(tmp_est,facet_var = "cond_site",title_map="") {
+map_param_abmu <- function(tmp_est,facet_var = "cond_site",filename_part="abmu_revisited",title_map="") {
     misscol <- "aquamarine"
     Nsites <- max(tmp_est$res, tmp_est$given,na.rm=TRUE)
     if (identical(facet_var,"cond_site")) {
@@ -65,9 +65,9 @@ map_param_abmu <- function(tmp_est,facet_var = "cond_site",title_map="") {
       pb <- tm_shape(uk_tmp1) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=lims,values="Blues",value.na=misscol,label.na = "Conditioning site"),size=0.3, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 0.8,legend.title.size=1,legend.reverse=TRUE) + tm_title(text=title_map) 
  #    lims <- c(min(as.numeric(uk_tmp1$mu),na.rm = TRUE),max(as.numeric(uk_tmp1$mu),na.rm = TRUE))
       pmu <- tm_shape(uk_tmp1) + tm_dots(fill="mu",fill.scale = tm_scale_continuous(values="-matplotlib.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=0.3, fill.legend = tm_legend(title=TeX("$\\mu$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 0.8,legend.title.size=1,legend.reverse=TRUE) + tm_title(text=title_map) 
-      tmap_save(pa,filename="../Documents/a_all_abmu_revisited.png",width=8,height=8)
-      tmap_save(pb,filename="../Documents/b_all_abmu_revisited.png",width=8,height=8)
-      tmap_save(pmu,filename="../Documents/mu_all_abmu_revisited.png",width=8,height=8)
+      tmap_save(pa,filename=paste0("../Documents/a_all_",filename_part,".png"),width=8,height=8)
+      tmap_save(pb,filename=paste0("../Documents/b_all_",filename_part,".png"),width=8,height=8)
+      tmap_save(pmu,filename=paste0("../Documents/mu_all_",filename_part,".png"),width=8,height=8)
       
       return(list(pa,pb,pmu)) 
 }
@@ -80,3 +80,9 @@ testmap[[3]]
 est_all_sfout <- est_all_sf[which.max(est_all_sf$a),]
 est_all_sfout
 
+# compare with previous estimates
+load("data_processed/N9000_sequential2_AGG_all12sites90.RData")
+summary(est_all_sf)
+est_all_sf <- est_all_sf %>% mutate(cond_site=factor(cond_site,levels=names(df_sites)))
+maptit <- TeX("$(\\alpha,\\beta,\\mu)$ for 12 different conditioning sites (original estimates)")
+testmap <- map_param_abmu(tmp_est = est_all_sf,filename_part = "original_estimates",title_map = maptit)
