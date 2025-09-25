@@ -701,8 +701,20 @@ find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::sele
   return(x)
 }
 
-# function for plotting parameter estimates on a map and against distance
-map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="",grid_uk=uk_temp_sf) {
+
+#' Comprehensive map plots of parameter estimates
+#'
+#' @param tmp_est An sf object of parameter estimates
+#' @param method Several options of what maps to return
+#' @param facet_var Options are "cond_site", "tau", "q" or c("cond_site","tau")
+#' @param title_map Optional title to add to each map
+#' @param grid_uk 
+#'
+#' @return A list of tmap plots
+#' @export
+#'
+#' @examples
+map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="") {
   misscol <- "aquamarine"
   Nsites <- max(tmp_est$res, tmp_est$given,na.rm=TRUE)
   if (identical(facet_var,"cond_site")) {
