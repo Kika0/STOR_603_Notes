@@ -15,15 +15,20 @@
 #' @export
 #'
 #' @examples
-spatial_par_est <- function(data_Lap,cond_sites,dayshift=c(0),Ndays_season=90,v=0.9,ab_method="sequential2",res_margin="AGG",grid_uk=xyUK20_sf,title="") {
+spatial_par_est <- function(data_Lap,cond_sites,cond_site_names=NULL,dayshift=c(0),Ndays_season=90,v=0.9,ab_method="sequential2",res_margin="AGG",grid_uk=xyUK20_sf,title="") {
   est_all <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
                             "a" = numeric(), "b" = numeric(),
                             "mu" = numeric(),"mu_agg" = numeric(),
                             "sig" = numeric(),"sig_agg" = numeric(),"sigl" = numeric(),"sigu" = numeric(),
                             "delta" = numeric(),"deltal" = numeric(), "deltau" = numeric(),
                             "given" = numeric(), "res" = numeric(), "cond_site" = character(), "tau" = numeric())
-  for (i in 1:ncol(cond_sites)) {
-    cond_site <- find_site_index(as.numeric(cond_sites[,i]),grid_uk = grid_uk)
+  if(is.null(cond_site_names)) {
+    cond_site_names <- names(cond_sites)
+  }
+  for (i in 1:length(cond_site_names)) {
+    if (is.numeric(cond_site)) {cond_site <- cond_sites[i]} else{
+      cond_site <- find_site_index(as.numeric(cond_sites[,i]),grid_uk = grid_uk)
+    }
     for (j in 1:length(dayshift)) {
       sims_tau <- shift_time(sims=data_Lap,cond_site=cond_site,tau=dayshift[j],Ndays_season = Ndays_season)
       pe <- par_est(df=sims_tau,v=v,given=cond_site,margin = "Normal", method=ab_method,keef_constraints = c(1,2))
@@ -31,7 +36,7 @@ spatial_par_est <- function(data_Lap,cond_sites,dayshift=c(0),Ndays_season=90,v=
       obsr <- observed_residuals(df=sims_tau,given=cond_site,v = v,a=pe$a,b=pe$b)
       # estimate residual margin parameters
       pe_res <- res_margin_par_est(obs_res = obsr,method="AGG")
-      est_all <- rbind(est_all,cbind(pe[,-c(8,10:12,14:15)],pe_res) %>% add_row(.before=cond_site) %>%  mutate(cond_site=names(cond_sites[i]),tau=as.character(dayshift[j])))
+      est_all <- rbind(est_all,cbind(pe[,-c(8,10:12,14:15)],pe_res) %>% add_row(.before=cond_site) %>%  mutate("cond_site"=cond_site_names[i],tau=as.character(dayshift[j])))
        }
   }
   est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(dayshift))) %>% mutate(cond_site=factor(cond_site))
