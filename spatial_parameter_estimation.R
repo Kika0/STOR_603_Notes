@@ -44,7 +44,23 @@ spatial_par_est <- function(data_Lap,cond_sites,cond_site_names=NULL,dayshift=c(
   save(est_all_sf,file=paste0("data_processed/N",nrow(data_Lap),"_",ab_method,"_",res_margin,"_",title,".RData"))
 }
 
-res_margin_par_est_ite <- function(data=Z,given=cond_site,N=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init=NULL,deltal_init=NULL,deltau_init=NULL,method="onephi",SN=NULL, b_inc=FALSE)  {
+#' Iterative estimation for common deltal and deltau parameters
+#'
+#' @param data A dataframe of observed residuals
+#' @param given An index of a conditioning variable
+#' @param N A number of iterations
+#' @param show_ite A logical to return also values from each iteration
+#' @param mu_init A vector of initial value for mu
+#' @param sigl_init A vector of initial value for sigl
+#' @param sigu_init A vector of initial value for sigu
+#' @param deltal_init A vector of initial value for deltal
+#' @param deltau_init A vector of initial value for deltau
+#'
+#' @return A dataframe of final iteration estimates or a list for each parameter when show_ite=TRUE
+#' @export
+#'
+#' @examples
+deltas_par_est_ite <- function(data=Z,given=cond_site,N=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init=NULL,deltal_init=NULL,deltau_init=NULL)  {
   d <- ncol(data)
   nv <- nrow(data)
   res <- 1:d
@@ -101,7 +117,7 @@ iter_delta_site <- function(j,Nite=50,sites=df_sites,cond_site_names=NULL,grid=x
   Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
   
   # estimate parameters iteratively --------------------------------------------
-  tmp <- res_margin_par_est_ite(data=Z,show_ite = TRUE,N=Nite)
+  tmp <- deltas_par_est_ite(data=Z,show_ite = TRUE,N=Nite, mu_init = discard(as.numeric(est_site$mu_agg),is.na), sigl_init = discard(as.numeric(est_site$sigl),is.na), sigu_init = discard(as.numeric(est_site$sigu),is.na), deltal = discard(as.numeric(est_site$deltal),is.na), deltau = discard(as.numeric(est_site$deltau),is.na))
   # plot delta estimates
   tmp_delta <- rbind(data.frame(delta=as.numeric(unlist(tmp[[4]][1,])),iteration=1:(Nite+1),parameter = "delta_lower"),
                      data.frame(delta=as.numeric(unlist(tmp[[5]][1,])),iteration=1:(Nite+1),parameter = "delta_upper"))
@@ -151,6 +167,7 @@ iter_delta_site <- function(j,Nite=50,sites=df_sites,cond_site_names=NULL,grid=x
   
   return(tmpsf)
 }
+
 sigmau_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init=NULL,deltal,deltau)  {
   d <- ncol(data)
   N <- nrow(data)
