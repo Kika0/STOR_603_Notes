@@ -86,6 +86,66 @@ res_margin_par_est_ite <- function(data=Z,given=cond_site,N=10, show_ite=FALSE,m
   } else {return(par_sum)}
 }
 
+# write into a function ----------------------------------------------------
+iter_delta_site <- function(j,Nite=50,sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf) {
+  q <- 0.9
+  cond_site_name <- names(sites)[j]  
+  est_site <- par_est %>% filter(cond_site==cond_site_name)
+  cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+  cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
+  Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
+  
+  # estimate parameters iteratively --------------------------------------------
+  tmp <- res_margin_par_est_ite(data=Z,show_ite = TRUE,N=Nite)
+  # plot delta estimates
+  tmp_delta <- rbind(data.frame(delta=as.numeric(unlist(tmp[[4]][1,])),iteration=1:(Nite+1),parameter = "delta_lower"),
+                     data.frame(delta=as.numeric(unlist(tmp[[5]][1,])),iteration=1:(Nite+1),parameter = "delta_upper"))
+  pd <- ggplot(tmp_delta) + geom_point(aes(x=iteration,y=delta,col=parameter))
+  ggsave(pd,filename=paste0("../Documents/iterative_deltas_res_margin/deltas_",cond_site_name,".png"))
+  
+  # plot across iterations for a selected site
+  random_site <- 100
+  tmp_all <- rbind(data.frame(delta=as.numeric(unlist(tmp[[1]][random_site,])),iteration=1:(Nite+1),parameter = "mu_agg"),
+                   data.frame(delta=as.numeric(unlist(tmp[[2]][random_site,])),iteration=1:(Nite+1),parameter = "sigma_lower"),
+                   data.frame(delta=as.numeric(unlist(tmp[[3]][random_site,])),iteration=1:(Nite+1),parameter = "sigma_upper"),
+                   data.frame(delta=as.numeric(unlist(tmp[[4]][random_site,])),iteration=1:(Nite+1),parameter = "delta_lower"),
+                   data.frame(delta=as.numeric(unlist(tmp[[5]][random_site,])),iteration=1:(Nite+1),parameter = "delta_upper")
+                   
+  )
+  # plot the final iteration
+  p1 <- ggplot(tmp_all) + geom_point(aes(x=iteration,y=delta,col=parameter))
+  ggsave(p1,filename=paste0("../Documents/iterative_deltas_res_margin/random_site_par_",cond_site_name,".png"))
+  
+  est_ite <- tmp[[6]] %>% add_row(.before=cond_site)
+  names(est_ite) <- paste0(names(est_ite),"_ite")
+  tmpsf <- cbind(est_site,est_ite)
+  # plot parameter estimates against distance
+  # calculate distance from a conditioning site with st_distance()
+  mud <- data.frame(mu=tmpsf$mu_agg_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=mu,x=dist))
+  ggsave(mud,filename=paste0("../Documents/iterative_deltas_res_margin/muagg_distance_",cond_site_name,".png")) 
+  
+  sigld <- data.frame(sigl=tmpsf$sigl_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigl,x=dist))
+  ggsave(sigld,filename=paste0("../Documents/iterative_deltas_res_margin/sigl_distance_",cond_site_name,".png")) 
+  
+  sigud <- data.frame(sigu=tmpsf$sigu_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigu,x=dist))
+  ggsave(sigud,filename=paste0("../Documents/iterative_deltas_res_margin/sigu_distance_",cond_site_name,".png")) 
+  
+  # map final iteration 
+  t <- tmpsf %>% dplyr::select(mu_agg,mu_agg_ite) %>% pivot_longer(cols=c(mu_agg,mu_agg_ite),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu")) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 12) 
+  
+  tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/mu_agg_",cond_site_name,".png"),width=8,height=6)
+  
+  t <- tmpsf %>% dplyr::select(sigl,sigl_ite) %>% pivot_longer(cols=c(sigl,sigl_ite),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="brewer.blues")) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 12) 
+  tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/sigma_lower_",cond_site_name,".png"),width=8,height=6)
+  
+  t <- tmpsf %>% dplyr::select(sigu,sigu_ite) %>% pivot_longer(cols=c(sigu,sigu_ite),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="brewer.blues")) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 12) 
+  tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/sigma_upper_",cond_site_name,".png"),width=8,height=6)
+  
+  return(tmpsf)
+}
 sigmau_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, show_ite=FALSE,mu_init=NULL,sigl_init=NULL,sigu_init=NULL,deltal,deltau)  {
   d <- ncol(data)
   N <- nrow(data)
