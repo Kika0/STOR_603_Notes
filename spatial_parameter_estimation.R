@@ -208,7 +208,7 @@ sigmau_par_est_ite <- function(data=Z,given=cond_site,cond_site_dist, Nite=10, s
   } else {return(par_sum)}
 }
 
-iter_sigmau_site <- function(i,Nite=5,sites=df_sites,cond_site_names=NULL,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf,ite_delta = result,index_outliers = NULL, folder_name = "iterative_sigmau_res_margin") {
+iter_sigmau_site <- function(j,Nite=5,sites=df_sites,cond_site_names=NULL,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf,ite_delta = result,index_outliers = NULL, folder_name = "iterative_sigmau_res_margin") {
   q <- 0.9
   if(is.null(cond_site_names)) {
     cond_site_name <- names(sites)[j]
