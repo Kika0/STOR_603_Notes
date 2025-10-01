@@ -32,8 +32,8 @@ site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_di
 # plot these points on a map
 uk_diag <- uk_diag %>% mutate(sites_diagonal=factor(case_match(siteID,c(site_start) ~ "Birmingham",c(site_end)~"Cromer",sites_index_diagonal[2:(length(site_name_diagonal)-1)]~"diagonal_sites")))
 tmap_mode("plot")
-tm_shape(uk_diag) + tm_dots("sites_diagonal",size=0.1,fill.scale = tm_scale_categorical(values=c("Birmingham"="#C11432","Cromer" = "#009ADA", "diagonal_sites" = "#FDD10A")))
-
+t <- tm_shape(uk_diag) + tm_dots("sites_diagonal",size=0.5,fill.scale = tm_scale_categorical(values=c("Birmingham"="#C11432","Cromer" = "#009ADA", "diagonal_sites" = "#FDD10A")))
+tmap_save(t, filename = "../Documents/Birmingham_Cromer_diagonal/sites_illustrate.png",width=4,height=6)
 # estimate parameters along
 spatial_par_est(data_Lap = data_mod_Lap,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = 0,v=q,Ndays_season = 90,title = paste0("diagonal_sites_Birmingham_Cromer",q*100))
 
@@ -53,7 +53,7 @@ sapply(1:length(condmodel_params),FUN = save_map_i)
 
 # move to delta estimates
 result <- sapply(1:length(sites_index_diagonal),FUN = iter_delta_site,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
-sapply(1,FUN = iter_delta_site,Nite=20,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
+#sapply(1,FUN = iter_delta_site,Nite=20,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
 
 deltal <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,29])))
 deltau <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,30])))
@@ -77,4 +77,53 @@ tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/all_deltas.
 # save the estimates to pass into iterative sigma_u
 save(result, file="data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
 
+load("data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
+result <- sapply(1:length(sites_index_diagonal),FUN = iter_sigmau_site,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/sigmau",simplify = FALSE)
 
+# plot also all phis 
+# separate diagnostics to allow for common phi parameters across conditioning sites ------------------------------------------------------------
+phi0 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,34])))
+phi1 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,35])))
+# plot spatially
+
+# get the point
+phi0tmp <- rep(NA,nrow(xyUK20_sf))
+phi1tmp <- rep(NA, nrow(xyUK20_sf))
+phi0tmp[sites_index_diagonal] <- phi0
+phi1tmp[sites_index_diagonal] <- phi1
+est_phi <- xyUK20_sf[sites_index_diagonal,] %>% mutate(phi0=phi0,phi1 = phi1)
+
+toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))
+tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 1, fill.scale =tm_scale_continuous(values="Blues"),fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 1, fill.scale =tm_scale_continuous(values="Blues"),fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+t <- tmap_arrange(tmphi0,tmphi1,ncol=2)
+tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi0_phi1.png"),width=8,height=6)
+
+# plot sigma_u against distance for all sites
+get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
+  sigu <- tmp[[i]]$sigu_ite_sigu
+  dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
+  sigud <- data.frame(sigu=sigu,dist=dist_cond_site) 
+  return(sigud %>% mutate(cond_site = site_name_diagonal[i]))
+}
+
+tmp_sigu <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance)) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
+c25 <- c(
+  "dodgerblue2", "#E31A1C", # red
+               "green4",
+               "#6A3D9A", # purple
+               "#FF7F00", # orange
+               "black", "gold1",
+               "skyblue2", "#FB9A99", # lt pink
+               "palegreen2",
+               "#CAB2D6", # lt purple
+               "#FDBF6F", # lt orange
+               "gray70", "khaki2",
+               "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
+               "darkturquoise", "green1", "yellow4", "yellow3",
+               "darkorange4", "brown"
+)
+p <- ggplot(tmp_sigu) + geom_point(aes(y=sigu,x=dist,col=cond_site)) + scale_color_manual(values = sample(c25,length(site_name_diagonal))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_u$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigu_distance_all.png"),width=10,height=7) 
+
+# move to sigmal estimates
