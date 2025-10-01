@@ -169,3 +169,38 @@ ggsave(p,filename=paste0("../Documents/iterative_sigmal_res_margin/sigl_distance
 # save these estimates
 iterative_sigmal_estimates <- tmp
 save(iterative_sigmal_estimates,file="data_processed/iterative_sigmal_estimates.RData")
+
+# explore plots of mu against distance
+i <- 6 # Newcastle
+cond_site_name <- names(df_sites)[i] 
+cond_site_coord <- df_sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+cond_site <- find_site_index(cond_site_coord,grid_uk = xyUK20_sf)
+tmp <- tmp[[i]]
+mutmp <- data.frame(mu=tmp$mu_agg_ite_sigl,dist=as.numeric(unlist(st_distance(tmp[cond_site,],tmp))))
+mud <- mutmp %>% ggplot() + geom_point(aes(y=mu,x=dist))
+
+# plot above and below
+sigl_above_below <- function(cond_site_name = "Birmingham",tmp=tmp,sites=df_sites,sigud=mutmp,x1,x2,y1,y2) {
+  sigud <- sigud %>% mutate(is.above=is_above(x=dist,y=mu,x1=x1,y1=y1,x2=x2,y2=y2))
+  p <- ggplot(sigud) + 
+    geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
+    geom_point(aes(x=dist,y=mu,col=factor(is.above)),size=0.5) + 
+    ylab(TeX("$\\sigma_u$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(cond_site_name) + guides(col="none")
+  ggsave(p,filename=paste0("../Documents/iterative_sigmal_res_margin/abovebelow_sigl_distance_",cond_site_name,".png"),width=4,height=4) 
+  # plot also spatially
+  musf <- cbind(tmp,sigud %>% select(dist,is.above))
+  t <- tm_shape(musf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name) + tm_layout(legend.position=c("right","top"),legend.height = 12) 
+  tmap_save(t,filename=paste0("../Documents/iterative_sigmal_res_margin/abovebelow_sigl_map_",cond_site_name,".png"),width=3,height=6) 
+  return(sigud$is.above)
+}
+
+sigl_above_below(cond_site_name = "Newcastle", x1=0,y1=0,x2=600000,y2=0.8)
+
+i <- 1 # Birmingham
+cond_site_name <- names(df_sites)[i] 
+cond_site_coord <- df_sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+cond_site <- find_site_index(cond_site_coord,grid_uk = xyUK20_sf)
+tmp <- iterative_sigmal_estimates[[i]]
+mutmp <- data.frame(mu=tmp$mu_agg_ite_sigl,dist=as.numeric(unlist(st_distance(tmp[cond_site,],tmp))))
+mud <- mutmp %>% ggplot() + geom_point(aes(y=mu,x=dist))
+sigl_above_below(cond_site_name = "Birmingham", x1=0,y1=0,x2=600000,y2=0.8)
