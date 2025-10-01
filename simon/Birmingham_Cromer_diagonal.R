@@ -52,7 +52,7 @@ save_map_i <- function(i,tm_list=tm,doc_folder = "Birmingham_Cromer_diagonal",w 
 sapply(1:length(condmodel_params),FUN = save_map_i)
 
 # move to delta estimates
-result <- sapply(1:length(sites_index_diagonal),FUN = iter_delta_site,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
+result <- sapply(1:length(sites_index_diagonal),FUN = iter_delta_site,Nite=100,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
 #sapply(1,FUN = iter_delta_site,Nite=20,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
 
 deltal <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,29])))
@@ -127,3 +127,17 @@ p <- ggplot(tmp_sigu) + geom_point(aes(y=sigu,x=dist,col=cond_site)) + scale_col
 ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigu_distance_all.png"),width=10,height=7) 
 
 # move to sigmal estimates
+# save estimates
+save(result, file="data_processed/iterative_sigmau_estimates_Birmingham_Cromer_diagonal.RData")
+# load estimates
+load("data_processed/iterative_sigmau_estimates_Birmingham_Cromer_diagonal.RData")
+
+result <- sapply(1:length(sites_index_diagonal),FUN = iter_sigmal_site,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,ite_sigu = result,folder_name = "Birmingham_Cromer_diagonal/sigmal",simplify = FALSE)
+# save estimates
+save(result, file="data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData")
+
+# examine output
+
+
+
+
