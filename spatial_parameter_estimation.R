@@ -212,6 +212,7 @@ iter_sigmau_site <- function(j,Nite=5,sites=df_sites,cond_site_names=NULL,grid=x
   q <- 0.9
   if(is.null(cond_site_names)) {
     cond_site_name <- names(sites)[j]
+    cond_site_names <- names(sites)
   } else {  cond_site_name <- cond_site_names[j] }
   
   if (is.numeric(sites)) {cond_site <- sites[j]} else{
@@ -220,7 +221,7 @@ iter_sigmau_site <- function(j,Nite=5,sites=df_sites,cond_site_names=NULL,grid=x
   
   if (is.null(index_outliers)) {
     est_site <- par_est %>% filter(cond_site==cond_site_name)
-    tmpsf <- ite_delta[[ which(names(df_sites)==cond_site_name) ]]
+    tmpsf <- ite_delta[[ which(cond_site_names==cond_site_name) ]]
   } else {
     # change NA to FALSE for subsetting the points
     index_outliers[is.na(index_outliers)] <- FALSE
