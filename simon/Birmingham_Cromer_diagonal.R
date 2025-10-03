@@ -75,18 +75,18 @@ tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/all_deltas.
 
 
 # save the estimates to pass into iterative sigma_u
-save(result, file="data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
+#save(result, file="data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
 
 load("data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
 result <- sapply(1:length(sites_index_diagonal),FUN = iter_sigmau_site,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/sigmau",simplify = FALSE)
+# save estimates
+#save(result, file="data_processed/iterative_sigmau_estimates_Birmingham_Cromer_diagonal.RData")
 
 # plot also all phis 
 # separate diagnostics to allow for common phi parameters across conditioning sites ------------------------------------------------------------
 phi0 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,34])))
 phi1 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,35])))
 # plot spatially
-
-# get the point
 phi0tmp <- rep(NA,nrow(xyUK20_sf))
 phi1tmp <- rep(NA, nrow(xyUK20_sf))
 phi0tmp[sites_index_diagonal] <- phi0
@@ -94,8 +94,8 @@ phi1tmp[sites_index_diagonal] <- phi1
 est_phi <- xyUK20_sf[sites_index_diagonal,] %>% mutate(phi0=phi0,phi1 = phi1)
 
 toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))
-tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 1, fill.scale =tm_scale_continuous(values="Blues"),fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
-tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 1, fill.scale =tm_scale_continuous(values="Blues"),fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
 t <- tmap_arrange(tmphi0,tmphi1,ncol=2)
 tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi0_phi1.png"),width=8,height=6)
 
@@ -127,8 +127,6 @@ p <- ggplot(tmp_sigu) + geom_point(aes(y=sigu,x=dist,col=cond_site)) + scale_col
 ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigu_distance_all.png"),width=10,height=7) 
 
 # move to sigmal estimates
-# save estimates
-save(result, file="data_processed/iterative_sigmau_estimates_Birmingham_Cromer_diagonal.RData")
 # load estimates
 load("data_processed/iterative_sigmau_estimates_Birmingham_Cromer_diagonal.RData")
 
