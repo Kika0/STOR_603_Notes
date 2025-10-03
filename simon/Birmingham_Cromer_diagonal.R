@@ -16,6 +16,8 @@ sapply(file.sources,source,.GlobalEnv)
 source("spatial_parameter_estimation.R") # for spatial_par_est function
 load("data_processed/temperature_data.RData")
 load("data_processed/spatial_helper.RData")
+load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"))
+est_all <- as.data.frame(est_all_sf)
 
 # identify diagonal sites
 # find indeces of start and end sites
@@ -84,8 +86,8 @@ result <- sapply(1:length(sites_index_diagonal),FUN = iter_sigmau_site,sites = s
 
 # plot also all phis 
 # separate diagnostics to allow for common phi parameters across conditioning sites ------------------------------------------------------------
-phi0 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,34])))
-phi1 <- sapply(1:ncol(df_sites),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,35])))
+phi0 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,34])))
+phi1 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,35])))
 # plot spatially
 phi0tmp <- rep(NA,nrow(xyUK20_sf))
 phi1tmp <- rep(NA, nrow(xyUK20_sf))
@@ -135,6 +137,47 @@ result <- sapply(1:length(sites_index_diagonal),FUN = iter_sigmal_site,sites = s
 save(result, file="data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData")
 
 # examine output
+phi2 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,41])))
+phi3 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,42])))
+# plot spatially
+phi2tmp <- rep(NA,nrow(xyUK20_sf))
+phi3tmp <- rep(NA, nrow(xyUK20_sf))
+phi2tmp[sites_index_diagonal] <- phi2
+phi3tmp[sites_index_diagonal] <- phi3
+est_phi <- xyUK20_sf[sites_index_diagonal,] %>% mutate(phi2=phi2,phi3 = phi3)
+
+toplabel <- c(TeX("$\\phi_2$"),TeX("$\\phi_3$"))
+tmphi2 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi2",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_2$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi3 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi3",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_3$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+t <- tmap_arrange(tmphi2,tmphi3,ncol=2)
+tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi2_phi3.png"),width=8,height=6)
+
+# plot sigma_u against distance for all sites
+get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
+  sigl <- tmp[[i]]$sigl_ite_sigl
+  dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
+  sigld <- data.frame(sigl=sigl,dist=dist_cond_site) 
+  return(sigld %>% mutate(cond_site = site_name_diagonal[i]))
+}
+
+tmp_sigl <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance)) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
+c25 <- c(
+  "dodgerblue2", "#E31A1C", # red
+               "green4",
+               "#6A3D9A", # purple
+               "#FF7F00", # orange
+               "black", "gold1",
+               "skyblue2", "#FB9A99", # lt pink
+               "palegreen2",
+               "#CAB2D6", # lt purple
+               "#FDBF6F", # lt orange
+               "gray70", "khaki2",
+               "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
+               "darkturquoise", "green1", "yellow4", "yellow3",
+               "darkorange4", "brown"
+)
+p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = sample(c25,length(site_name_diagonal))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigl_distance_all.png"),width=10,height=7) 
 
 
 
