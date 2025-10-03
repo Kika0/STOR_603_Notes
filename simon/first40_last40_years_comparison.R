@@ -77,7 +77,39 @@ for (i in 1:12) {
     tmap_save(pa,filename=paste0("../Documents/acomp_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
     pb <- tm_shape(est_comball %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(col="b",palette="viridis",breaks=seq(bmin,bmax,length.out=11),size=0.3,colorNA="aquamarine",title=TeX("$\\beta$"),textNA = "Conditioning site") + tm_facets(by= c("cond_site","Year_range"))+  tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5)
     tmap_save(pb,filename=paste0("../Documents/bcomp_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
-    
     }
 
+# extend the analysis to a sliding window
+# spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites",q*100))
+# spatial_par_est(data_Lap = data_mod_Lap[1:3600,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("first40_12sites",q*100))
+# spatial_par_est(data_Lap = data_mod_Lap[5401:9000,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("last40_12sites",q*100))
+
+time_bracket <- 900 # 10 years period is 900 summer days
+block_size <- 3600 # 40 years is block size
+# there are 7 40 year periods in 100 years
+# run at first only for Birmingham to test
+for (i in 1:((9000-(block_size-time_bracket))/time_bracket)) {
+spatial_par_est(data_Lap = data_mod_Lap[((i-1)*time_bracket+1):(block_size+(i-1)*time_bracket),],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("12sites_40years_period",i))
+}
+# load estimates
+load(paste0("data_processed/N3600_sequential2_AGG_12sites_40years_period",1,".RData"))
+est_all <- est_all_sf %>% mutate(period = as.character(1))
+for (p in 2:((9000-(block_size-time_bracket))/time_bracket)) {
+load(paste0("data_processed/N3600_sequential2_AGG_12sites_40years_period",p,".RData"))
+est_all <- rbind(est_all,est_all_sf%>% mutate(period = as.character(p)))
+  }
+# plot alphas
+tm_shape(est_all) + tm_dots(fill="a",size=1) + tm_facets(by=c("period"),nrow=1)
+est_all$a[est_all$a<0] <- 0
+point_size <- 0.3
+lims <- c(0,1)
+misscol <- "aquamarine"
+panel_labels <- sapply(1:((9000-(block_size-time_bracket))/time_bracket),FUN=function(i){paste0((1980+(i-1)*time_bracket/90),"-",(1980+(block_size+(i-1)*time_bracket)/90))})
+for (i in 1:12) {
+#  pa <- tm_shape(uk_tmp1) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+  pa <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by= c("period"),nrow = 1)+  tm_layout(panel.labels = panel_labels, legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pa,filename=paste0("../Documents/dependence_stationary/acomp_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
+  pb <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=c(0,0.6),values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by= c("period"),nrow=1)+  tm_layout(panel.labels = panel_labels, legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pb,filename=paste0("../Documents/dependence_stationary/bcomp_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
+}
 
