@@ -111,5 +111,20 @@ for (i in 1:12) {
   tmap_save(pa,filename=paste0("../Documents/dependence_stationary/acomp_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
   pb <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=c(0,0.6),values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by= c("period"),nrow=1)+  tm_layout(panel.labels = panel_labels, legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
   tmap_save(pb,filename=paste0("../Documents/dependence_stationary/bcomp_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
+# plot also difference between first and last panel
+  
+  }
+
+names(panel_labels) <- c(as.character(1:7))
+for (i in 1:12) {
+pa <- est_all %>% filter(cond_site==names(df_sites)[i]) %>% ggplot() + geom_point(aes(x=period,y=a)) + geom_line(aes(x=period,y=a,group=res)) + ylab(TeX("$\\alpha$")) + xlab("40 year period T") + ggtitle(names(df_sites)[i])
+ggsave(pa, filename = paste0("../Documents/dependence_stationary/acomp_plot_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=10)
+pa <- est_all %>% filter(cond_site==names(df_sites)[i]) %>% ggplot() + geom_boxplot(aes(y=a)) + facet_wrap("period",nrow = 1,labeller=as_labeller(panel_labels)) + ylab(TeX("$\\alpha$")) + xlab("40 year period T") + ggtitle(names(df_sites)[i])
+ggsave(pa, filename = paste0("../Documents/dependence_stationary/acomp_boxplot_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
+
+pb <- est_all %>% filter(cond_site==names(df_sites)[i]) %>% ggplot() + geom_point(aes(x=period,y=b)) + geom_line(aes(x=period,y=b,group=res)) + ylab(TeX("$\\beta$")) + xlab("40 year period T") + ggtitle(names(df_sites)[i])
+ggsave(pb, filename = paste0("../Documents/dependence_stationary/bcomp_plot_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=10)
+pb <- est_all %>% filter(cond_site==names(df_sites)[i]) %>% ggplot() + geom_boxplot(aes(y=b)) + facet_wrap("period",nrow = 1,labeller=as_labeller(panel_labels))  + ylab(TeX("$\\beta$")) + xlab("40 year period") + ggtitle(names(df_sites)[i])
+ggsave(pb, filename = paste0("../Documents/dependence_stationary/bcomp_boxplot_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
 }
 
