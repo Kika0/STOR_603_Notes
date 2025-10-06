@@ -26,7 +26,7 @@ spatial_par_est <- function(data_Lap,cond_sites,cond_site_names=NULL,dayshift=c(
     cond_site_names <- names(cond_sites)
   }
   for (i in 1:length(cond_site_names)) {
-    if (is.numeric(cond_site)) {cond_site <- cond_sites[i]} else{
+    if (is.numeric(cond_sites)) {cond_site <- cond_sites[i]} else{
       cond_site <- find_site_index(as.numeric(cond_sites[,i]),grid_uk = grid_uk)
     }
     for (j in 1:length(dayshift)) {
