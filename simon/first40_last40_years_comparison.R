@@ -112,8 +112,14 @@ for (i in 1:12) {
   pb <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=c(0,0.6),values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by= c("period"),nrow=1)+  tm_layout(panel.labels = panel_labels, legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
   tmap_save(pb,filename=paste0("../Documents/dependence_stationary/bcomp_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
 # plot also difference between first and last panel
+  Tdiffa <- (est_all %>% filter(cond_site==names(df_sites)[i],period=="7") %>% pull(a)) - (est_all %>% filter(cond_site==names(df_sites)[i],period=="1") %>% pull(a)) 
+  pa <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i],period=="1") %>% mutate(Tdiff=Tdiffa))  + tm_dots(fill="Tdiff",fill.scale = tm_scale_continuous(limits=c(-0.5,0.5),ticks=c(-0.5,-0.25,0,0.25,0.5),values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha_{diff}$"))) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pa,filename=paste0("../Documents/dependence_stationary/acomp_diff_q",q*100,"_",names(df_sites[i]),".png"),width=4,height=4)
+  Tdiffb <- (est_all %>% filter(cond_site==names(df_sites)[i],period=="7") %>% pull(b)) - (est_all %>% filter(cond_site==names(df_sites)[i],period=="1") %>% pull(b)) 
+  pb <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i],period=="1") %>% mutate(Tdiff=Tdiffb))  + tm_dots(fill="Tdiff",fill.scale = tm_scale_continuous(limits=c(-0.5,0.5),ticks=c(-0.5,-0.25,0,0.25,0.5),values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta_{diff}$"))) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pb,filename=paste0("../Documents/dependence_stationary/bcomp_diff_q",q*100,"_",names(df_sites[i]),".png"),width=4,height=4)
   
-  }
+   }
 
 names(panel_labels) <- c(as.character(1:7))
 for (i in 1:12) {
