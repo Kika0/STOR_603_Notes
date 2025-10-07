@@ -67,13 +67,14 @@ deltautmp[sites_index_diagonal] <- deltau
 est_delta <- xyUK20_sf[sites_index_diagonal,] %>% mutate(deltal=deltal,deltau = deltau)
 
 toplabel <- c(TeX("$\\delta_l$"),TeX("$\\delta_u$"))
+size_point <- 0.7
 #delta_limits <- c(min(deltal,deltau),max(deltal,deltau))
 deltal_limits <- c(min(deltal),max(deltal))
 deltau_limits <- c(min(deltau),max(deltau))
-tmdeltal <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_delta) + tm_dots(fill="deltal",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues",limits=deltal_limits),fill.legend = tm_legend(title = toplabel[1])) + tm_layout(legend.position=c("right","top"),legend.height = 12)
-tmdeltau <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_delta) + tm_dots(fill="deltau",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues",limits=deltau_limits), fill.legend = tm_legend(title = toplabel[2])) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmdeltal <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_delta) + tm_dots(fill="deltal",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues",limits=deltal_limits),fill.legend = tm_legend(title = toplabel[1])) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmdeltau <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_delta) + tm_dots(fill="deltau",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues",limits=deltau_limits), fill.legend = tm_legend(title = toplabel[2])) + tm_layout(legend.position=c("right","top"),legend.height = 12)
 t <- tmap_arrange(tmdeltal,tmdeltau,ncol=2)
-tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/all_deltas.png"),width=8,height=6)
+tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/all_deltas.png"),width=5,height=4)
 
 
 # save the estimates to pass into iterative sigma_u
@@ -96,10 +97,11 @@ phi1tmp[sites_index_diagonal] <- phi1
 est_phi <- xyUK20_sf[sites_index_diagonal,] %>% mutate(phi0=phi0,phi1 = phi1)
 
 toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))
-tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
-tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+size_point <- 0.7
+tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
 t <- tmap_arrange(tmphi0,tmphi1,ncol=2)
-tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi0_phi1.png"),width=8,height=6)
+tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi0_phi1.png"),width=5,height=4)
 
 # plot sigma_u against distance for all sites
 get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
@@ -147,10 +149,11 @@ phi3tmp[sites_index_diagonal] <- phi3
 est_phi <- xyUK20_sf[sites_index_diagonal,] %>% mutate(phi2=phi2,phi3 = phi3)
 
 toplabel <- c(TeX("$\\phi_2$"),TeX("$\\phi_3$"))
-tmphi2 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi2",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_2$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
-tmphi3 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi3",size = 1, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_3$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+size_point <- 0.7
+tmphi2 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi2",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_2$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi3 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi3",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_3$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
 t <- tmap_arrange(tmphi2,tmphi3,ncol=2)
-tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi2_phi3.png"),width=8,height=6)
+tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi2_phi3.png"),width=5,height=4)
 
 # plot sigma_u against distance for all sites
 get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
@@ -179,6 +182,32 @@ c25 <- c(
 p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = sample(c25,length(site_name_diagonal))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
 ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigl_distance_all.png"),width=10,height=7) 
 
+# try phi0,phi1,phi2,phi3 joint estimation
+load("data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
+result <- sapply(1:length(sites_index_diagonal),FUN = iter_sigmas_site,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/sigmas",simplify = FALSE)
 
+# examine output
+phi0 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,34])))
+phi1 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,35])))
+phi2 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,36])))
+phi3 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,37])))
+
+# plot spatially
+phi0tmp <- phi1tmp <- rep(NA,nrow(xyUK20_sf))
+phi2tmp <- phi3tmp <- rep(NA, nrow(xyUK20_sf))
+phi0tmp[sites_index_diagonal] <- phi0
+phi1tmp[sites_index_diagonal] <- phi1
+phi2tmp[sites_index_diagonal] <- phi2
+phi3tmp[sites_index_diagonal] <- phi3
+est_phi <- xyUK20_sf[sites_index_diagonal,] %>% mutate(phi0=phi0,phi1=phi1,phi2=phi2,phi3 = phi3)
+
+toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"),TeX("$\\phi_2$"),TeX("$\\phi_3$"))
+size_point <- 0.7
+tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi2 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi2",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_2$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi3 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi3",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_3$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+t <- tmap_arrange(tmphi0,tmphi1,tmphi2,tmphi3,ncol=4)
+tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phis_all4.png"),width=8,height=4)
 
 
