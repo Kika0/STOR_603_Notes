@@ -334,6 +334,8 @@ NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),delt
   } 
   deltal <- phi[5]
   deltau <- phi[6]
+  if(deltal<1 |deltau<1 ){return(10e10)}
+  
   sigu <- phi[1]*(1-exp(-(phi[2]*dij.)))
   sigl <- phi[3]*(1-exp(-(phi[4]*dij.)))
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
