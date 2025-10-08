@@ -170,10 +170,11 @@ t <- tm_shape(tm_thres) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_sca
 tmap_save(t,filename=paste0("../Documents/threshold_explore.png"),width=8,height=6)
 
 # plot differences
-tm_thres <- xyUK20_sf %>% mutate("CPM_diff" =thresCPM-thresCPM1, "observed_diff"=thresobs-thresobs1) %>% pivot_longer(cols=c("CPM_diff","observed_diff"),values_to = "temperature", names_to = "data_source")
-t <- tm_shape(tm_thres) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE)
+tm_thres_diff <- xyUK20_sf %>% mutate("CPM_diff" =thresCPM-thresCPM1, "observed_diff"=thresobs-thresobs1) %>% pivot_longer(cols=c("CPM_diff","observed_diff"),values_to = "temperature", names_to = "data_source")
+t <- tm_shape(tm_thres_diff) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE)
 # save map
 tmap_save(t,filename=paste0("../Documents/threshold_explore_difference.png"),width=8,height=6)
 
 
 # add this to object of analysis data to be potentially used as a covariate
+save(tm_thres,tm_thres_diff,file = "data_processed/94thresholds.RData")
