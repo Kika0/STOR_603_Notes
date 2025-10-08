@@ -250,7 +250,7 @@ dist_tmp <- dist_tmp[dist_tmp>0]
 distnorm <- dist_tmp/1000000
 parest_site <- st_drop_geometry(result[[j]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
 
-
-try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=5, show_ite=TRUE)
+try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=10, show_ite=TRUE)
 
 # separate parameter estimation and analysis
+
