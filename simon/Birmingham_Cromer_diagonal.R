@@ -105,7 +105,7 @@ tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi0_phi1.p
 
 # plot sigma_u against distance for all sites
 get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
-  sigu <- tmp[[i]]$sigu_ite_sigu
+  sigu <- tmp[[i]]$sigu_iteu
   dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
   sigud <- data.frame(sigu=sigu,dist=dist_cond_site) 
   return(sigud %>% mutate(cond_site = site_name_diagonal[i]))
@@ -157,7 +157,7 @@ tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi2_phi3.p
 
 # plot sigma_u against distance for all sites
 get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
-  sigl <- tmp[[i]]$sigl_ite_sigl
+  sigl <- tmp[[i]]$sigl_itel
   dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
   sigld <- data.frame(sigl=sigl,dist=dist_cond_site) 
   return(sigld %>% mutate(cond_site = site_name_diagonal[i]))
@@ -249,8 +249,73 @@ dist_tmp <- dist_tmp[dist_tmp>0]
 # normalise distance using a common constant
 distnorm <- dist_tmp/1000000
 parest_site <- st_drop_geometry(result[[j]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
+Nite <- 10
+try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE)
 
-try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=10, show_ite=TRUE)
 
+sapply(1:12,function(i)print(summary(try7[[i]])),simplify=FALSE)
 # separate parameter estimation and analysis
+p <- ggplot(try7[[1]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\alpha"))
+ggsave(p,file="../Documents/abmu_iterative_alpha.png",height=5,width=10)
+p <- ggplot(try7[[2]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\beta"))
+ggsave(p,file="../Documents/abmu_iterative_beta.png",height=5,width=10)
+p <- ggplot(try7[[3]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\mu_{AGG}"))
+ggsave(p,file="../Documents/abmu_iterative_mu.png",height=5,width=10)
+p <- ggplot(try7[[4]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_l"))
+ggsave(p,file="../Documents/abmu_iterative_sigmal.png",height=5,width=10)
+p <- ggplot(try7[[5]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_u"))
+ggsave(p,file="../Documents/abmu_iterative_sigmau.png",height=5,width=10)
 
+p <- ggplot(data.frame("deltal"=try7[[10]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltal),size=1.5) +ylab(TeX("$\\delta_l"))
+ggsave(p,file="../Documents/abmu_iterative_deltal.png",height=5,width=10)
+
+p <- ggplot(data.frame("deltau"=try7[[11]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltau),size=1.5) +ylab(TeX("$\\delta_u"))
+ggsave(p,file="../Documents/abmu_iterative_deltau.png",height=5,width=10)
+
+# look spatially to check
+# explore also spatial parameters
+est_ite <- try7[[12]] %>% add_row(.before=cond_site)
+names(est_ite) <- paste0(names(est_ite),"_ite")
+tmpsf <- cbind(est_all_sf %>% filter(cond_site==cond_site_name),est_ite)
+# plot parameter estimates against distance
+# calculate distance from a conditioning site with st_distance()
+folder_name <- "abmu_iterative"
+mud <- data.frame(mu=tmpsf$mu_agg_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=mu,x=dist))
+ggsave(mud,filename=paste0("../Documents/",folder_name,"/muagg_distance_",cond_site_name,".png")) 
+
+sigld <- data.frame(sigl=tmpsf$sigl_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigl,x=dist))
+ggsave(sigld,filename=paste0("../Documents/",folder_name,"/sigl_distance_",cond_site_name,".png")) 
+
+sigud <- data.frame(sigu=tmpsf$sigu_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigu,x=dist))
+ggsave(sigud,filename=paste0("../Documents/",folder_name,"/sigu_distance_",cond_site_name,".png")) 
+
+
+tmpsf <- tmpsf %>% mutate(adiff=a_ite-a,bdiff=b_ite-b,mudiff = mu_agg_ite - mu_agg, sigldiff = sigl_ite - sigl, sigudiff = sigu_ite - sigu)
+toplabel <- c("New iterative approach","Original method","Difference")
+t <- tmpsf %>% dplyr::select(a_ite,a,adiff) %>% pivot_longer(cols=c(a_ite,a,adiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("a_ite","a","adiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\alpha$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel,legend.reverse = TRUE) 
+
+tmap_save(t,filename=paste0("../Documents/",folder_name,"/a_",cond_site_name,".png"),width=8,height=6)
+
+t <- tmpsf %>% dplyr::select(b_ite,b,bdiff) %>% pivot_longer(cols=c(b_ite,b,bdiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("b_ite","b","bdiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\beta$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel,legend.reverse = TRUE) 
+
+tmap_save(t,filename=paste0("../Documents/",folder_name,"/b_",cond_site_name,".png"),width=8,height=6)
+
+#mu_limits <- c(-2.61,1)
+t <- tmpsf %>% dplyr::select(mu_agg_ite,mu_agg,mudiff) %>% pivot_longer(cols=c(mu_agg_ite,mu_agg,mudiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("mu_agg_ite","mu_agg","mudiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel,legend.reverse = TRUE) 
+
+tmap_save(t,filename=paste0("../Documents/",folder_name,"/mu_agg_",cond_site_name,".png"),width=8,height=6)
+
+#sigma_limits <- c(-1.32,2.3)
+t <- tmpsf %>% dplyr::select(sigl_ite,sigl,sigldiff) %>% pivot_longer(cols=c(sigl_ite,sigl,sigldiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("sigl_ite","sigl","sigldiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 9, panel.labels = toplabel,legend.reverse = TRUE) 
+tmap_save(t,filename=paste0("../Documents/",folder_name,"/sigma_lower_",cond_site_name,".png"),width=8,height=6)
+
+t <- tmpsf %>% dplyr::select(sigu_ite,sigu,sigudiff) %>% pivot_longer(cols=c(sigu_ite,sigu,sigudiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("sigu_ite","sigu","sigudiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\sigma_u$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 9, panel.labels = toplabel,legend.reverse = TRUE) 
+tmap_save(t,filename=paste0("../Documents/",folder_name,"/sigma_upper_",cond_site_name,".png"),width=8,height=6)
+
+
+est_all_sf %>% filter(cond_site=="Birmingham") %>% tm_shape() + tm_dots("mu_agg")
