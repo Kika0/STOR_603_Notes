@@ -134,3 +134,30 @@ pb <- est_all %>% filter(cond_site==names(df_sites)[i]) %>% ggplot() + geom_boxp
 ggsave(pb, filename = paste0("../Documents/dependence_stationary/bcomp_boxplot_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
 }
 
+# finally, look at residual quantiles with highest observed value
+Lap_max <- apply(X=data_mod_Lap,MARGIN = c(2),FUN = max)
+conditional_quantiles <- function(x,model_pars,q_res=0.75) {
+  a <- model_pars$a
+  b <- model_pars$b
+  mu <- model_pars$mu
+  sigl <- model_pars$sigl
+  sigu <- model_pars$sigu
+  deltal <- model_pars$deltal 
+  deltau <- model_pars$deltau
+  Zq <- sapply(1:length(a),FUN=function(i)qAGG(p=q_res,theta = c(mu[i],sigl[i],sigu[i],deltal,deltau)))
+  return(a*x+ x^b*Zq)  
+}
+
+cond_quantiles_wrapper <- function(Lap_max,par_est,q_res,T,sites= df_sites,cond_site_name = "Birmingham",grid=xyUK20_sf) {
+  cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+  cond_site <- find_site_index(cond_site_coord,grid_uk = grid)    
+  x <- Lap_max[cond_site]
+  par_est_site <- par_est %>% filter(cond_site==cond_site_name,period==T)
+  model_pars <- list("a"=par_est_site$a, "b" = par_est_site$b, "mu" = par_est_site$mu_agg, "sigl" = par_est_site$sigl, "sigu" = par_est_site$sigu, "deltal" = par_est_site$deltal[1], "deltau" = par_est_site$deltau[1])
+ return(conditional_quantiles(x=x,model_pars=model_pars,q_res=q_res))
+  }
+
+QT1 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est = est_all,q_res=0.75,T=1,sites = df_sites,cond_site_name = "Birmingham")
+QT7<- cond_quantiles_wrapper(Lap_max=Lap_max,par_est = est_all,q_res=0.75,T=7,sites = df_sites,cond_site_name = "Birmingham")
+
+tm_shape(xyUK20_sf %>% mutate(QT1=QT1)) + tm_dots("QT1")
