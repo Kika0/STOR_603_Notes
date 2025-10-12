@@ -51,7 +51,7 @@ image.plot(tas5.o[,,10],  main='OBS 5km')
 
 #save(file="grid-info-5km.RData", lon5.o, lat5.o, lon5.m, lat5.m, obs_example, cpm2k_example)
 
-# NOTE: only need to work with files that overlap with mainland UK
+# NOTE: only need to work with files that overlap with mainland UK ----------------
 # find a subset of x and y that overlap with mainland UK
 summary(as.vector(lon5.o))
 summary(as.vector(lat5.o))
@@ -76,7 +76,7 @@ uk <- st_simplify(uk_notsimplified,dTolerance = 2000) %>% st_transform(crs = 432
 # tm_shape(uk_notsimplified) + tm_polygons()
 # great, now subset
 xyUK_sf <- st_filter(xy_sf,uk)
-tm_shape(xyUK_sf) + tm_dots(col="temp")
+tm_shape(xyUK_sf) + tm_dots(fill="temp")
 # take only every fourth dot in each x and y
 x20 <- seq(from=4,to=dim(lon5.o)[1],by=4)
 y20 <- seq(from=4,to=dim(lon5.o)[2],by=4)
@@ -85,8 +85,8 @@ xyUK20_sf <-xyUK_sf %>% filter(x %in% x20,y %in% y20)
 save(uk,uk_notsimplified,xyUK20_sf,files_subset1,file="data_processed/spatial_helper.RData")
 
 
-# start here to get data---
-tm_shape(xyUK20_sf) + tm_dots(col="temp")
+# start here to get data-----------------------------------------------
+tm_shape(xyUK20_sf) + tm_dots(fill="temp")
 # great, now load only files that overlap this grid or perhaps delete all other files?
 files <- list.files("../luna/kristina/MSdata01/")
 list_of_files <- list() #create empty list
@@ -122,14 +122,21 @@ xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as
 names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(91:180,40),"_",rep(1981:2080,each=90)) 
 
 for (i in 1: length(list_of_files)) {
-  xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="mod") %>% pull(x) 
+  u <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="mod",doy>=151,doy<=240) %>% pull(u) 
+ # u[is.na(u)] <- runif(sum(is.na(u)),0.01,0.2)
+  u[is.na(u)] <- 0.1
+  xyUK20[i,5:ncol(xyUK20)] <- u
 }
 # setup for par_est
 data_mod <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
 # ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
 colnames(data_mod) <- paste0("Y",1:ncol(data_mod))
 # transform to Laplace margins
-data_mod_Lap <- as.data.frame((data_mod %>% apply(c(2),FUN=row_number))/(nrow(data_mod)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+data_mod_Lap <- data_mod %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+
+plot(data_mod_Lap_old[,1])
+plot(data_mod_Lap[,1])
+plot(data_obs_Lap[,1])
 
 # save as R object for further analysis
 save(data_obs,data_obs_Lap,data_mod,data_mod_Lap,file = "data_processed/temperature_data.RData")
