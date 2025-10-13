@@ -97,13 +97,21 @@ est_all <- est_all_sf %>% mutate(period = as.character(1))
 for (p in 2:((9000-(block_size-time_bracket))/time_bracket)) {
 load(paste0("data_processed/N3600_sequential2_AGG_12sites_40years_period",p,".RData"))
 est_all <- rbind(est_all,est_all_sf%>% mutate(period = as.character(p)))
-  }
-# plot alphas
+}
+
+# try comparing first and last 40 years
+load("data_processed/N3600_sequential2_AGG_first40_12sites90.RData")
+est_all <- est_all_sf %>% mutate(period = as.character(1))
+load("data_processed/N3600_sequential2_AGG_last40_12sites90.RData")
+est_all <- rbind(est_all,est_all_sf%>% mutate(period = as.character(7)))
+
+#plot alphas
 tm_shape(est_all) + tm_dots(fill="a",size=1) + tm_facets(by=c("period"),nrow=1)
 est_all$a[est_all$a<0] <- 0
 point_size <- 0.3
 lims <- c(0,1)
 misscol <- "aquamarine"
+#panel_labels <- c("1980-2020","2040-2080")
 panel_labels <- sapply(1:((9000-(block_size-time_bracket))/time_bracket),FUN=function(i){paste0((1980+(i-1)*time_bracket/90),"-",(1980+(block_size+(i-1)*time_bracket)/90))})
 for (i in 1:12) {
 #  pa <- tm_shape(uk_tmp1) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
@@ -136,7 +144,7 @@ ggsave(pb, filename = paste0("../Documents/dependence_stationary/bcomp_boxplot_q
 
 # finally, look at residual quantiles with highest observed value ------------
 Lap_max <- apply(X=data_mod_Lap,MARGIN = c(2),FUN = max)
-conditional_quantiles <- function(x,model_pars,q_res=0.75) {
+conditional_quantiles <- function(x,model_pars,q_res=0.75,Y=data_mod_Lap, cond_site) {
   a <- model_pars$a
   b <- model_pars$b
   mu <- model_pars$mu
@@ -144,6 +152,10 @@ conditional_quantiles <- function(x,model_pars,q_res=0.75) {
   sigu <- model_pars$sigu
   deltal <- model_pars$deltal 
   deltau <- model_pars$deltau
+  Zobs <- observed_residuals(df=Y,given = cond_site,a = a[!is.na(a)],b=b[!is.na(b)])
+  Zq1 <- apply(X=Zobs,MARGIN = 2,FUN=function(z)quantile(z,p=q_res))
+  Zq1 <- append(Zq1,NA,after = cond_site-1)
+  tm_shape(xyUK20_sf %>% mutate(Zq1=Zq1)) + tm_dots("Zq1")
   Zq <- sapply(1:length(a),FUN=function(i)qAGG(p=q_res,theta = c(mu[i],sigl[i],sigu[i],deltal,deltau)))
   #Zq <- rnorm(length(a))
   return(a*x+ x^b*Zq)  
@@ -155,7 +167,7 @@ cond_quantiles_wrapper <- function(Lap_max,par_est,q_res,T,sites= df_sites,cond_
   x <- Lap_max[cond_site]
   par_est_site <- par_est %>% filter(cond_site==cond_site_name,period==T)
   model_pars <- list("a"=par_est_site$a, "b" = par_est_site$b, "mu" = par_est_site$mu_agg, "sigl" = par_est_site$sigl, "sigu" = par_est_site$sigu, "deltal" = par_est_site$deltal[1], "deltau" = par_est_site$deltau[1])
- return(conditional_quantiles(x=x,model_pars=model_pars,q_res=q_res))
+ return(conditional_quantiles(x=x,model_pars=model_pars,q_res=q_res,cond_site=cond_site))
 }
 
 i <- 1
@@ -164,6 +176,6 @@ QT1 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est = est_all,q_res=0.75,T=T,s
 t <- tm_shape(xyUK20_sf %>% mutate(QT1=QT1))  + tm_dots(fill="QT1",fill.scale = tm_scale_continuous(midpoint=Lap_max[cond_site],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="1980-2020 return")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
 tmap_save(t,filename=paste0("../Documents/dependence_stationary/QT_",T,"_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
 T <- "7"
-QT7<- cond_quantiles_wrapper(Lap_max=Lap_max,par_est = est_all,q_res=0.75,T=7,sites = df_sites,cond_site_name = "Birmingham")
+QT7<- cond_quantiles_wrapper(Lap_max=Lap_max,par_est = est_all,q_res=0.75,T=T,sites = df_sites,cond_site_name = "Birmingham")
 t <- tm_shape(xyUK20_sf %>% mutate(QT=QT7))  + tm_dots(fill="QT",fill.scale = tm_scale_continuous(midpoint=Lap_max[cond_site],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="1980-2020 return")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
 tmap_save(t,filename=paste0("../Documents/dependence_stationary/QT_",T,"_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
