@@ -89,7 +89,7 @@ iter_delta_site_wrapper <- function(i) {
 sapply(10,iter_delta_site,simplify=FALSE)
 result <- sapply(1:ncol(df_sites),iter_delta_site,Nite=50,simplify = FALSE)
 library(parallel)
-result <- parallel::mclapply(1:ncol(df_sites),iter_delta_site,Nite=50,mc.cores=2)
+result <- parallel::mclapply(1:ncol(df_sites),iter_delta_site,Nite=50,mc.cores=3)
 
 deltal <- deltau <-  c()
 for (i in 1:12) {
@@ -118,7 +118,7 @@ plot_is_above <- function(x1,x2,y1,y2,cond_var) {
     ylab(TeX("$\\alpha$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(sites[cond_var])
   return(p)
 }
-sigu_above_below <- function(cond_site_name = "Birmingham",sites=df_sites,result.=result,x1,x2,y1,y2) {
+sigu_above_below <- function(cond_site_name = "Birmingham",sites=df_sites,result.=result,x1,x2,y1,y2, grid = xyUK20_sf) {
   # filter conditioning site
   cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
   cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
@@ -137,7 +137,6 @@ sigu_above_below <- function(cond_site_name = "Birmingham",sites=df_sites,result
    return(sigud$is.above)
 }
 
-
 x1 <- rep(0,12)
 x2 <- c(rep(600000,8),800000,900000,600000,600000)
 y1 <- c(0.5,1,0.5,0.8,1,1,1.2,1,1.35,1.1,0.9,1.5)
@@ -147,11 +146,11 @@ sapply(1:ncol(df_sites),FUN = function(i) {sigu_above_below(cond_site_name = nam
 
 
 # repeat for beta ------------------------------------------------
-beta_above_below <- function(cond_site_name = "Birmingham",est_all_sf.=est_all_sf,x1,x2,y1,y2) {
+beta_above_below <- function(cond_site_name = "Birmingham",sites=df_sites,est_all_sf.=est_all_sf,x1,x2,y1,y2,grid = xyUK20_sf) {
   # filter conditioning site
   cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
   cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
-  tmpsf <- est_all_sf %>% filter(cond_site==cond_site_name)
+  tmpsf <- est_all_sf. %>% filter(cond_site==cond_site_name)
   
   betad <- data.frame(b=tmpsf$b,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% mutate(is.above=is_above(x=dist,y=b,x1=x1,y1=y1,x2=x2,y2=y2))
   p <- ggplot(betad) + 
