@@ -27,7 +27,7 @@ Lowestoft <- c(1.72431,52.48435)
 Truro <- c(-5.05125342465549,50.263075821232704)
 Dolgellau <- c(-3.8844362867080897,52.74213275545185)
 Bournemouth <- c(-1.8650607066137428,50.72173094587856)
-Leeds <- c(-1.5410242288355958,53.80098118214994)
+#Leeds <- c(-1.5410242288355958,53.80098118214994)
 df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth)
 #spatial_par_est saves parameter estimates as est_all_sf sf object in ../Documents folder
 q <- 0.9 # quantile threshold
@@ -66,7 +66,7 @@ toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"))
 tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = 2, fill.scale =tm_scale_continuous(values="Blues"),fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
 tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = 2, fill.scale =tm_scale_continuous(values="Blues"),fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
 t <- tmap_arrange(tmphi0,tmphi1,ncol=2)
-tmap_save(t,filename=paste0("../Documents/iterative_sigmas_res_margin_all/all_phis.png"),width=8,height=6)
+tmap_save(t,filename=paste0("../Documents/iterative_sigmau_res_margin_all/all_phis.png"),width=8,height=6)
 
 # plot sigma_u against distance for all sites
 get_sigma_distance <- function(i, grid = xyUK20_sf,sites=df_sites) {
@@ -94,7 +94,7 @@ c25 <- c(
                "darkorange4", "brown"
 )
 p <- ggplot(tmp_sigu) + geom_point(aes(y=sigu,x=dist,col=cond_site)) + scale_color_manual(values = sample(c25,ncol(df_sites))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_u$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
-ggsave(p,filename=paste0("../Documents/iterative_sigmas_res_margin/sigu_distance_all.png"),width=10,height=7) 
+ggsave(p,filename=paste0("../Documents/iterative_sigmau_res_margin/sigu_distance_all.png"),width=10,height=7) 
 
 # save these estimates
 iterative_sigmau_estimates <- tmp
