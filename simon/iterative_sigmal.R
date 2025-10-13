@@ -101,7 +101,7 @@ mutmp <- data.frame(mu=tmp$mu_agg_ite_sigl,dist=as.numeric(unlist(st_distance(tm
 mud <- mutmp %>% ggplot() + geom_point(aes(y=mu,x=dist))
 
 # plot above and below
-sigl_above_below <- function(cond_site_name = "Birmingham",tmp=tmp,sites=df_sites,sigud=mutmp,x1,x2,y1,y2) {
+sigl_above_below <- function(cond_site_name = "Birmingham",tmp,sites=df_sites,sigud=mutmp,x1,x2,y1,y2) {
   sigud <- sigud %>% mutate(is.above=is_above(x=dist,y=mu,x1=x1,y1=y1,x2=x2,y2=y2))
   p <- ggplot(sigud) + 
     geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
@@ -115,7 +115,7 @@ sigl_above_below <- function(cond_site_name = "Birmingham",tmp=tmp,sites=df_site
   return(sigud$is.above)
 }
 
-sigl_above_below(cond_site_name = "Newcastle", x1=0,y1=0,x2=600000,y2=0.8)
+sigl_above_below(cond_site_name = "Newcastle", x1=0,y1=0,x2=600000,y2=0.8,tmp=tmp)
 
 i <- 1 # Birmingham
 cond_site_name <- names(df_sites)[i] 
@@ -124,4 +124,5 @@ cond_site <- find_site_index(cond_site_coord,grid_uk = xyUK20_sf)
 tmp <- iterative_sigmal_estimates[[i]]
 mutmp <- data.frame(mu=tmp$mu_agg_ite_sigl,dist=as.numeric(unlist(st_distance(tmp[cond_site,],tmp))))
 mud <- mutmp %>% ggplot() + geom_point(aes(y=mu,x=dist))
-sigl_above_below(cond_site_name = "Birmingham", x1=0,y1=0,x2=600000,y2=0.8)
+sigl_above_below(cond_site_name = "Birmingham", x1=0,y1=0,x2=600000,y2=0.8,tmp=tmp)
+
