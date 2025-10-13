@@ -104,7 +104,7 @@ deltasf <- st_as_sf(rbind(deltaldf,deltaudf),coords =c(2:3))
 st_crs(deltasf) <- st_crs(est_all_sf)
 t <- tm_shape(est_all_sf) + tm_dots(size=0.2,fill_alpha=0.3) +  tm_shape(deltasf) + tm_dots(fill="value",size=1) + tm_facets(by="parameter") +
 tm_layout(legend.position=c("right","top"),legend.height = 12)
-tmap_save(t,filename=paste0("../Documents/iterative_deltas_res_margin/all_deltas.png"),width=8,height=6)
+tmap_save(t,filename=paste0("../Documents/all_deltas.png"),width=8,height=6)
 
 # explore points above and below a line -----------------------
 is_above <- function(x,y,x1,x2,y1,y2) { y>(y2-y1)/(x2-x1)*(x-x1)+y1
