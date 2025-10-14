@@ -54,7 +54,7 @@ save_map_i <- function(i,tm_list=tm,doc_folder = "Birmingham_Cromer_diagonal",w 
 sapply(1:length(condmodel_params),FUN = save_map_i)
 
 # move to delta estimates
-result <- sapply(1:length(sites_index_diagonal),FUN = iter_delta_site,Nite=100,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
+result <- sapply(1:length(sites_index_diagonal),FUN = iter_delta_site,Nite=50,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
 #sapply(1,FUN = iter_delta_site,Nite=20,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
 
 deltal <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,29])))
