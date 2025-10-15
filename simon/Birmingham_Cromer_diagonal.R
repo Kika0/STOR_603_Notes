@@ -55,6 +55,9 @@ sapply(1:length(condmodel_params),FUN = save_map_i)
 
 # move to delta estimates
 result <- sapply(1:length(sites_index_diagonal),FUN = iter_delta_site,Nite=50,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
+# save the estimates to pass into iterative sigma_u
+save(result, file="data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
+
 #sapply(1,FUN = iter_delta_site,Nite=20,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
 
 deltal <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,29])))
@@ -77,8 +80,6 @@ t <- tmap_arrange(tmdeltal,tmdeltau,ncol=2)
 tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/all_deltas.png"),width=5,height=4)
 
 
-# save the estimates to pass into iterative sigma_u
-#save(result, file="data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
 
 load("data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
 result <- sapply(1:length(sites_index_diagonal),FUN = iter_sigmau_site,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/sigmau",simplify = FALSE)
