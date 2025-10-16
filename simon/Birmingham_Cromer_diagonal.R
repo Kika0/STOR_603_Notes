@@ -58,8 +58,6 @@ result <- sapply(1:length(sites_index_diagonal),FUN = iter_delta_site,Nite=50,si
 # save the estimates to pass into iterative sigma_u
 save(result, file="data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
 
-#sapply(1,FUN = iter_delta_site,Nite=20,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/delta",simplify = FALSE)
-
 deltal <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,29])))
 deltau <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,30])))
 # plot spatially
@@ -106,7 +104,7 @@ tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi0_phi1.p
 
 # plot sigma_u against distance for all sites
 get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
-  sigu <- tmp[[i]]$sigu_iteu
+  sigu <- tmp[[i]]$sigu_ite_sigu
   dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
   sigud <- data.frame(sigu=sigu,dist=dist_cond_site) 
   return(sigud %>% mutate(cond_site = site_name_diagonal[i]))
@@ -158,7 +156,7 @@ tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi2_phi3.p
 
 # plot sigma_u against distance for all sites
 get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
-  sigl <- tmp[[i]]$sigl_itel
+  sigl <- tmp[[i]]$sigl_ite_sigl
   dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
   sigld <- data.frame(sigl=sigl,dist=dist_cond_site) 
   return(sigld %>% mutate(cond_site = site_name_diagonal[i]))
