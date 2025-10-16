@@ -38,85 +38,6 @@ est_all <- as.data.frame(est_all_sf)
 # load iterative delta estimates
 load("data_processed/iterative_sigmau_estimates.R")
 
-# repeat for all other sites -------------------------------------------------
-iter_sigmal_site <- function(i,Nite=5,file_folder="iterative_sigmal_res_margin",sites=df_sites,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf,ite_sigu = iterative_sigmau_estimates,index_outliers = NULL) {
-  q <- 0.9
-  cond_site_name <- names(sites)[i] 
-  cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
-  
-  if (is.null(index_outliers)) {
-    est_site <- par_est %>% filter(cond_site==cond_site_name)
-    tmpsf <- ite_sigu[[ which(names(df_sites)==cond_site_name) ]]
-  } else {
-    # change NA to FALSE for subsetting the points
-    index_outliers[is.na(index_outliers)] <- FALSE
-    est_site <- par_est %>% filter(cond_site==cond_site_name)
-    est_site <- est_site[!index_outliers,] 
-    tmpsf <- ite_sigu[[ which(names(df_sites)==cond_site_name) ]][!index_outliers,]
-    # subset data
-    data_mod_Lap <- data_mod_Lap[,!index_outliers]
-    # subset grid
-    grid <- grid[!index_outliers,]
-  }
-  cond_site <- find_site_index(cond_site_coord,grid_uk = grid)
-  Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
-  # calculate distance from the conditioning site
-  dist_tmp <- as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))
-  # remove zero distance
-  dist_tmp <- dist_tmp[dist_tmp>0]
-  # normalise distance using a common constant
-  distnorm <- dist_tmp/1000000
-  tmp <- sigmal_par_est_ite(data = Z, given = cond_site, cond_site_dist = distnorm, Nite = Nite, show_ite = TRUE, mu_init = discard(as.numeric(tmpsf$mu_agg_ite_sigu),is.na), sigl_init = discard(as.numeric(tmpsf$sigl_ite_sigu),is.na), deltal = as.numeric(tmpsf$deltal_ite[1]), deltau = as.numeric(tmpsf$deltau_ite[1]), sigu = discard(as.numeric(tmpsf$sigu_ite_sigu),is.na))
-  
-  # explore estimates
-  # plot phi estimates
-  tmp_phi <- rbind(data.frame("phi"=as.numeric(unlist(tmp[[3]])),iteration=1:(Nite+1),parameter = "phi2"),
-                   data.frame("phi"=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi3"))
-  pphi <- ggplot(tmp_phi) + geom_point(aes(x=iteration,y=phi,col=parameter)) + scale_color_manual(values = c("#009ADA","#66A64F"), breaks = c("phi2","phi2"),labels = c(TeX("$\\phi_2$"),TeX("$\\phi_3$"))) + ylab("")
-  ggsave(pphi,filename=paste0("../Documents/",file_folder,"/phi_",cond_site_name,".png"),width=5,height=5)
-  
-  # plot also for a random site as a check for convergence
-  # plot across iterations for a selected site
-  random_site <- 100
-  tmp_all <- rbind(data.frame(delta=as.numeric(unlist(tmp[[1]][random_site,])),iteration=1:(Nite+1),parameter = "mu_agg"),
-                   data.frame(delta=as.numeric(unlist(tmp[[2]][random_site,])),iteration=1:(Nite+1),parameter = "sigma_lower"),
-                   data.frame(delta=as.numeric(unlist(tmp[[3]])),iteration=1:(Nite+1),parameter = "phi2"),
-                   data.frame(delta=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi3")
-                   
-  )
-  # plot the final iteration
-  p1 <- ggplot(tmp_all) + geom_point(aes(x=iteration,y=delta,col=parameter)) + ylab("")
-  ggsave(p1,filename=paste0("../Documents/",file_folder,"/random_site_par_",cond_site_name,".png"),width=5,height=5)
-  
-  # explore also spatial parameters
-  est_ite <- tmp[[5]] %>% add_row(.before=cond_site)
-  names(est_ite) <- paste0(names(est_ite),"_ite_sigl")
-  tmpsf <- cbind(tmpsf,est_ite)
-  # plot parameter estimates against distance
-  # calculate distance from a conditioning site with st_distance()
-  mud <- data.frame(mu=tmpsf$mu_agg_ite_sigl,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=mu,x=dist))
-  ggsave(mud,filename=paste0("../Documents/",file_folder,"/muagg_distance_",cond_site_name,".png")) 
-  
-  sigld <- data.frame(sigl=tmpsf$sigl_ite_sigl,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigl,x=dist))
-  ggsave(sigld,filename=paste0("../Documents/",file_folder,"/sigl_distance_",cond_site_name,".png")) 
-  
- 
-  tmpsf <- tmpsf %>% mutate(mudiff = mu_agg_ite_sigu - mu_agg_ite_sigl, sigldiff = sigl_ite_sigl - sigl_ite_sigu)
-  toplabel <- c(TeX("Iterative $\\sigma_u (d_j)$ method"),TeX("Iterative $\\sigma_l (d_j)$ method"),"Difference")
-  mu_limits <- c(-1.75,1.79)
-  t <- tmpsf %>% dplyr::select(mu_agg_ite_sigu,mu_agg_ite_sigl,mudiff) %>% pivot_longer(cols=c(mu_agg_ite_sigu,mu_agg_ite_sigl,mudiff),names_to = "parameter", values_to = "value") %>% mutate(parameter=factor(parameter,levels=c("mu_agg_ite_sigu","mu_agg_ite_sigl","mudiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu",limits=mu_limits),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel) 
-  
-  tmap_save(t,filename=paste0("../Documents/",file_folder,"/mu_agg_",cond_site_name,".png"),width=8,height=6)
-  
-  sigma_limits <- c(-1.32,2.3)
-  t <- tmpsf %>% dplyr::select(sigl_ite_sigu,sigl_ite_sigl,sigldiff) %>% pivot_longer(cols=c(sigl_ite_sigu,sigl_ite_sigl,sigldiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("sigl_ite_sigu","sigl_ite_sigl","sigldiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu",limits=sigma_limits),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 9, panel.labels = toplabel) 
-  tmap_save(t,filename=paste0("../Documents/",file_folder,"/sigma_lower_",cond_site_name,".png"),width=8,height=6)
-  
-  return(tmpsf)
-}
-
 Nite <- 5
 tmp <- sapply(1:ncol(df_sites),iter_sigmal_site, Nite = 5, simplify = FALSE)
 
@@ -169,3 +90,39 @@ ggsave(p,filename=paste0("../Documents/iterative_sigmal_res_margin/sigl_distance
 # save these estimates
 iterative_sigmal_estimates <- tmp
 save(iterative_sigmal_estimates,file="data_processed/iterative_sigmal_estimates.RData")
+
+# explore plots of mu against distance
+i <- 6 # Newcastle
+cond_site_name <- names(df_sites)[i] 
+cond_site_coord <- df_sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+cond_site <- find_site_index(cond_site_coord,grid_uk = xyUK20_sf)
+tmp <- tmp[[i]]
+mutmp <- data.frame(mu=tmp$mu_agg_ite_sigl,dist=as.numeric(unlist(st_distance(tmp[cond_site,],tmp))))
+mud <- mutmp %>% ggplot() + geom_point(aes(y=mu,x=dist))
+
+# plot above and below
+sigl_above_below <- function(cond_site_name = "Birmingham",tmp,sites=df_sites,sigud=mutmp,x1,x2,y1,y2) {
+  sigud <- sigud %>% mutate(is.above=is_above(x=dist,y=mu,x1=x1,y1=y1,x2=x2,y2=y2))
+  p <- ggplot(sigud) + 
+    geom_segment(x=x1,y=y1,xend=x2,yend=y2) +
+    geom_point(aes(x=dist,y=mu,col=factor(is.above)),size=0.5) + 
+    ylab(TeX("$\\sigma_u$")) + xlab("Distance") + scale_color_manual(values = c("black", "#C11432")) + ggtitle(cond_site_name) + guides(col="none")
+  ggsave(p,filename=paste0("../Documents/iterative_sigmal_res_margin/abovebelow_sigl_distance_",cond_site_name,".png"),width=4,height=4) 
+  # plot also spatially
+  musf <- cbind(tmp,sigud %>% select(dist,is.above))
+  t <- tm_shape(musf) + tm_dots(fill="is.above",size=0.6,fill.scale = tm_scale_categorical(values=c("TRUE" = "#C11432", "FALSE" = "black")))  + tm_title(cond_site_name) + tm_layout(legend.position=c("right","top"),legend.height = 12) 
+  tmap_save(t,filename=paste0("../Documents/iterative_sigmal_res_margin/abovebelow_sigl_map_",cond_site_name,".png"),width=3,height=6) 
+  return(sigud$is.above)
+}
+
+sigl_above_below(cond_site_name = "Newcastle", x1=0,y1=0,x2=600000,y2=0.8,tmp=tmp)
+
+i <- 1 # Birmingham
+cond_site_name <- names(df_sites)[i] 
+cond_site_coord <- df_sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+cond_site <- find_site_index(cond_site_coord,grid_uk = xyUK20_sf)
+tmp <- iterative_sigmal_estimates[[i]]
+mutmp <- data.frame(mu=tmp$mu_agg_ite_sigl,dist=as.numeric(unlist(st_distance(tmp[cond_site,],tmp))))
+mud <- mutmp %>% ggplot() + geom_point(aes(y=mu,x=dist))
+sigl_above_below(cond_site_name = "Birmingham", x1=0,y1=0,x2=600000,y2=0.8,tmp=tmp)
+

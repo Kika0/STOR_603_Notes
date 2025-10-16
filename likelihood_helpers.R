@@ -159,6 +159,11 @@ NLL_AGGsig <- function(x,theta) {
 #'
 #' @param x A numerical vector of data.
 #' @param theta A vector of parameters c(mu,sigl,sigu,deltal,deltau).
+#' @param mu_hat Optional fixed mu parameter
+#' @param sigl_hat Optional fixed sigl parameter
+#' @param sigu_hat Optional fixed sigu parameter
+#' @param deltal_hat Optional fixed deltal parameter
+#' @param deltau_hat Optional fixed deltau parameter
 #'
 #' @return A number of negative log-likelihood.
 #' @export
@@ -200,6 +205,68 @@ NLL_AGG <- function(x,theta,mu_hat=NULL,sigl_hat=NULL,sigu_hat=NULL,deltal_hat=N
   return(-sum(z))
 }
 
+#' One-step estimation of a,b and AGG parameters
+#'
+#' @param x 
+#' @param theta 
+#' @param a_hat Optional fixed a parameter
+#' @param b_hat Optional fixed b parameter
+#' @param mu_hat Optional fixed mu parameter
+#' @param sigl_hat Optional fixed sigl parameter
+#' @param sigu_hat Optional fixed sigu parameter
+#' @param deltal_hat Optional fixed deltal parameter
+#' @param deltau_hat Optional fixed deltau parameter
+#'
+#' @return
+#' @export
+#'
+#' @examples
+NLL_AGG_onestep <- function(x,theta,a_hat = NULL, b_hat = NULL, mu_hat = NULL, sigl_hat = NULL, sigu_hat = NULL, deltal_hat = NULL, deltau_hat = NULL) {
+  if (is.null(a_hat)==FALSE) {
+    theta <- append(theta,a_hat,after=0)
+  }
+  if (is.null(b_hat)==FALSE) {
+    theta <- append(theta,b_hat,after=1)
+  }
+  if (is.null(mu_hat)==FALSE) {
+    theta <- append(theta,mu_hat,after=2)
+  }
+  if (is.null(sigl_hat)==FALSE) {
+    theta <- append(theta,sigl_hat,after=3)
+  } 
+  if (is.null(sigu_hat)==FALSE) {
+    theta <- append(theta,sigu_hat,after=4)
+  }
+  if (is.null(deltal_hat)==FALSE) {
+    theta <- append(theta,deltal_hat,after=5)
+  } 
+  if (is.null(deltau_hat)==FALSE) {
+    theta <- append(theta,deltau_hat,after=6)
+  } 
+  a <- theta[1]
+  b <- theta[2]
+  mu <- theta[3]
+  sigl <- theta[4]
+  sigu <- theta[5]
+  deltal <- theta[6]
+  deltau <- theta[7]
+  Y1 <- x[,1]
+  Y2 <- x[,2]
+  obs_res <- (Y2-a*Y1)/(Y1^b)
+  if(a<=-1 | a>1 | b<0 | b>1 ){return(10e10)}
+  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  z <- c()
+  for (i in 1:length(obs_res)) {
+    if (obs_res[i]<mu) {
+      z[i] <- log(C_AGG)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sigl)^deltal
+    }
+    else {
+      z[i] <- log(C_AGG)-log(Y1[i]^b)-(abs(obs_res[i]-mu)/sigu)^deltau
+    }
+  }
+  return(-sum(z))
+}
+
 
 # More likelihood functions (mostly not relevant)--------------------------------------------
 NLL_exp_norm_noise <- function(d,x,theta) {
@@ -225,7 +292,7 @@ NLL_expalpha_HT <- function(phi,df = Y_given1extreme, d1j. = d1j,mu1=as.numeric(
   return(log_lik)
 }
 
-NLL_exp_sigmau <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),sigl1=as.numeric(unlist(sigl[,1])),deltal=2,deltau=2,d.=d) {
+NLL_exp_sigmau <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),sigl1=as.numeric(unlist(sigl[,1])),deltal=2,deltau=2) {
   N <- nrow(x)
   mu1 <- rep(mu1, each = N)
   sigl1 <- rep(sigl1, each = N)
@@ -239,7 +306,7 @@ NLL_exp_sigmau <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),si
   return(-sum(log_lik))
 }
 
-NLL_exp_sigmal <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),sigu1=as.numeric(unlist(sigu[,1])),deltal=2,deltau=2,d.=d) {
+NLL_exp_sigmal <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),sigu1=as.numeric(unlist(sigu[,1])),deltal=2,deltau=2) {
   N <- nrow(x)
   mu1 <- rep(mu1, each = N)
   sigu1 <- rep(sigu1, each = N)
@@ -250,6 +317,30 @@ NLL_exp_sigmal <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),si
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu1/deltau*gamma(1/deltau)  )^(-1)
   log_lik[x<mu1] <- log(C_AGG[x<mu1])-((mu1[x<mu1]-x[x<mu1])/sigl[x<mu1])^deltal 
   log_lik[x>=mu1] <- log(C_AGG[x>=mu1])-((x[x>=mu1]-mu1[x>=mu1])/sigu1[x>=mu1])^deltau 
+  return(-sum(log_lik))
+}
+
+NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),deltal=2,deltau=2) {
+  N <- nrow(x)
+  mu1 <- rep(mu1, each = N)
+  z <- as.numeric(unlist(x))
+  dij. <- rep(d1j, each = N)
+  log_lik <- rep(NA,length(z))
+  if (is.null(deltal)==FALSE) {
+    phi <- append(phi,deltal,after=4)
+  } 
+  if (is.null(deltau)==FALSE) {
+    phi <- append(phi,deltau,after=5)
+  } 
+  deltal <- phi[5]
+  deltau <- phi[6]
+  if(deltal<1 |deltau<1 ){return(10e10)}
+  
+  sigu <- phi[1]*(1-exp(-(phi[2]*dij.)))
+  sigl <- phi[3]*(1-exp(-(phi[4]*dij.)))
+  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  log_lik[x<mu1] <- log(C_AGG[x<mu1])-((mu1[x<mu1]-x[x<mu1])/sigl[x<mu1])^deltal 
+  log_lik[x>=mu1] <- log(C_AGG[x>=mu1])-((x[x>=mu1]-mu1[x>=mu1])/sigu[x>=mu1])^deltau 
   return(-sum(log_lik))
 }
 
@@ -293,10 +384,12 @@ NLL_AGGdelta_onestep <- function(x,theta,a_hat=NULL,b_hat=NULL) {
   if (is.null(b_hat)==FALSE) {
     b <- b_hat
   } else {theta <- append(theta,b,after=1)}
-  mu <- theta[1]
-  sig <- theta[2]
-  deltal <- theta[3]
-  deltau <- theta[4]
+  a <- theta[1]
+  b <- theta[2]
+  mu <- theta[3]
+  sig <- theta[4]
+  deltal <- theta[5]
+  deltau <- theta[6]
   Y1 <- x[,1]
   Y2 <- x[,2]
   obs_res <- (Y2-a*Y1)/(Y1^b)

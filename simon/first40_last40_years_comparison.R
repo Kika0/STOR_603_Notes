@@ -1,6 +1,7 @@
 library(tmap) # spatial map plots
 library(sf) # for handling spatial sf objects
 library(tidyverse)
+library(viridis) # viridis colour palette
 library(latex2exp) # latex expressions for plot labels
 theme_set(theme_bw())
 theme_replace(
@@ -27,11 +28,11 @@ Truro <- c(-5.05125342465549,50.263075821232704)
 Dolgellau <- c(-3.8844362867080897,52.74213275545185)
 Bournemouth <- c(-1.8650607066137428,50.72173094587856)
 df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth)
-#spatial_par_est saves parameter estimates as est_all_sf sf object in ../Documents folder
-q <- 0.98 # quantile threshold
-# spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites",q*100))
-# spatial_par_est(data_Lap = data_mod_Lap[1:3600,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("first40_12sites",q*100))
-# spatial_par_est(data_Lap = data_mod_Lap[5401:9000,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("last40_12sites",q*100))
+#spatial_par_est saves parameter estimates as est_all_sf sf object in data_processed folder
+q <- 0.9 # quantile threshold
+#spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites",q*100))
+#spatial_par_est(data_Lap = data_mod_Lap[1:3600,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("first40_12sites",q*100))
+#spatial_par_est(data_Lap = data_mod_Lap[5401:9000,],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("last40_12sites",q*100))
 
 # load all three parameter estimates sf objects ----
 load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"))
@@ -69,15 +70,123 @@ amin <- -0.4
 amax <- 1
 bmin <- 0
 bmax <- 1
+misscol <- "aquamarine"
+point_size <- 0.5
+lims <- c(0,1)
 #amax <- max(est_comball$a,na.rm=TRUE)
 #bmin <- min(est_comball$b,na.rm=TRUE)
 #bmax <- max(est_comball$b,na.rm=TRUE)
 for (i in 1:12) {
-  pa <- tm_shape(est_comball %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(col="a",palette="viridis",breaks=seq(amin,amax,length.out=11),size=0.3,colorNA="aquamarine",title=TeX("$\\alpha$"),textNA = "Conditioning site") + tm_facets(by= c("cond_site","Year_range"))+  tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5)
-    tmap_save(pa,filename=paste0("../Documents/acomp_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
-    pb <- tm_shape(est_comball %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(col="b",palette="viridis",breaks=seq(bmin,bmax,length.out=11),size=0.3,colorNA="aquamarine",title=TeX("$\\beta$"),textNA = "Conditioning site") + tm_facets(by= c("cond_site","Year_range"))+  tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5)
-    tmap_save(pb,filename=paste0("../Documents/bcomp_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
-    
+    pa <- tm_shape(est_comball %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by= c("Year_range"),nrow = 1)+  tm_layout( legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+    tmap_save(pa,filename=paste0("../Documents/acomp_q",q*100,"_",names(df_sites[i]),".png"),width=8,height=5)
+    pb <- tm_shape(est_comball %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by= c("Year_range"),nrow = 1)+  tm_layout( legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+    tmap_save(pb,filename=paste0("../Documents/bcomp_q",q*100,"_",names(df_sites[i]),".png"),width=8,height=5)
     }
 
+# extend the analysis to a sliding window
+time_bracket <- 900 # 10 years period is 900 summer days
+block_size <- 3600 # 40 years is block size
+# there are 7 40 year periods in 100 years
+# run at first only for Birmingham to test
+# for (i in 1:((9000-(block_size-time_bracket))/time_bracket)) {
+# spatial_par_est(data_Lap = data_mod_Lap[((i-1)*time_bracket+1):(block_size+(i-1)*time_bracket),],cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("12sites_40years_period",i))
+# }
+# load estimates
+load(paste0("data_processed/N3600_sequential2_AGG_12sites_40years_period",1,".RData"))
+est_all <- est_all_sf %>% mutate(period = as.character(1))
+for (p in 2:((9000-(block_size-time_bracket))/time_bracket)) {
+load(paste0("data_processed/N3600_sequential2_AGG_12sites_40years_period",p,".RData"))
+est_all <- rbind(est_all,est_all_sf%>% mutate(period = as.character(p)))
+}
+
+#plot alphas
+est_all$a[est_all$a<0] <- 0
+point_size <- 0.3
+lims <- c(0,1)
+misscol <- "aquamarine"
+#panel_labels <- c("1980-2020","2040-2080")
+panel_labels <- sapply(1:((9000-(block_size-time_bracket))/time_bracket),FUN=function(i){paste0((1980+(i-1)*time_bracket/90),"-",(1980+(block_size+(i-1)*time_bracket)/90))})
+for (i in 1:12) {
+#  pa <- tm_shape(uk_tmp1) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+  pa <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by= c("period"),nrow = 1)+  tm_layout(panel.labels = panel_labels, legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pa,filename=paste0("../Documents/dependence_stationary/acomp_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
+  pb <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=c(0,0.6),values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by= c("period"),nrow=1)+  tm_layout(panel.labels = panel_labels, legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pb,filename=paste0("../Documents/dependence_stationary/bcomp_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
+# plot also difference between first and last panel
+  Tdiffa <- (est_all %>% filter(cond_site==names(df_sites)[i],period=="7") %>% pull(a)) - (est_all %>% filter(cond_site==names(df_sites)[i],period=="1") %>% pull(a)) 
+  pa <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i],period=="1") %>% mutate(Tdiff=Tdiffa))  + tm_dots(fill="Tdiff",fill.scale = tm_scale_continuous(limits=c(-0.5,0.5),ticks=c(-0.5,-0.25,0,0.25,0.5),values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha_{diff}$"))) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pa,filename=paste0("../Documents/dependence_stationary/acomp_diff_q",q*100,"_",names(df_sites[i]),".png"),width=4,height=4)
+  Tdiffb <- (est_all %>% filter(cond_site==names(df_sites)[i],period=="7") %>% pull(b)) - (est_all %>% filter(cond_site==names(df_sites)[i],period=="1") %>% pull(b)) 
+  pb <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i],period=="1") %>% mutate(Tdiff=Tdiffb))  + tm_dots(fill="Tdiff",fill.scale = tm_scale_continuous(limits=c(-0.5,0.5),ticks=c(-0.5,-0.25,0,0.25,0.5),values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta_{diff}$"))) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pb,filename=paste0("../Documents/dependence_stationary/bcomp_diff_q",q*100,"_",names(df_sites[i]),".png"),width=4,height=4)
+   }
+
+names(panel_labels) <- c(as.character(1:7))
+for (i in 1:12) {
+pa <- est_all %>% filter(cond_site==names(df_sites)[i]) %>% ggplot() + geom_point(aes(x=period,y=a)) + geom_line(aes(x=period,y=a,group=res)) + ylab(TeX("$\\alpha$")) + xlab("40 year period T") + ggtitle(names(df_sites)[i])
+ggsave(pa, filename = paste0("../Documents/dependence_stationary/acomp_plot_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=10)
+pa <- est_all %>% filter(cond_site==names(df_sites)[i]) %>% ggplot() + geom_boxplot(aes(y=a)) + facet_wrap("period",nrow = 1,labeller=as_labeller(panel_labels)) + ylab(TeX("$\\alpha$")) + xlab("40 year period T") + ggtitle(names(df_sites)[i])
+ggsave(pa, filename = paste0("../Documents/dependence_stationary/acomp_boxplot_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
+
+pb <- est_all %>% filter(cond_site==names(df_sites)[i]) %>% ggplot() + geom_point(aes(x=period,y=b)) + geom_line(aes(x=period,y=b,group=res)) + ylab(TeX("$\\beta$")) + xlab("40 year period T") + ggtitle(names(df_sites)[i])
+ggsave(pb, filename = paste0("../Documents/dependence_stationary/bcomp_plot_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=10)
+pb <- est_all %>% filter(cond_site==names(df_sites)[i]) %>% ggplot() + geom_boxplot(aes(y=b)) + facet_wrap("period",nrow = 1,labeller=as_labeller(panel_labels))  + ylab(TeX("$\\beta$")) + xlab("40 year period") + ggtitle(names(df_sites)[i])
+ggsave(pb, filename = paste0("../Documents/dependence_stationary/bcomp_boxplot_q",q*100,"_",names(df_sites[i]),".png"),width=10,height=6)
+}
+
+# finally, look at residual quantiles with highest observed value ------------
+Lap_max <- apply(X=data_mod_Lap,MARGIN = c(2),FUN = max)
+conditional_quantiles <- function(x,model_pars,q_res=0.75,Y=data_mod_Lap, cond_site) {
+  a <- model_pars$a
+  b <- model_pars$b
+  mu <- model_pars$mu
+  sigl <- model_pars$sigl
+  sigu <- model_pars$sigu
+  deltal <- model_pars$deltal 
+  deltau <- model_pars$deltau
+  Zobs <- observed_residuals(df=Y,given = cond_site,a = a[!is.na(a)],b=b[!is.na(b)])
+  Zq1 <- apply(X=Zobs,MARGIN = 2,FUN=function(z)quantile(z,p=q_res))
+  Zq1 <- append(Zq1,NA,after = cond_site-1)
+  tm_shape(xyUK20_sf %>% mutate(Zq1=Zq1)) + tm_dots("Zq1")
+  Zq <- sapply(1:length(a),FUN=function(i)qAGG(p=q_res,theta = c(mu[i],sigl[i],sigu[i],deltal,deltau)))
+  #Zq <- rnorm(length(a))
+  return(a*x+ x^b*Zq)  
+}
+
+cond_quantiles_wrapper <- function(Lap_max,par_est,q_res,T,sites= df_sites,cond_site_name = "Birmingham",grid=xyUK20_sf) {
+  cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+  cond_site <- find_site_index(cond_site_coord,grid_uk = grid)    
+  x <- Lap_max[cond_site]
+  par_est_site <- par_est %>% filter(cond_site==cond_site_name,period==T)
+  model_pars <- list("a"=par_est_site$a, "b" = par_est_site$b, "mu" = par_est_site$mu_agg, "sigl" = par_est_site$sigl, "sigu" = par_est_site$sigu, "deltal" = par_est_site$deltal[1], "deltau" = par_est_site$deltau[1])
+ return(data.frame(Ycond=conditional_quantiles(x=x,model_pars=model_pars,q_res=q_res,cond_site=cond_site),period=as.character(T)))
+}
+
+i <- 1
+T <- "1"
+QT1 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est = est_all,q_res=0.75,T=T,sites = df_sites,cond_site_name = "Birmingham")
+t <- tm_shape(xyUK20_sf %>% mutate(QT1=QT1))  + tm_dots(fill="QT1",fill.scale = tm_scale_continuous(midpoint=Lap_max[cond_site],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="1980-2020 return")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+tmap_save(t,filename=paste0("../Documents/dependence_stationary/QT_",T,"_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
+T <- "7"
+QT7<- cond_quantiles_wrapper(Lap_max=Lap_max,par_est = est_all,q_res=0.75,T=T,sites = df_sites,cond_site_name = "Birmingham")
+t <- tm_shape(xyUK20_sf %>% mutate(QT=QT7))  + tm_dots(fill="QT",fill.scale = tm_scale_continuous(midpoint=Lap_max[cond_site],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="1980-2020 return")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+tmap_save(t,filename=paste0("../Documents/dependence_stationary/QT_",T,"_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
+
+# calculate for each panel
+q_res <- 0.75
+#q_res <- 0.25 # repeat with this value
+for (site in 1:ncol(df_sites)) {
+point_size <- 0.5
+Zsite <- sapply(1:7,FUN = function(i){cond_quantiles_wrapper(Lap_max=Lap_max,par_est=est_all,q_res=q_res,T=i,sites=df_sites,cond_site_name=names(df_sites)[site])},simplify = FALSE)
+Z75 <- do.call(rbind,Zsite)
+cond_site <- find_site_index(df_sites[,site],grid_uk = xyUK20_sf)   
+tmp <- est_all %>% filter(cond_site==names(df_sites)[site]) %>% mutate(Z=Z75[,1])
+t <- tm_shape(tmp)  + tm_dots(fill="Z",fill.scale = tm_scale_continuous(midpoint=Lap_max[cond_site],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Conditional\n quantile\n (Laplace scale)")) + tm_layout(panel.labels = panel_labels,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[site]) + tm_facets("period",nrow=1)
+tmap_save(t,filename=paste0("../Documents/dependence_stationary/residual_quantile_",q_res*100,"_",names(df_sites[site]),".png"),width=12,height=4)
+# calculate the difference between the first and the last panel
+Tdiff <- (tmp %>% filter(period=="7") %>% pull(Z)) - (tmp %>% filter(period=="1") %>% pull(Z)) 
+point_size <- 1
+t <- tm_shape(tmp %>% filter(period=="1") %>% mutate(Tdiff=Tdiff))  + tm_dots(fill="Tdiff",fill.scale = tm_scale_continuous(limits=c(-6,6),values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Difference\n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[site])
+tmap_save(t,filename=paste0("../Documents/dependence_stationary/diff_residual_quantile_",q_res*100,"_",names(df_sites[site]),".png"),width=8,height=8)
+}
 
