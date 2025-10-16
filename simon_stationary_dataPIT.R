@@ -27,7 +27,7 @@ xcoord_o         <- xcoord_m
 ycoord_o         <- ycoord_m + obs_cpm_offset_y
 
 ### OBS 5km
-obs_example  <- '../luna/kristina/UKgrid5km/tasmax_rcp85_land-cpm_uk_5km_01_ann_206012-208011.nc'
+obs_example  <- '../luna/kristina_old/UKgrid5km/tasmax_rcp85_land-cpm_uk_5km_01_ann_206012-208011.nc'
 nc1      <- nc_open(obs_example)
 vlist    <- nc1$var
 shape.o  <- vlist$tasmax$size
@@ -51,7 +51,7 @@ image.plot(tas5.o[,,10],  main='OBS 5km')
 
 #save(file="grid-info-5km.RData", lon5.o, lat5.o, lon5.m, lat5.m, obs_example, cpm2k_example)
 
-# NOTE: only need to work with files that overlap with mainland UK
+# NOTE: only need to work with files that overlap with mainland UK ----------------
 # find a subset of x and y that overlap with mainland UK
 summary(as.vector(lon5.o))
 summary(as.vector(lat5.o))
@@ -76,7 +76,7 @@ uk <- st_simplify(uk_notsimplified,dTolerance = 2000) %>% st_transform(crs = 432
 # tm_shape(uk_notsimplified) + tm_polygons()
 # great, now subset
 xyUK_sf <- st_filter(xy_sf,uk)
-tm_shape(xyUK_sf) + tm_dots(col="temp")
+tm_shape(xyUK_sf) + tm_dots(fill="temp")
 # take only every fourth dot in each x and y
 x20 <- seq(from=4,to=dim(lon5.o)[1],by=4)
 y20 <- seq(from=4,to=dim(lon5.o)[2],by=4)
@@ -85,8 +85,8 @@ xyUK20_sf <-xyUK_sf %>% filter(x %in% x20,y %in% y20)
 save(uk,uk_notsimplified,xyUK20_sf,files_subset1,file="data_processed/spatial_helper.RData")
 
 
-# start here to get data---
-tm_shape(xyUK20_sf) + tm_dots(col="temp")
+# start here to get data-----------------------------------------------
+tm_shape(xyUK20_sf) + tm_dots(fill="temp")
 # great, now load only files that overlap this grid or perhaps delete all other files?
 files <- list.files("../luna/kristina/MSdata01/")
 list_of_files <- list() #create empty list
@@ -122,14 +122,66 @@ xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as
 names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(91:180,40),"_",rep(1981:2080,each=90)) 
 
 for (i in 1: length(list_of_files)) {
-  xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="mod") %>% pull(x) 
+  u <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="mod",doy>=151,doy<=240) %>% pull(u) 
+ # u[is.na(u)] <- runif(sum(is.na(u)),0.01,0.2)
+  u[is.na(u)] <- 0.1
+  xyUK20[i,5:ncol(xyUK20)] <- u
 }
 # setup for par_est
 data_mod <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
 # ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
 colnames(data_mod) <- paste0("Y",1:ncol(data_mod))
 # transform to Laplace margins
-data_mod_Lap <- as.data.frame((data_mod %>% apply(c(2),FUN=row_number))/(nrow(data_mod)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+data_mod_Lap <- data_mod %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+
+plot(data_mod_Lap_old[,1])
+plot(data_mod_Lap[,1])
+plot(data_obs_Lap[,1])
 
 # save as R object for further analysis
 save(data_obs,data_obs_Lap,data_mod,data_mod_Lap,file = "data_processed/temperature_data.RData")
+
+# explore other datasets
+files <- list.files("../luna/kristina/MSGpdParam_CPM5km_member1_20x20/scratch/hadsx/heatwave/HadUKGrid/dur-clim/CPM5km/v2kristina/UK/01/MakeStationary/MSGpdParam/")
+list_of_files <- list() #create empty list
+# only subset for x in x20 and y in y20
+files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],".MSGpdParam.2025-02-26.RData")})
+#loop through the files
+files_subset1 <- files_subset[files_subset %in% files]
+# could take only x and y divisible by 4 to subset and speed up data loading
+for (i in 1:length(files_subset1)) {
+  print(files_subset1[i])
+  load(paste0("../luna/kristina/MSGpdParam_CPM5km_member1_20x20/scratch/hadsx/heatwave/HadUKGrid/dur-clim/CPM5km/v2kristina/UK/01/MakeStationary/MSGpdParam/", files_subset1[i]))
+  list_of_files[[i]] <- gpdpar #add files to list position
+}
+
+i    <- which(trunc(data01$time)==2020 & data01$doy==205 & data01$class=='obs')
+k    <- which(trunc(data01$time)==2079 & data01$doy==205 & data01$class=='mod')
+i1    <- which(trunc(data01$time)==1960 & data01$doy==205 & data01$class=='obs')
+k1    <- which(trunc(data01$time)==1981 & data01$doy==205 & data01$class=='mod')
+glimpse(list_of_files[[1]]$threshold[i])
+# setup for par_est
+thresCPM <- thresobs <- c()
+thresCPM1 <- thresobs1 <- c()
+
+for (j in 1: length(list_of_files)) {
+thresCPM[j] <-   list_of_files[[j]]$threshold[k]
+thresobs[j] <-   list_of_files[[j]]$threshold[i]
+thresCPM1[j] <-   list_of_files[[j]]$threshold[k1]
+thresobs1[j] <-   list_of_files[[j]]$threshold[i1]
+}
+tmap_mode("plot")
+tm_thres <- xyUK20_sf %>% mutate("CPM" =thresCPM, "observed"=thresobs) %>% pivot_longer(cols=c("CPM","observed"),values_to = "temperature", names_to = "data_source")
+t <- tm_shape(tm_thres) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE)
+# save map
+tmap_save(t,filename=paste0("../Documents/threshold_explore.png"),width=8,height=6)
+
+# plot differences
+tm_thres_diff <- xyUK20_sf %>% mutate("CPM_diff" =thresCPM-thresCPM1, "observed_diff"=thresobs-thresobs1) %>% pivot_longer(cols=c("CPM_diff","observed_diff"),values_to = "temperature", names_to = "data_source")
+t <- tm_shape(tm_thres_diff) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE)
+# save map
+tmap_save(t,filename=paste0("../Documents/threshold_explore_difference.png"),width=8,height=6)
+
+
+# add this to object of analysis data to be potentially used as a covariate
+save(tm_thres,tm_thres_diff,file = "data_processed/94thresholds.RData")

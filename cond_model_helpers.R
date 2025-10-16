@@ -382,6 +382,53 @@ observed_residuals <- function(df=sims,given=1,v=0.99,a=NULL,b=NULL) {
   return(Z)
 }
 
+#' Estimate a,b,mu for each residual site with fixed sigl, sigu, deltal, deltau parameters
+#'
+#' @param df A dataframe of data on Laplace scale Y
+#' @param v A quantile threshold
+#' @param given A column index of a conditioning variable
+#' @param res_margin_est A list of residual parameters sigl,sigu,deltal,deltau
+#'
+#' @return A dataframe of parameter estimates plus a few extra columns
+#' @export
+#'
+#' @examples
+par_est_abmu <- function(df=sims,v=0.99,given=c(1),res_margin_est = res_margin_est) {
+  lik <- a_hat <- b_hat <- mu_hat <- res_var <- c()
+  names(df) <- paste0("Y",1:ncol(df))
+  d <- ncol(df)
+  for (j in given) {
+    Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+    res <- c(1:d)[-j]
+    init_par <- c()
+    init_lik <- c()
+    sigl <- res_margin_est$sigl
+    sigu <- res_margin_est$sigu
+    deltal <- res_margin_est$deltal
+    deltau <- res_margin_est$deltau
+    for (i in 2:d) {
+      # optimise using the initial parameters
+      Y1 <- Y_given1extreme[,j]
+      Y2 <- Y_given1extreme[,res[i-1]]
+      init_par <- c(0.8,0.2,0)
+      opt <- optim(fn=NLL_AGG_onestep,x=data.frame(Y1,Y2),sigl_hat = sigl[i-1], sigu_hat = sigu[i-1], deltal_hat = deltal, deltau_hat = deltau,par=init_par,control=list(maxit=2000))
+      a_hat <- append(a_hat,opt$par[1])
+      b_hat <- append(b_hat,opt$par[2])
+      mu_hat <- append(mu_hat,opt$par[3])
+      lik <- append(lik,opt$value)
+      res_var <- append(res_var,res[i-1])
+    }
+  }
+  nas <- rep(NA,length(a_hat)) # NA values for parameters not used by a given method
+    par_sum <- data.frame("lik"=lik, 
+                          "a" = a_hat,"b" = b_hat,
+                          "mu" = mu_hat,
+                          "sigl" = sigl,"sigu" = sigu,
+                          "deltal" = deltal,"deltau" = deltau,
+                          "given" = rep(given,each=(d-1)),"res" = res_var)  
+  
+  return(par_sum)
+}
 
 plot_simulated <- function(sims=sims,v=0.99,sim_threshold=0.999,given=1) {
   df <- sims %>% dplyr::select(starts_with("Y"))
@@ -654,14 +701,28 @@ find_site_index <- function(site = Inverness,grid_uk = uk_sf_rot %>% dplyr::sele
   return(x)
 }
 
-# function for plotting parameter estimates on a map and against distance
-map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="",grid_uk=uk_temp_sf) {
+
+#' Comprehensive map plots of parameter estimates
+#'
+#' @param tmp_est An sf object of parameter estimates
+#' @param method Several options of what maps to return
+#' @param facet_var Options are "cond_site", "tau", "q" or c("cond_site","tau")
+#' @param title_map Optional title to add to each map
+#' @param grid_uk 
+#'
+#' @return A list of tmap plots
+#' @export
+#'
+#' @examples
+map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map="") {
   misscol <- "aquamarine"
-  Nsites <- max(tmp_est$res, tmp_est$given,na.rm=TRUE)
+   my_red <- structure(grDevices::colorRampPalette(c("#FFFFEF","#C11432"))(2), name = "my_red_pal", class = "palette")
+  my_blue <- structure(grDevices::colorRampPalette(c("#FFFFEF","#009ADA"))(2), name = "my_blue_pal", class = "palette")
+   Nsites <- max(tmp_est$res, tmp_est$given,na.rm=TRUE)
   if (identical(facet_var,"cond_site")) {
     Nfacet <- length(unique(tmp_est$cond_site))
     facet_label <- unique(tmp_est$cond_site)
-    nrow_facet <- ceiling(length(unique(tmp_est$cond_site))/3)
+    nrow_facet <- ceiling(length(unique(tmp_est$cond_site))/4)
     legend_outside_size <- 0.3
   } else if (identical(facet_var,"tau")) {
     Nfacet <- nrow(tmp_est)/Nsites
@@ -721,47 +782,67 @@ map_param <- function(tmp_est,method = "AGG", facet_var = "cond_site",title_map=
     pa_tau <- tm_shape(uk_tmp1) + tm_dots(col="a_tau",style="cat",size=0.3,palette="-RdBu",colorNA=misscol,title=TeX("$\\tau_{\\alpha_{max}}$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
   }
   if (method %in% c("Normal","AGG")) {
-    lims <- seq(min(as.numeric(uk_tmp1$a),na.rm = TRUE),max(as.numeric(uk_tmp1$a),na.rm = TRUE),length.out=5)
-    pa <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    aspect <- 0.6
+    legend_text_size <- 0.8
+    legend_title_size <- 1.2
+    point_size <- 0.4
+ #   lims <- c(min(as.numeric(uk_tmp1$a),na.rm = TRUE),max(as.numeric(uk_tmp1$a),na.rm = TRUE))
+     lims <- c(0,1)
+     pa <- tm_shape(uk_tmp1) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+    
+#    pa <- tm_shape(uk_tmp1) + tm_dots(col="a",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\alpha$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
 
-    lims <- seq(min(as.numeric(uk_tmp1$b),na.rm = TRUE),max(as.numeric(uk_tmp1$b),na.rm = TRUE),length.out=6)
-    pb <- tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
-    lims <- seq(min(as.numeric(uk_tmp1$mu),na.rm = TRUE),max(as.numeric(uk_tmp1$mu),na.rm = TRUE),length.out=6)
-    pmu <- tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    lims <- c(min(as.numeric(uk_tmp1$b),na.rm = TRUE),max(as.numeric(uk_tmp1$b),na.rm = TRUE))
+#    pb <- tm_shape(uk_tmp1) + tm_dots(col="b",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\beta$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pb <- tm_shape(uk_tmp1) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+    
+        lims <- c(min(as.numeric(uk_tmp1$mu),na.rm = TRUE),max(as.numeric(uk_tmp1$mu),na.rm = TRUE))
+        pmu <- tm_shape(uk_tmp1) + tm_dots(fill="mu",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+       # pmu <- tm_shape(uk_tmp1) + tm_dots(col="mu",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     
     sigmax <- 3
-    lims <- seq(min(as.numeric(uk_tmp1$sig),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sig),na.rm = TRUE),sigmax),length.out=6)
-    psig <- tm_shape(uk_tmp1 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    lims <- c(min(as.numeric(uk_tmp1$sig),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sig),na.rm = TRUE),sigmax))
+    psig <- tm_shape(uk_tmp1) + tm_dots(fill="sig",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
     
-    lims <- seq(min(as.numeric(uk_tmp1$delta),na.rm = TRUE),max(as.numeric(uk_tmp1$delta),na.rm = TRUE),length.out=5)
-    pdelta <- tm_shape(uk_tmp1) + tm_dots(col="delta",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    #    psig <- tm_shape(uk_tmp1 %>% filter(is.na(sig) |sig < sigmax)) + tm_dots(col="sig",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    
+    # lims <- seq(min(as.numeric(uk_tmp1$delta),na.rm = TRUE),max(as.numeric(uk_tmp1$delta),na.rm = TRUE),length.out=5)
+    # pdelta <- tm_shape(uk_tmp1) + tm_dots(col="delta",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
     
       }
 
     if (method=="AGG") {
-    lims <- seq(min(as.numeric(uk_tmp1$mu_agg),na.rm = TRUE),max(as.numeric(uk_tmp1$mu_agg),na.rm = TRUE),length.out=6)
-    pmuagg <- tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
-
-    lims <- seq(min(as.numeric(uk_tmp1$sigl),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sigl),na.rm = TRUE),sigmax),length.out=6)
-    psigl <- tm_shape(uk_tmp1 %>% filter(is.na(sigl) | sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
-
-    lims <- seq(min(as.numeric(uk_tmp1$sigu),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sigu),na.rm = TRUE),sigmax),length.out=6)
-    psigu <- tm_shape(uk_tmp1 %>% filter(is.na(sigu) | sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
-
-    lims <- seq(min(as.numeric(uk_tmp1$sigdiff),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sigdiff),na.rm = TRUE),sigmax),length.out=6)
-    psigdiff <- tm_shape(uk_tmp1 %>% filter(is.na(sigdiff) | sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=0.3,palette="-RdBu",midpoint=0,colorNA=misscol,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
-
+    lims <- c(min(as.numeric(uk_tmp1$mu_agg),na.rm = TRUE),max(as.numeric(uk_tmp1$mu_agg),na.rm = TRUE))
+    #pmuagg <- tm_shape(uk_tmp1) + tm_dots(col="mu_agg",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\mu_{AGG}$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pmuagg <- tm_shape(uk_tmp1) + tm_dots(fill="mu_agg",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu_{AGG}$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+    
+    lims <- c(min(as.numeric(uk_tmp1$sigl),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sigl),na.rm = TRUE),sigmax))
+    #psigl <- tm_shape(uk_tmp1 %>% filter(is.na(sigl) | sigl < sigmax)) + tm_dots(col="sigl",style="cont",size=point_size,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_l$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    psigl <- tm_shape(uk_tmp1) + tm_dots(fill="sigl",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_l$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+    
+    lims <- c(min(as.numeric(uk_tmp1$sigu),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sigu),na.rm = TRUE),sigmax))
+    #psigu <- tm_shape(uk_tmp1 %>% filter(is.na(sigu) | sigu < sigmax)) + tm_dots(col="sigu",style="cont",size=point_size,palette="viridis",colorNA=misscol,title=TeX("$\\sigma_u$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    psigu <- tm_shape(uk_tmp1) + tm_dots(fill="sigu",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+    
+    lims <- c(min(as.numeric(uk_tmp1$sigdiff),na.rm = TRUE),min(max(as.numeric(uk_tmp1$sigdiff),na.rm = TRUE),sigmax))
+    #psigdiff <- tm_shape(uk_tmp1 %>% filter(is.na(sigdiff) | sigdiff < sigmax)) + tm_dots(col="sigdiff",style="cont",size=point_size,palette="-RdBu",midpoint=0,colorNA=misscol,title=TeX("$\\sigma_u-\\sigma_l$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    psigdiff <- tm_shape(uk_tmp1 %>% filter(is.na(sigdiff) | sigdiff < sigmax)) + tm_dots(fill="sigdiff",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u-\\sigma_l$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+    
     deltamax <- 5
     deltamin <- min(as.numeric(uk_tmp1$deltal),as.numeric(uk_tmp1$deltau),na.rm = TRUE)
-    lims <- seq(deltamin,min(max(uk_tmp1$deltal,uk_tmp1$deltau,na.rm=TRUE),deltamax),length.out=6)
-    pdeltal <- tm_shape(uk_tmp1 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
-
-    pdeltau <- tm_shape(uk_tmp1 %>% filter(is.na(deltau) | deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=0.3,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    lims <- c(deltamin,min(max(uk_tmp1$deltal,uk_tmp1$deltau,na.rm=TRUE),deltamax))
+    #pdeltal <- tm_shape(uk_tmp1 %>% filter(is.na(deltal)| deltal < deltamax)) + tm_dots(col="deltal",style="cont",size=point_size,palette="viridis",colorNA=misscol,title=TeX("$\\delta_l$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pdeltal <- tm_shape(uk_tmp1) + tm_dots(fill="deltal",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\delta_l$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+    
+    #pdeltau <- tm_shape(uk_tmp1 %>% filter(is.na(deltau) | deltau < deltamax)) + tm_dots(col="deltau",style="cont",size=point_size,palette="viridis",colorNA=misscol,title=TeX("$\\delta_u$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pdeltau <- tm_shape(uk_tmp1) + tm_dots(fill="deltau",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\delta_u$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
     
     deltamin <- -5
-    lims <- seq(max(min(uk_tmp1$deltadiff,na.rm=TRUE),deltamin),min(max(uk_tmp1$deltadiff,na.rm=TRUE),deltamax),length.out=6)
-    pdeltadiff <- tm_shape(uk_tmp1 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax & deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=0.3,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
-    return(list(pa,pb,pmu,psig,pdelta,pmuagg,psigl,psigu,psigdiff,pdeltal,pdeltau,pdeltadiff)) 
+    lims <- c(max(min(uk_tmp1$deltadiff,na.rm=TRUE),deltamin),min(max(uk_tmp1$deltadiff,na.rm=TRUE),deltamax))
+    #pdeltadiff <- tm_shape(uk_tmp1 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax & deltadiff>deltamin))) + tm_dots(col="deltadiff",style="cont",size=point_size,palette="-RdBu",colorNA=misscol,midpoint=0,title=TeX("$\\delta_u-\\delta_l$"), breaks=lims,textNA = "Conditioning site") + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=0.5,legend.text.size = 1,legend.title.size=1.5, title=title_map) 
+    pdeltadiff <- tm_shape(uk_tmp1 %>% filter(is.na(deltadiff ) | (deltadiff < deltamax & deltadiff>deltamin))) + tm_dots(fill="deltadiff",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\delta_u-\\delta_l$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+    
+    return(list(pa,pb,pmu,psig,pmuagg,psigl,psigu,psigdiff,pdeltal,pdeltau,pdeltadiff)) 
     } else if (method=="Normal") {
     return(list(pa,pb,pmu,psig))
     } else if (method=="max_tau") {return(list(pa,pa_tau))}
