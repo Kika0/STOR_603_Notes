@@ -229,10 +229,7 @@ ggsave(p,filename="../Documents/phis_temp94diff.png",width=5,height=5)
 
 # iterative a,b,mu and 
 load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData")
-sites = sites_index_diagonal
-cond_site_names = site_name_diagonal
-q <- 0.9
-site <- 2
+abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf) {
 if(is.null(cond_site_names)) {
   cond_site_name <- names(sites)[site]
   cond_site_names <- names(sites)
@@ -249,29 +246,25 @@ dist_tmp <- dist_tmp[dist_tmp>0]
 # normalise distance using a common constant
 distnorm <- dist_tmp/1000000
 parest_site <- st_drop_geometry(result[[j]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
-Nite <- 20
-try2 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE)
-
-try7 <- try2
+try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE)
 sapply(1:12,function(i)print(summary(try7[[i]])),simplify=FALSE)
 # separate parameter estimation and analysis
-
 p <- ggplot(try7[[1]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par") %>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\alpha"))
-ggsave(p,file=paste0("../Documents/abmu_iterative_alpha_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_alpha_",cond_site_name,".png"),height=5,width=10)
 p <- ggplot(try7[[2]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\beta"))
-ggsave(p,file=paste0("../Documents/abmu_iterative_beta_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_beta_",cond_site_name,".png"),height=5,width=10)
 p <- ggplot(try7[[3]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\mu_{AGG}"))
-ggsave(p,file=paste0("../Documents/abmu_iterative_mu_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_mu_",cond_site_name,".png"),height=5,width=10)
 p <- ggplot(try7[[4]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_l"))
-ggsave(p,file=paste0("../Documents/abmu_iterative_sigmal_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_sigmal_",cond_site_name,".png"),height=5,width=10)
 p <- ggplot(try7[[5]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_u"))
-ggsave(p,file=paste0("../Documents/abmu_iterative_sigmau_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_sigmau_",cond_site_name,".png"),height=5,width=10)
 
 p <- ggplot(data.frame("deltal"=try7[[10]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltal),size=1.5) +ylab(TeX("$\\delta_l"))
-ggsave(p,file=paste0("../Documents/abmu_iterative_deltal_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/abmu_iterative/plot_deltal_",cond_site_name,".png"),height=5,width=10)
 
 p <- ggplot(data.frame("deltau"=try7[[11]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltau),size=1.5) +ylab(TeX("$\\delta_u"))
-ggsave(p,file=paste0("../Documents/abmu_iterative_deltau_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/abmu_iterative/plot_deltau_",cond_site_name,".png"),height=5,width=10)
 
 # look spatially to check
 # explore also spatial parameters
@@ -317,7 +310,9 @@ tmap_save(t,filename=paste0("../Documents/",folder_name,"/sigma_lower_",cond_sit
 t <- tmpsf %>% dplyr::select(sigu_ite,sigu,sigudiff) %>% pivot_longer(cols=c(sigu_ite,sigu,sigudiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("sigu_ite","sigu","sigudiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\sigma_u$"))) + tm_facets("parameter") +
   tm_layout(legend.position=c("right","top"),legend.height = 9, panel.labels = toplabel,legend.reverse = TRUE) 
 tmap_save(t,filename=paste0("../Documents/",folder_name,"/sigma_upper_",cond_site_name,".png"),width=8,height=6)
+return(try7)
+}
 
-
+sapply(1:length(sites_index_diagonal),FUN=abmu_par_est_ite,result=result,est_all_sf=est_all_sf,simplify=FALSE)
 #save(try7,file="data_processed/Birmingham_temporary_abmu.RData")
 est_all_sf %>% filter(cond_site=="Birmingham") %>% tm_shape() + tm_dots("mu_agg")
