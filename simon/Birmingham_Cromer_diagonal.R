@@ -417,4 +417,4 @@ deltal <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st
 deltau <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,30])))
 load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData")
 #tmp <- sapply(1:length(sites_index_diagonal),FUN=function(k) {par_est_ite(dataLap = data_mod_Lap,given = sites_index_diagonal[k],parest_site=result[[k]],deltal=mean(deltal),deltau=mean(deltau))},simplify=FALSE)
-tmp <- sapply(1:length(sites_index_diagonal),FUN=function(k) {abmu_par_est_ite(result=result,est_all_sf=est_all_sf)},simplify=FALSE)
+tmp <- sapply(1:length(sites_index_diagonal),FUN=abmu_par_est_ite,result=result,est_all_sf=est_all_sf,simplify=FALSE)
