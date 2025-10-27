@@ -625,7 +625,7 @@ iter_sigmas_site <- function(j,Nite=5,sites=df_sites,cond_site_names=NULL,grid=x
   return(tmpsf)
 }
 
-par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist, parest_site = result[[1]],Nite=10, show_ite=FALSE)  {
+par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist, parest_site = result[[1]],Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL)  {
   d <- (ncol(dataLap)-1)
   N <- nrow(dataLap)
   res <- 1:d
@@ -633,27 +633,35 @@ par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist,
 
   phi0. <- phi1. <- phi2. <- phi3. <- c(1) 
   deltal. <- deltau. <- 2
+  if (is.null(deltal)) {
   residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
                         sigu = parest_site$sigu_ite_sigu,
                         deltal = parest_site$deltal_ite[1],
                         deltau = parest_site$deltau_ite[1])
-  for (i in 1:Nite) {
-    if (i >1) {
+  } else {
+    residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
+                          sigu = parest_site$sigu_ite_sigu,
+                          "deltal" = deltal,
+                          "deltau" = deltau)
+    
+  }
+  for (k in 1:Nite) {
+    if (k >1) {
       residual_pars <- list(sigl=phi2*(1-exp(-phi3*cond_site_dist)),sigu=phi0*(1-exp(-phi1*cond_site_dist)),deltal=deltal,deltau=deltau)
     }
       # estimate a,b,mu
-      pe <- par_est_abmu(df=dataLap,v=v,given=cond_site,res_margin_est=residual_pars)
+      pe <- par_est_abmu(df=dataLap,v=v,given=given,res_margin_est=residual_pars)
       # calculate observed residuals
-      Z <- observed_residuals(df=dataLap,given=cond_site,v = v,a=pe$a,b=pe$b)
+      Z <- observed_residuals(df=dataLap,given=given,v = v,a=pe$a,b=pe$b)
       # update parameters
-      a[,i] <- pe$a
-      b[,i] <- pe$b
-      mu_agg[,i] <- pe$mu
+      a[,k] <- pe$a
+      b[,k] <- pe$b
+      mu_agg[,k] <- pe$mu
       
       
     # estimate sigu parameters phi0 and phi1
-    phi_init <- c(phi0.[i],phi1.[i],phi2.[i],phi3.[i],deltal.[i],deltau.[i])
-    opt <- optim(fn=NLL_exp_phis,x = Z,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,i]),control=list(maxit=2000),par = phi_init,deltal=NULL,deltau=NULL,method = "Nelder-Mead")
+    phi_init <- c(phi0.[k],phi1.[k],phi2.[k],phi3.[k],deltal.[k],deltau.[k])
+    opt <- optim(fn=NLL_exp_phis,x = Z,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,k]),control=list(maxit=2000),par = phi_init,deltal=deltal,deltau=deltau,method = "Nelder-Mead")
     phi0 <- opt$par[1]
     phi1 <- opt$par[2]
     phi2 <- opt$par[3]
@@ -666,8 +674,8 @@ par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist,
     phi3. <- append(phi3.,phi3)
     deltal. <- append(deltal.,deltal)
     deltau. <- append(deltau.,deltau)
-    sigu[,i] <- phi0*(1-exp(-phi1*cond_site_dist))
-    sigl[,i] <- phi2*(1-exp(-phi3*cond_site_dist))
+    sigu[,k] <- phi0*(1-exp(-phi1*cond_site_dist))
+    sigl[,k] <- phi2*(1-exp(-phi3*cond_site_dist))
     
   }
   par_sum <- data.frame("a" = as.numeric(a[,Nite]),"b" = as.numeric(b[,Nite]),"mu_agg" = as.numeric(mu_agg[,Nite]),"sigl" = as.numeric(sigl[,Nite]),"sigu" = as.numeric(sigu[,Nite]),"phi0" = phi0.[Nite], "phi1" = phi1.[Nite],"phi2" = phi2.[Nite], "phi3" = phi3.[Nite], "deltal" = deltal.[Nite], "deltau" = deltau.[Nite])
