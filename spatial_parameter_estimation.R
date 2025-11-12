@@ -666,8 +666,9 @@ par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist,
     phi1 <- opt$par[2]
     phi2 <- opt$par[3]
     phi3 <- opt$par[4] 
+    if (!is.numeric(deltal) & !is.numeric(deltau)) {
     deltal <- opt$par[5]
-    deltau <- opt$par[6]
+    deltau <- opt$par[6] } 
     phi0. <- append(phi0.,phi0)
     phi1. <- append(phi1.,phi1)
     phi2. <- append(phi2.,phi2)
@@ -676,7 +677,6 @@ par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist,
     deltau. <- append(deltau.,deltau)
     sigu[,k] <- phi0*(1-exp(-phi1*cond_site_dist))
     sigl[,k] <- phi2*(1-exp(-phi3*cond_site_dist))
-    
   }
   par_sum <- data.frame("a" = as.numeric(a[,Nite]),"b" = as.numeric(b[,Nite]),"mu_agg" = as.numeric(mu_agg[,Nite]),"sigl" = as.numeric(sigl[,Nite]),"sigu" = as.numeric(sigu[,Nite]),"phi0" = phi0.[Nite], "phi1" = phi1.[Nite],"phi2" = phi2.[Nite], "phi3" = phi3.[Nite], "deltal" = deltal.[Nite], "deltau" = deltau.[Nite])
   if (show_ite == TRUE) {
