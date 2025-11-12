@@ -111,22 +111,18 @@ get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal
 }
 
 tmp_sigu <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance)) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
-c25 <- c(
-  "dodgerblue2", "#E31A1C", # red
+c12 <- c(
+  "#009ADA", "#C11432", # red
                "green4",
                "#6A3D9A", # purple
                "#FF7F00", # orange
                "black", "gold1",
-               "skyblue2", "#FB9A99", # lt pink
-               "palegreen2",
-               "#CAB2D6", # lt purple
-               "#FDBF6F", # lt orange
-               "gray70", "khaki2",
-               "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
-               "darkturquoise", "green1", "yellow4", "yellow3",
-               "darkorange4", "brown"
+               "#FB9A99", # lt pink
+               "gray70", 
+               "darkturquoise", "green1", 
+               "darkorange4"
 )
-p <- ggplot(tmp_sigu) + geom_point(aes(y=sigu,x=dist,col=cond_site)) + scale_color_manual(values = sample(c25,length(site_name_diagonal))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_u$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+p <- ggplot(tmp_sigu) + geom_point(aes(y=sigu,x=dist,col=cond_site)) + scale_color_manual(values = c12) + xlab("Distance [m]") + ylab(TeX("$\\sigma_u$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
 ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigu_distance_all.png"),width=10,height=7) 
 
 # move to sigmal estimates
@@ -156,29 +152,14 @@ tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi2_phi3.p
 
 # plot sigma_u against distance for all sites
 get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
-  sigl <- tmp[[i]]$sigl_ite_sigl
+  sigl <- result[[i]]$sigl_ite_sigl
   dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
   sigld <- data.frame(sigl=sigl,dist=dist_cond_site) 
   return(sigld %>% mutate(cond_site = site_name_diagonal[i]))
 }
 
 tmp_sigl <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance)) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
-c25 <- c(
-  "dodgerblue2", "#E31A1C", # red
-               "green4",
-               "#6A3D9A", # purple
-               "#FF7F00", # orange
-               "black", "gold1",
-               "skyblue2", "#FB9A99", # lt pink
-               "palegreen2",
-               "#CAB2D6", # lt purple
-               "#FDBF6F", # lt orange
-               "gray70", "khaki2",
-               "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
-               "darkturquoise", "green1", "yellow4", "yellow3",
-               "darkorange4", "brown"
-)
-p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = sample(c25,length(site_name_diagonal))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = c12) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
 ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigl_distance_all.png"),width=10,height=7) 
 
 # try phi0,phi1,phi2,phi3 joint estimation
@@ -212,7 +193,7 @@ tmphi3 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="ph
 t <- tmap_arrange(tmphi0,tmphi1,tmphi2,tmphi3,ncol=4)
 tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phis_all4.png"),width=8,height=4)
 
-# plots against 94 marginal quantile
+# plots against 94 marginal quantile --------
 load("data_processed/94thresholds.RData")
 temp94 <- tm_thres %>% filter(data_source=="CPM") %>% pull(temp)
 temp94diff <- tm_thres_diff %>% filter(data_source=="CPM_diff") %>% pull(temperature)
@@ -227,7 +208,7 @@ tmp <- data.frame(param_value=c(phi0,phi1,phi2,phi3),temp94diff=rep(temp94diff[s
 p <- ggplot(tmp) + geom_point(aes(x=temp94diff,y=param_value,col=phi)) + geom_line(aes(x=temp94diff,y=param_value,col=phi))
 ggsave(p,filename="../Documents/phis_temp94diff.png",width=5,height=5)
 
-# iterative a,b,mu and 
+# iterative a,b,mu and phis --------------------------------------------------
 load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData")
 abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf,deltal=NULL,deltau=NULL) {
 if(is.null(cond_site_names)) {
@@ -248,7 +229,6 @@ distnorm <- dist_tmp/1000000
 parest_site <- st_drop_geometry(result[[j]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
 if (is.null(deltal)) {
   try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE)
-  
 } else {
 try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE,deltal=deltal,deltau=deltau) }
 
@@ -393,22 +373,7 @@ get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal
 }
 
 tmp_sigl <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance)) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
-c25 <- c(
-  "dodgerblue2", "#E31A1C", # red
-               "green4",
-               "#6A3D9A", # purple
-               "#FF7F00", # orange
-               "black", "gold1",
-               "skyblue2", "#FB9A99", # lt pink
-               "palegreen2",
-               "#CAB2D6", # lt purple
-               "#FDBF6F", # lt orange
-               "gray70", "khaki2",
-               "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
-               "darkturquoise", "green1", "yellow4", "yellow3",
-               "darkorange4", "brown"
-)
-p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = sample(c25,length(site_name_diagonal))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = c12) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
 ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigl_distance_all.png"),width=10,height=7) 
 
 # try deltas fixed as mean of 12 deltas
