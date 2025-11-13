@@ -632,18 +632,22 @@ par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist,
   a <- b <- mu_agg <- sigl <- sigu <- data.frame(matrix(ncol=(Nite),nrow = d))
 
   phi0. <- phi1. <- phi2. <- phi3. <- c(1) 
-  deltal. <- deltau. <- 2
+  
   if (is.null(deltal)) {
   residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
                         sigu = parest_site$sigu_ite_sigu,
                         deltal = parest_site$deltal_ite[1],
                         deltau = parest_site$deltau_ite[1])
+  deltal. <- 2
+  deltau. <- 2
+  
   } else {
     residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
                           sigu = parest_site$sigu_ite_sigu,
                           "deltal" = deltal,
                           "deltau" = deltau)
-    
+    deltal. <- deltal
+    deltau. <- deltau   
   }
   for (k in 1:Nite) {
     if (k >1) {
@@ -683,4 +687,5 @@ par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist,
     return(list(a,b,mu_agg,sigl,sigu,phi0.,phi1.,phi2.,phi3.,deltal.,deltau.,par_sum))
   } else {return(par_sum)}
 }
+
 
