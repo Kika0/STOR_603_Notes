@@ -56,3 +56,9 @@ pl <- ggplot(data.frame(x=Z)) + geom_density(aes(x=x),linetype="dashed") + xlim(
 pl1 <- pl + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)) %>% filter(Method %in% c("Normal","GenGaus","AGG")),aes(x=x,y=y,col=Method)) +
   xlab("Observed residuals kernel smoothed density") + ylab("Density") + ggtitle("Kernel smoothed residual density and AGG fits")+ scale_color_manual(values=c("Normal"="#070707","GenGaus"="#C11432","AGG"="#009ADA","AGGsig"="#66A64F","AGGdelta"="#FDD10A"),drop=FALSE) + ylim(c(0,0.5))
 ggsave(filename = paste0("../Documents/Vinecopula_paper/density1_cond",j,".png"),plot=pl1,height=5,width=8)
+
+# number of vines
+Nvine <- function(d) {
+  2^(ceiling(choose(d-2,2)/2))*factorial(d)/2
+}
+sapply(4:10,Nvine)
