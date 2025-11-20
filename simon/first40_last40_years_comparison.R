@@ -102,10 +102,23 @@ est_all <- rbind(est_all,est_all_sf%>% mutate(period = as.character(p)))
 #plot alphas
 est_all$a[est_all$a<0] <- 0
 point_size <- 0.3
-lims <- c(0,1)
+lims <- c(-0.5,0.5)
 misscol <- "aquamarine"
 #panel_labels <- c("1980-2020","2040-2080")
+a4 <- est_all %>% filter(period==4) %>% pull(a)
+b4 <- est_all %>% filter(period==4) %>% pull(b)
+est_all_set <- est_all %>% mutate("a4"=rep(a4,7),"b4"=rep(b4,7))
+est_all_set <- est_all_set %>% mutate(a4diff = a-a4, b4diff = b-b4)
 panel_labels <- sapply(1:((9000-(block_size-time_bracket))/time_bracket),FUN=function(i){paste0((1980+(i-1)*time_bracket/90),"-",(1980+(block_size+(i-1)*time_bracket)/90))})
+for (i in 1:12) {
+  #  pa <- tm_shape(uk_tmp1) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+  pa <- tm_shape(est_all_set %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="a4diff",fill.scale = tm_scale_continuous(limits=lims,values="-RdBu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by= c("period"),nrow = 1)+  tm_layout(panel.labels = panel_labels, legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pa,filename=paste0("../Documents/dependence_stationary/a4comp_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
+  pb <- tm_shape(est_all_set %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="b4diff",fill.scale = tm_scale_continuous(limits=lims,values="-RdBu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by= c("period"),nrow=1)+  tm_layout(panel.labels = panel_labels, legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
+  tmap_save(pb,filename=paste0("../Documents/dependence_stationary/b4comp_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
+}
+
+lims <- c(0,1)
 for (i in 1:12) {
 #  pa <- tm_shape(uk_tmp1) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,asp=aspect,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
   pa <- tm_shape(est_all %>% filter(cond_site==names(df_sites)[i]))  + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by= c("period"),nrow = 1)+  tm_layout(panel.labels = panel_labels, legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[i])
@@ -173,7 +186,7 @@ t <- tm_shape(xyUK20_sf %>% mutate(QT=QT7))  + tm_dots(fill="QT",fill.scale = tm
 tmap_save(t,filename=paste0("../Documents/dependence_stationary/QT_",T,"_q",q*100,"_",names(df_sites[i]),".png"),width=12,height=4)
 
 # calculate for each panel
-q_res <- 0.75
+q_res <- 0.25
 #q_res <- 0.25 # repeat with this value
 for (site in 1:ncol(df_sites)) {
 point_size <- 0.5
@@ -181,6 +194,14 @@ Zsite <- sapply(1:7,FUN = function(i){cond_quantiles_wrapper(Lap_max=Lap_max,par
 Z75 <- do.call(rbind,Zsite)
 cond_site <- find_site_index(df_sites[,site],grid_uk = xyUK20_sf)   
 tmp <- est_all %>% filter(cond_site==names(df_sites)[site]) %>% mutate(Z=Z75[,1])
+# calculate also difference from the fourth panel
+Z4 <- tmp %>% filter(period=="4") %>% pull(Z)
+tmp4<- tmp %>% mutate("Z4"=rep(Z4,7))
+tmp4<- tmp4%>% mutate("Z4diff" = Z-Z4)
+
+t <- tm_shape(tmp4)  + tm_dots(fill="Z4diff",fill.scale = tm_scale_continuous(midpoint=0,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Conditional\n quantile\n (Laplace scale)")) + tm_layout(panel.labels = panel_labels,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[site]) + tm_facets("period",nrow=1)
+tmap_save(t,filename=paste0("../Documents/dependence_stationary/residual4_quantile_",q_res*100,"_",names(df_sites[site]),".png"),width=12,height=4)
+
 t <- tm_shape(tmp)  + tm_dots(fill="Z",fill.scale = tm_scale_continuous(midpoint=Lap_max[cond_site],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Conditional\n quantile\n (Laplace scale)")) + tm_layout(panel.labels = panel_labels,legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(names(df_sites)[site]) + tm_facets("period",nrow=1)
 tmap_save(t,filename=paste0("../Documents/dependence_stationary/residual_quantile_",q_res*100,"_",names(df_sites[site]),".png"),width=12,height=4)
 # calculate the difference between the first and the last panel
