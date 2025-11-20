@@ -196,8 +196,6 @@ end_time <- Sys.time()
 end_time - start_time
 
 # calculate the AIC
-npar1 <- 8
-npar2 <- 8
 tmp <- tmp 
 tmp <- tmp %>% mutate(W=2*(ll_m2-ll_m1),AIC1=-2*ll_m1+2*npar1,AIC2=-2*ll_m2+2*npar2)
 tmp <- tmp %>% mutate(AICdiff=AIC2-AIC1)
@@ -433,11 +431,16 @@ b1s$logLik
 ll_m2s
 ll_m1s
 
-# consider all possible matrices
-# start with the winter matrix
-vcs1$Matrix
+# consider all possible matrices --------------------------------------------
 
-# extract all possible permutations
+#' All permutations (reverse order discarded)
+#'
+#' @param n An integer of dimension
+#'
+#' @returns A dataframe where each permutation is one row.
+#' @export 
+#'
+#' @examples permutations(n=3)
 permutations <- function(n){
   if(n==1){
     return(matrix(1))
@@ -451,6 +454,7 @@ permutations <- function(n){
     return(A)
   }
 }
+
 library(combinat)
 all_c_vine_matrices <- function(d)
 {
@@ -474,8 +478,8 @@ all_c_vine_matrices <- function(d)
 # keep reverse for now as a check
 giventree_fitfamilies <- function(data=obsresw,tree_struc) {
   # estimate the family and parameters for dvine_mat tree structure
- y <-  VineCopula::RVineCopSelect(data=data,Matrix=tree_struc,selectioncrit = "logLik")
- return(list(vc=y,ll=y$logLik))
+ y <-  rvinecopulib::vinecop(data=data,structure = tree_struc[nrow(tree_struc):1,],selcrit = "loglik", family_set = c("onepar","twopar","threepar"))
+ return(list(vc=y,ll=y$loglik))
 }
 # print all possible c vines and d vines
 all_d_vine_matrices <- function(d=4) {
@@ -492,26 +496,107 @@ cvines <- all_c_vine_matrices(4)
 dvines <- all_d_vine_matrices(4)
 allvines <- c(cvines,dvines)
 
-dvine_winter <- lapply(allvines,FUN = giventree_fitfamilies,data=obsresw)
+vine_winter <- lapply(allvines,FUN = giventree_fitfamilies,data=obsresw)
 # print log-likelihood of each permutation
-loglikw <- sapply(X=dvine_winter,FUN=function(x)x[[2]],simplify=TRUE)
+loglikw <- sapply(X=vine_winter,FUN=function(x)x[[2]],simplify=TRUE)
+# compare with winter fitted vine copula
+vcw1 <- rvinecopulib::vinecop(data=obsresw,selcrit = "loglik",family_set = c("onepar","twopar","threepar"))
 
-# compare with winter fitted vine copula as a check
-vcw1 <- VineCopula::RVineStructureSelect(data=obsresw,selectioncrit = "logLik")
-dvine_winter[[2]]
 
 # repeat for summer
-dvine_summer <- lapply(allvines,FUN = giventree_fitfamilies,data=obsresw)
+vine_summer <- lapply(allvines,FUN = giventree_fitfamilies,data=obsress)
 # print log-likelihood of each permutation
-logliks <- sapply(X=dvine_summer,FUN=function(x)x[[2]],simplify=TRUE)
+logliks <- sapply(X=vine_summer,FUN=function(x)x[[2]],simplify=TRUE)
+# compare with summer fitted copula
+vcs1 <- rvinecopulib::vinecop(data=obsress,selcrit = "loglik", family_set = c("onepar","twopar","threepar"))
+# repeat for joined data
+vine_join <- lapply(allvines,FUN = giventree_fitfamilies,data=rbind(obsresw,obsress))
+# print log-likelihood of each permutation
+logliksw <- sapply(X=vine_join,FUN=function(x)x[[2]],simplify=TRUE)
+# compare with dismann algorithm
+vc_join <- rvinecopulib::vinecop(data=rbind(obsress,obsresw),selcrit = "loglik", family_set = c("onepar","twopar","threepar"))
 
 which.max(loglikw+logliks)
 
-dvine_winter[[8]]
-dvine_summer[[8]]
+plot(sort(loglikw))
+plot(sort(logliks))
+plot(sort(loglikw+logliks))
+
+# aim is to explore if dismann structure is among top trees
+plot(x=c(vcs1$logl),y=1)
+# find which one matches
+round(vcs1$loglik,1)==round(logliks,1)
+summary(vcs1)
+summary(vine_summer[[20]]$vc)
+# plot this example with imposed summer structure
+vcs1 <- rvinecopulib::vinecop(data=obsress,selcrit = "loglik", family_set = c("onepar","twopar","threepar"),structure = vcs1$structure)
+vcs1
+
+round(vcw1$loglik,1)==round(loglikw,1)
+
+# create a join plot for summer and winter
+tmp <- data.frame(vine_index=1:24,logliks=logliks,loglikw=loglikw,dismannw=NA,dismanns=NA,loglik_sum = loglikw+logliks,loglik_join=logliksw,dismannsw = NA)
+tmp$dismannw[round(vcw1$loglik,1)==round(loglikw,1)] <- vcw1$loglik
+tmp$dismanns[round(vcs1$loglik,1)==round(logliks,1)] <- vcs1$loglik
+tmp$dismannsw[round(vc_join$loglik,1)==round(logliksw,1)] <- vc_join$loglik
+ggplot(tmp) + geom_point(aes(x=vine_index,y=logliks),col="#C11432")+
+  geom_point(aes(x=vine_index,y=loglikw),col="#009ADA") +
+  geom_point(aes(x=vine_index,y=dismanns),col="#C11432",shape = 2,size=2) +
+  geom_point(aes(x=vine_index,y=dismannw),col="#009ADA",shape=2,size=2) +
+  geom_point(aes(x=vine_index,y=loglik_sum)) +
+  geom_point(aes(x=vine_index,y=loglik_join)) +
+  geom_point(aes(x=vine_index,y=dismannsw),shape=2,size=2) 
 
 # check structure for each conditioning pollutant variable -------------------
 # print best fitting tree structure for summer and winter
+
+plot_tree_loglik <- function(j,winterlap=winter_lap,summerlap=summer_lap,v=0.7) {
+  # calculate the observed residuals
+  pew <-  par_est(df=winterlap,v=v,given=j,margin = "Normal", method = "sequential2")
+  obsresw <- (observed_residuals(df = winterlap,given = j,v = v,a = pew$a,b=pew$b) %>% apply(c(2),FUN=row_number))/(nrow(winterlap)*(1-v)+1)
+  
+  pes <-  par_est(df=summer_lap,v=v,given=j,margin = "Normal", method = "sequential2")
+  obsress <- (observed_residuals(df = summerlap,given = j,v = v,a = pes$a,b=pes$b) %>% apply(c(2),FUN=row_number))/(nrow(summerlap)*(1-v)+1)
+  
+  
+  vine_winter <- lapply(allvines,FUN = giventree_fitfamilies,data=obsresw)
+  # print log-likelihood of each permutation
+  loglikw <- sapply(X=vine_winter,FUN=function(x)x[[2]],simplify=TRUE)
+  # compare with winter fitted vine copula
+  vcw1 <- rvinecopulib::vinecop(data=obsresw,selcrit = "loglik",family_set = c("onepar","twopar","threepar"))
+  
+  
+  # repeat for summer
+  vine_summer <- lapply(allvines,FUN = giventree_fitfamilies,data=obsress)
+  # print log-likelihood of each permutation
+  logliks <- sapply(X=vine_summer,FUN=function(x)x[[2]],simplify=TRUE)
+  # compare with summer fitted copula
+  vcs1 <- rvinecopulib::vinecop(data=obsress,selcrit = "loglik", family_set = c("onepar","twopar","threepar"))
+
+    # repeat for joined data
+  vine_join <- lapply(allvines,FUN = giventree_fitfamilies,data=rbind(obsresw,obsress))
+  # print log-likelihood of each permutation
+  logliksw <- sapply(X=vine_join,FUN=function(x)x[[2]],simplify=TRUE)
+  # compare with dismann algorithm
+  vc_join <- rvinecopulib::vinecop(data=rbind(obsress,obsresw),selcrit = "loglik", family_set = c("onepar","twopar","threepar"))
+
+  # create a join plot for summer and winter
+  tmp <- data.frame(vine_index=1:24,logliks=logliks,loglikw=loglikw,dismannw=NA,dismanns=NA,loglik_sum = loglikw+logliks,loglik_join=logliksw,dismannsw = NA)
+  tmp$dismannw[abs(vcw1$loglik - loglikw)<0.05] <- vcw1$loglik
+  tmp$dismanns[round(vcs1$loglik,1)==round(logliks,1)] <- vcs1$loglik
+  tmp$dismannsw[round(vc_join$loglik,1)==round(logliksw,1)] <- vc_join$loglik
+p <-   ggplot(tmp) + geom_point(aes(x=vine_index,y=logliks),col="#C11432")+
+    geom_point(aes(x=vine_index,y=loglikw),col="#009ADA") +
+    geom_point(aes(x=vine_index,y=dismanns),col="#C11432",shape = 2,size=2) +
+    geom_point(aes(x=vine_index,y=dismannw),col="#009ADA",shape=2,size=2) +
+    geom_point(aes(x=vine_index,y=loglik_sum)) +
+    geom_point(aes(x=vine_index,y=loglik_join)) +
+    geom_point(aes(x=vine_index,y=dismannsw),shape=2,size=2) + xlab("Vine structure index") + ylab("Log-likelihood")
+ggsave(p,filename = paste0("../Documents/plot_tree_loglik_cond",j,".png"))
+return(tmp)
+}
+tmp <- plot_tree_loglik(j=3)
+sapply(1:5,plot_tree_loglik)
 
 # compare with joint fit and separate fits
 tree_select <- function(j,winterlap=winter_lap,summerlap=summer_lap,vines=allvines) {
