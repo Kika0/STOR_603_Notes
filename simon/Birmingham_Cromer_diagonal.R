@@ -2,6 +2,7 @@ library(tmap)
 library(sf)
 library(tidyverse)
 library(latex2exp)
+library(gridExtra)
 
 theme_set(theme_bw())
 theme_replace(
@@ -111,22 +112,18 @@ get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal
 }
 
 tmp_sigu <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance)) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
-c25 <- c(
-  "dodgerblue2", "#E31A1C", # red
+c12 <- c(
+  "#009ADA", "#C11432", # red
                "green4",
                "#6A3D9A", # purple
                "#FF7F00", # orange
                "black", "gold1",
-               "skyblue2", "#FB9A99", # lt pink
-               "palegreen2",
-               "#CAB2D6", # lt purple
-               "#FDBF6F", # lt orange
-               "gray70", "khaki2",
-               "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
-               "darkturquoise", "green1", "yellow4", "yellow3",
-               "darkorange4", "brown"
+               "#FB9A99", # lt pink
+               "gray70", 
+               "darkturquoise", "green1", 
+               "darkorange4"
 )
-p <- ggplot(tmp_sigu) + geom_point(aes(y=sigu,x=dist,col=cond_site)) + scale_color_manual(values = sample(c25,length(site_name_diagonal))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_u$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+p <- ggplot(tmp_sigu) + geom_point(aes(y=sigu,x=dist,col=cond_site)) + scale_color_manual(values = c12) + xlab("Distance [m]") + ylab(TeX("$\\sigma_u$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
 ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigu_distance_all.png"),width=10,height=7) 
 
 # move to sigmal estimates
@@ -156,29 +153,14 @@ tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phi2_phi3.p
 
 # plot sigma_u against distance for all sites
 get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
-  sigl <- tmp[[i]]$sigl_ite_sigl
+  sigl <- result[[i]]$sigl_ite_sigl
   dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
   sigld <- data.frame(sigl=sigl,dist=dist_cond_site) 
   return(sigld %>% mutate(cond_site = site_name_diagonal[i]))
 }
 
 tmp_sigl <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance)) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
-c25 <- c(
-  "dodgerblue2", "#E31A1C", # red
-               "green4",
-               "#6A3D9A", # purple
-               "#FF7F00", # orange
-               "black", "gold1",
-               "skyblue2", "#FB9A99", # lt pink
-               "palegreen2",
-               "#CAB2D6", # lt purple
-               "#FDBF6F", # lt orange
-               "gray70", "khaki2",
-               "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
-               "darkturquoise", "green1", "yellow4", "yellow3",
-               "darkorange4", "brown"
-)
-p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = sample(c25,length(site_name_diagonal))) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = c12) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
 ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigl_distance_all.png"),width=10,height=7) 
 
 # try phi0,phi1,phi2,phi3 joint estimation
@@ -212,7 +194,7 @@ tmphi3 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="ph
 t <- tmap_arrange(tmphi0,tmphi1,tmphi2,tmphi3,ncol=4)
 tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phis_all4.png"),width=8,height=4)
 
-# plots against 94 marginal quantile
+# plots against 94 marginal quantile --------
 load("data_processed/94thresholds.RData")
 temp94 <- tm_thres %>% filter(data_source=="CPM") %>% pull(temp)
 temp94diff <- tm_thres_diff %>% filter(data_source=="CPM_diff") %>% pull(temperature)
@@ -227,9 +209,9 @@ tmp <- data.frame(param_value=c(phi0,phi1,phi2,phi3),temp94diff=rep(temp94diff[s
 p <- ggplot(tmp) + geom_point(aes(x=temp94diff,y=param_value,col=phi)) + geom_line(aes(x=temp94diff,y=param_value,col=phi))
 ggsave(p,filename="../Documents/phis_temp94diff.png",width=5,height=5)
 
-# iterative a,b,mu and 
+# iterative a,b,mu and phis --------------------------------------------------
 load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData")
-abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf) {
+abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf,deltal=NULL,deltau=NULL,folder_name=NULL) {
 if(is.null(cond_site_names)) {
   cond_site_name <- names(sites)[site]
   cond_site_names <- names(sites)
@@ -241,30 +223,38 @@ if (is.numeric(sites)) {cond_site <- sites[site]} else{
 
 # calculate distance from the conditioning site
 dist_tmp <- as.numeric(unlist(st_distance(xyUK20_sf[cond_site,],xyUK20_sf)))
-# remove zero distance
+# remove zero distance (conditioning site)
 dist_tmp <- dist_tmp[dist_tmp>0]
 # normalise distance using a common constant
 distnorm <- dist_tmp/1000000
-parest_site <- st_drop_geometry(result[[j]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
-try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE)
+parest_site <- st_drop_geometry(result[[site]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
+if (is.null(deltal)) {
+  try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE)
+} else {
+try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE,deltal=deltal,deltau=deltau) }
+# print summary
 sapply(1:12,function(i)print(summary(try7[[i]])),simplify=FALSE)
+if (is.null(folder_name)) {
+  folder_name <- "abmu_iterative" 
+}
+
 # separate parameter estimation and analysis
 p <- ggplot(try7[[1]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par") %>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\alpha"))
-ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_alpha_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_alpha_",cond_site_name,".png"),height=5,width=10)
 p <- ggplot(try7[[2]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\beta"))
-ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_beta_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_beta_",cond_site_name,".png"),height=5,width=10)
 p <- ggplot(try7[[3]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\mu_{AGG}"))
-ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_mu_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_mu_",cond_site_name,".png"),height=5,width=10)
 p <- ggplot(try7[[4]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_l"))
-ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_sigmal_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_sigmal_",cond_site_name,".png"),height=5,width=10)
 p <- ggplot(try7[[5]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_u"))
-ggsave(p,file=paste0("../Documents/abmu_iterative/boxplot_sigmau_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_sigmau_",cond_site_name,".png"),height=5,width=10)
 
 p <- ggplot(data.frame("deltal"=try7[[10]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltal),size=1.5) +ylab(TeX("$\\delta_l"))
-ggsave(p,file=paste0("../Documents/abmu_iterative/plot_deltal_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/",folder_name,"/plot_deltal_",cond_site_name,".png"),height=5,width=10)
 
 p <- ggplot(data.frame("deltau"=try7[[11]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltau),size=1.5) +ylab(TeX("$\\delta_u"))
-ggsave(p,file=paste0("../Documents/abmu_iterative/plot_deltau_",cond_site_name,".png"),height=5,width=10)
+ggsave(p,file=paste0("../Documents/",folder_name,"/plot_deltau_",cond_site_name,".png"),height=5,width=10)
 
 # look spatially to check
 # explore also spatial parameters
@@ -273,7 +263,7 @@ names(est_ite) <- paste0(names(est_ite),"_ite")
 tmpsf <- cbind(est_all_sf %>% filter(cond_site==cond_site_name),est_ite)
 # plot parameter estimates against distance
 # calculate distance from a conditioning site with st_distance()
-folder_name <- "abmu_iterative"
+
 mud <- data.frame(mu=tmpsf$mu_agg_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=mu,x=dist))
 ggsave(mud,filename=paste0("../Documents/",folder_name,"/muagg_distance_",cond_site_name,".png")) 
 
@@ -313,6 +303,211 @@ tmap_save(t,filename=paste0("../Documents/",folder_name,"/sigma_upper_",cond_sit
 return(try7)
 }
 
-sapply(1:length(sites_index_diagonal),FUN=abmu_par_est_ite,result=result,est_all_sf=est_all_sf,simplify=FALSE)
-#save(try7,file="data_processed/Birmingham_temporary_abmu.RData")
-est_all_sf %>% filter(cond_site=="Birmingham") %>% tm_shape() + tm_dots("mu_agg")
+tmp_phis_deltas <- sapply(1:length(sites_index_diagonal),FUN=abmu_par_est_ite,result=result,est_all_sf=est_all_sf,simplify=FALSE,folder_name="abmu_iterative_phis_deltas")
+#save(tmp,file="data_processed/Birmingham_Cromer_abmu_iterative.RData")
+# plot estimates
+load("data_processed/Birmingham_Cromer_abmu_iterative.RData")
+
+# examine output
+phi0 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][[12]][1,6])))
+phi1 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][[12]][1,7])))
+phi2 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][[12]][1,8])))
+phi3 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][[12]][1,9])))
+
+# plot spatially
+phi0tmp <- phi1tmp <- rep(NA,nrow(xyUK20_sf))
+phi2tmp <- phi3tmp <- rep(NA, nrow(xyUK20_sf))
+phi0tmp[sites_index_diagonal] <- phi0
+phi1tmp[sites_index_diagonal] <- phi1
+phi2tmp[sites_index_diagonal] <- phi2
+phi3tmp[sites_index_diagonal] <- phi3
+est_phi <- xyUK20_sf[sites_index_diagonal,] %>% mutate(phi0=phi0,phi1=phi1,phi2=phi2,phi3 = phi3)
+
+toplabel <- c(TeX("$\\phi_0$"),TeX("$\\phi_1$"),TeX("$\\phi_2$"),TeX("$\\phi_3$"))
+size_point <- 0.7
+tmphi0 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi0",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_0$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi1 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi1",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_1$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi2 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi2",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_2$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmphi3 <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_phi) + tm_dots(fill="phi3",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues"),fill.legend = tm_legend(title = TeX("$\\phi_3$"))) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+t <- tmap_arrange(tmphi0,tmphi1,tmphi2,tmphi3,ncol=4)
+tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/phis_all4_abmu.png"),width=8,height=4)
+
+# plots against 94 marginal quantile
+load("data_processed/94thresholds.RData")
+temp94 <- tm_thres %>% filter(data_source=="CPM") %>% pull(temp)
+temp94diff <- tm_thres_diff %>% filter(data_source=="CPM_diff") %>% pull(temperature)
+data.frame(phi0,temp94=temp94[sites_index_diagonal]) %>%  ggplot() + geom_point(aes(x=temp94,y=phi0))
+data.frame(phi0,temp94diff=temp94diff[sites_index_diagonal]) %>%  ggplot() + geom_point(aes(x=temp94diff,y=phi0))
+
+# combine into one plot
+tmp <- data.frame(param_value=c(phi0,phi1,phi2,phi3),temp94=rep(temp94[sites_index_diagonal],4),phi = rep(c("phi0","phi1","phi2","phi3"),each=4))
+p <- ggplot(tmp) + geom_point(aes(x=temp94,y=param_value,col=phi)) + geom_line(aes(x=temp94,y=param_value,col=phi))
+ggsave(p,filename="../Documents/phis_temp94_abmu.png",width=5,height=5)
+tmp <- data.frame(param_value=c(phi0,phi1,phi2,phi3),temp94diff=rep(temp94diff[sites_index_diagonal],4),phi = rep(c("phi0","phi1","phi2","phi3"),each=4))
+p <- ggplot(tmp) + geom_point(aes(x=temp94diff,y=param_value,col=phi)) + geom_line(aes(x=temp94diff,y=param_value,col=phi))
+ggsave(p,filename="../Documents/phis_temp94diff_abmu.png",width=5,height=5)
+
+deltal <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][[12]][1,10])))
+deltau <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][[12]][1,11])))
+# plot spatially
+deltaltmp <- rep(NA,nrow(xyUK20_sf))
+deltautmp <- rep(NA, nrow(xyUK20_sf))
+deltaltmp[sites_index_diagonal] <- deltal
+deltautmp[sites_index_diagonal] <- deltau
+est_delta <- xyUK20_sf[sites_index_diagonal,] %>% mutate(deltal=deltal,deltau = deltau)
+
+toplabel <- c(TeX("$\\delta_l$"),TeX("$\\delta_u$"))
+size_point <- 0.7
+#delta_limits <- c(min(deltal,deltau),max(deltal,deltau))
+deltal_limits <- c(min(deltal),max(deltal))
+deltau_limits <- c(min(deltau),max(deltau))
+tmdeltal <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_delta) + tm_dots(fill="deltal",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues",limits=deltal_limits),fill.legend = tm_legend(title = toplabel[1])) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmdeltau <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(est_delta) + tm_dots(fill="deltau",size = size_point, fill.scale =tm_scale_continuous(values="brewer.blues",limits=deltau_limits), fill.legend = tm_legend(title = toplabel[2])) + tm_layout(legend.position=c("right","top"),legend.height = 12)
+t <- tmap_arrange(tmdeltal,tmdeltau,ncol=2)
+tmap_save(t,filename=paste0("../Documents/Birmingham_Cromer_diagonal/all_deltas_abmu.png"),width=5,height=4)
+
+
+# plot sigma_u against distance for all sites
+get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = result, cond_site_index = sites_index_diagonal) {
+  sigl <- tmp[[i]]$sigl_ite_sigl
+  dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
+  sigld <- data.frame(sigl=sigl,dist=dist_cond_site) 
+  return(sigld %>% mutate(cond_site = site_name_diagonal[i]))
+}
+
+tmp_sigl <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance)) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
+p <- ggplot(tmp_sigl) + geom_point(aes(y=sigl,x=dist,col=cond_site)) + scale_color_manual(values = c12) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigl_distance_all.png"),width=10,height=7) 
+
+# try deltas fixed as mean of 12 deltas
+# load(file="data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData")
+# deltal <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,29])))
+# deltau <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,30])))
+load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData")
+deltal <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,29])))
+deltau <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( result[[i]][1,30])))
+
+#tmp <- sapply(1:length(sites_index_diagonal),FUN=abmu_par_est_ite,result=result,est_all_sf=est_all_sf,simplify=FALSE)
+tmp_fixed_deltas <- sapply(1:length(sites_index_diagonal),FUN=abmu_par_est_ite,result=result,est_all_sf=est_all_sf,deltal=mean(deltal),deltau=mean(deltau),folder_name = "abmu_iterative_fixed_deltas",simplify=FALSE)
+
+for (i in 6:11) {
+print(tmp_fixed_deltas[[1]][[i]])
+}
+
+# plot sigmas against distance
+get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = tmp_fixed_deltas,sig_which="sigu", cond_site_index = sites_index_diagonal) {
+  sig <- tmp[[i]][[12]] %>% dplyr::select(contains(sig_which)) %>% pull()
+  sig <- append(sig,NA,after=(cond_site_index[i]-1))
+  dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid)))
+  sigd <- data.frame(sig=sig,dist=dist_cond_site) 
+  return(sigd %>% mutate(cond_site = site_name_diagonal[i]))
+}
+
+tmp_sigl <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance,sig_which="sigl")) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
+p1 <- ggplot(tmp_sigl) + geom_point(aes(y=sig,x=dist,col=cond_site)) + scale_color_manual(values = c12) + xlab("Distance [m]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+tmp_sigu <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance,sig_which="sigu")) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
+p2 <- ggplot(tmp_sigu) + geom_point(aes(y=sig,x=dist,col=cond_site)) + scale_color_manual(values = c12) + xlab("Distance [m]") + ylab(TeX("$\\sigma_u$")) + theme(legend.position=c("inside"),legend.position.inside = c(0.8,0.3))
+p <- grid.arrange(p1,p2,ncol=2)
+
+ggsave(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigmas_distance_allsites_fixed_deltas_abmu_iterative.png"),width=12,height=7) 
+
+# try to replace all plots with ones on a common scale
+# find a common scale
+
+# plot phi parameters before and after
+
+# plot iterations of alpha and beta
+plot_ab_ite <- function(site, Nite=10, pars=tmp_fixed_deltas,pars_original=est_all_sf,grid=xyUK20_sf,sites = sites_index_diagonal,cond_site_names = site_name_diagonal) {
+  if(is.null(cond_site_names)) {
+    cond_site_name <- names(sites)[site]
+    cond_site_names <- names(sites)
+  } else {  cond_site_name <- cond_site_names[site] }
+  
+  if (is.numeric(sites)) {cond_site <- sites[site]} else{
+    cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
+    cond_site <- find_site_index(cond_site_coord,grid_uk = grid)    }
+  # prepare dataframes
+  est_site_a <- pars[[site]][[1]] %>% add_row(.before=cond_site) %>% mutate("original" = pars_original %>% dplyr::filter(cond_site==cond_site_name) %>% pull(a))
+  tmpsfa <- cbind(xyUK20_sf,est_site_a) %>% pivot_longer(cols=c("original",matches("[[:digit:]]")),values_to = "a", names_to = "iteration")
+  est_site_b <- pars[[site]][[2]] %>% add_row(.before=cond_site) %>% mutate("original" = pars_original %>% dplyr::filter(cond_site==cond_site_name) %>% pull(b))
+  tmpsfb <- cbind(xyUK20_sf,est_site_b) %>% pivot_longer(cols=c("original",matches("[[:digit:]]")),values_to = "b", names_to = "iteration")
+  est_site_mu <- pars[[site]][[3]] %>% add_row(.before=cond_site) %>% mutate("original" = pars_original %>% dplyr::filter(cond_site==cond_site_name) %>% pull(mu_agg))
+  tmpsfmu <- cbind(xyUK20_sf,est_site_mu) %>% pivot_longer(cols=c("original",matches("[[:digit:]]")),values_to = "mu", names_to = "iteration")
+  est_site_sigl <- pars[[site]][[4]] %>% add_row(.before=cond_site) %>% mutate("original" = pars_original %>% dplyr::filter(cond_site==cond_site_name) %>% pull(sigl))
+  tmpsfsigl <- cbind(xyUK20_sf,est_site_sigl) %>% pivot_longer(cols=c("original",matches("[[:digit:]]")),values_to = "sigl", names_to = "iteration")
+  est_site_sigu <- pars[[site]][[5]] %>% add_row(.before=cond_site) %>% mutate("original" = pars_original %>% dplyr::filter(cond_site==cond_site_name) %>% pull(sigu))
+  tmpsfsigu <- cbind(xyUK20_sf,est_site_sigu) %>% pivot_longer(cols=c("original",matches("[[:digit:]]")),values_to = "sigu", names_to = "iteration")
+  
+   misscol <- "aquamarine"
+   point_size <- 0.3
+   facet_var <- "iteration"
+   nrow_facet <- 2
+   facet_label <- c("original",paste0("iteration",1:Nite))
+   tmpsfa <- tmpsfa %>% mutate("iteration"=factor(iteration,levels=unique(iteration)))
+   tmpsfb <- tmpsfb %>% mutate("iteration"=factor(iteration,levels=unique(iteration)))
+   tmpsfmu <- tmpsfmu %>% mutate("iteration"=factor(iteration,levels=unique(iteration)))
+   tmpsfsigl <- tmpsfsigl %>% mutate("iteration"=factor(iteration,levels=unique(iteration)))
+   tmpsfsigu <- tmpsfsigu %>% mutate("iteration"=factor(iteration,levels=unique(iteration)))
+   
+   title_map <- cond_site_name
+   legend_text_size <- 0.6
+   legend_title_size <- 1
+   legend_outside_size <- 1
+   lims <- c(0,1)
+   p <- tm_shape(tmpsfa) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+  tmap_save(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/a_",cond_site_name,"_iterations.png"))
+  lims <- c(0,0.5)
+  p <- tm_shape(tmpsfb) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+  tmap_save(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/b_",cond_site_name,"_iterations.png"))
+  lims <- c(-2,2)
+  p <- tm_shape(tmpsfmu) + tm_dots(fill="mu",fill.scale = tm_scale_continuous(limits=lims,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu_{AGG}$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+  tmap_save(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/mu_",cond_site_name,"_iterations.png"))
+  lims <- c(0,3)
+  p <- tm_shape(tmpsfsigl) + tm_dots(fill="sigl",fill.scale = tm_scale_continuous(limits=lims,values="brewer.blues",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_l$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+  tmap_save(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigl_",cond_site_name,"_iterations.png"))
+  lims <- c(0,3)
+  p <- tm_shape(tmpsfsigu) + tm_dots(fill="sigu",fill.scale = tm_scale_continuous(limits=lims,values="brewer.blues",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) + tm_facets(by=facet_var,nrow = nrow_facet) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+  tmap_save(p,filename=paste0("../Documents/Birmingham_Cromer_diagonal/sigu_",cond_site_name,"_iterations.png"))
+  
+  point_size <- 0.6
+  legend_text_size <- 0.6
+  legend_title_size <- 1 
+  lims <- c(0,1)
+  p <- tm_shape(tmpsfa) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by=facet_var, free.coords = FALSE, nrow = 1, ncol = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.position=c("right","top"),legend.height = 12) + tm_title(text=title_map) 
+  tmap_animation(p,delay=100,filename = paste0("../Documents/Birmingham_Cromer_diagonal/a_",cond_site_name,"_iterations.gif"),height=800,width=500)
+  lims <- c(0,0.5)
+  p <- tm_shape(tmpsfb) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by=facet_var, free.coords = FALSE, nrow = 1, ncol = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.position=c("right","top"),legend.height = 12) + tm_title(text=title_map) 
+  tmap_animation(p,delay=100,filename = paste0("../Documents/Birmingham_Cromer_diagonal/b_",cond_site_name,"_iterations.gif"),height=800,width=500)
+  lims <- c(-2,2)
+  p <- tm_shape(tmpsfmu) + tm_dots(fill="mu",fill.scale = tm_scale_continuous(limits=lims,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu_{AGG}$"))) + tm_facets(by=facet_var, free.coords = FALSE, nrow = 1, ncol = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.position=c("right","top"),legend.height = 12) + tm_title(text=title_map) 
+  tmap_animation(p,delay=100,filename = paste0("../Documents/Birmingham_Cromer_diagonal/mu_",cond_site_name,"_iterations.gif"),height=800,width=500)
+  lims <- c(0,3)
+  p <- tm_shape(tmpsfsigl) + tm_dots(fill="sigl",fill.scale = tm_scale_continuous(limits=lims,values="brewer.blues",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_l$"))) + tm_facets(by=facet_var, free.coords = FALSE, nrow = 1, ncol = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.position=c("right","top"),legend.height = 12) + tm_title(text=title_map) 
+  tmap_animation(p,delay=100,filename = paste0("../Documents/Birmingham_Cromer_diagonal/sigl_",cond_site_name,"_iterations.gif"),height=800,width=500)
+  lims <- c(0,3)
+  p <- tm_shape(tmpsfsigu) + tm_dots(fill="sigu",fill.scale = tm_scale_continuous(limits=lims,values="brewer.blues",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) + tm_facets(by=facet_var, free.coords = FALSE, nrow = 1, ncol = 1) +  tm_layout(panel.labels = facet_label,legend.outside.size=legend_outside_size,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.position=c("right","top"),legend.height = 12) + tm_title(text=title_map) 
+  tmap_animation(p,delay=100,filename = paste0("../Documents/Birmingham_Cromer_diagonal/sigu_",cond_site_name,"_iterations.gif"),height=800,width=500)
+  
+  
+  }
+
+sapply(1:length(cond_site_names),FUN=plot_ab_ite)
+
+# finally, plot phi estimates 
+tmpdf <- data.frame("value"=numeric(),"cond_site"=character(),"par"=character())
+tmp2 <- data.frame("value"=numeric(),"cond_site"=character(),"par"=character())
+for (subscript in 0:3) {
+
+tmp1 <- sapply(1:length(sites_index_diagonal),FUN=function(i) {
+  rbind(tmpdf,data.frame("value"=tmp_fixed_deltas[[i]][[subscript+6]]) %>% mutate("cond_site"=cond_site_names[i],"par"=paste0("phi",subscript),"iteration"=1:(Nite+1)))
+
+  },simplify=FALSE)
+tmp <- do.call("rbind",tmp1)
+tmp2 <- rbind(tmp2,tmp)
+}
+
+tmp2 <- tmp2 %>% mutate(cond_site=factor(cond_site,levels=cond_site_names)) %>% filter(iteration>1)
+p1 <- ggplot(tmp2 %>% filter(par %in% c("phi0","phi2")),aes(x=cond_site,y=value,alpha=iteration/(Nite))) + geom_point()+ geom_line(aes(group=iteration)) + facet_wrap("par",ncol=2)
+p2 <- ggplot(tmp2 %>% filter(par %in% c("phi1","phi3")),aes(x=cond_site,y=value,alpha=iteration/(Nite))) + geom_point()+ geom_line(aes(group=iteration))+ facet_wrap("par",ncol=2)
+p <- grid.arrange(p1,p2)
+ggsave(p,filename="../Documents/Birmingham_Cromer_diagonal/allphis_iterativeabmu.png")
