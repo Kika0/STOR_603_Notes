@@ -306,7 +306,7 @@ return(try7)
 tmp_phis_deltas <- sapply(1:length(sites_index_diagonal),FUN=abmu_par_est_ite,result=result,est_all_sf=est_all_sf,simplify=FALSE,folder_name="abmu_iterative_phis_deltas")
 #save(tmp,file="data_processed/Birmingham_Cromer_abmu_iterative.RData")
 # plot estimates
-load("data_processed/Birmingham_Cromer_abmu_iterative.RData")
+#load("data_processed/Birmingham_Cromer_abmu_iterative.RData")
 
 # examine output
 phi0 <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st_drop_geometry( tmp[[i]][[12]][1,6])))
