@@ -19,10 +19,33 @@ sapply(file.sources,source,.GlobalEnv)
 # set folder name to save plots to
 folder_name <- "../Documents/GLEN_workshop_plots/"
 
-# 1. plot alphas temporally and spatially ------------------------------
+# 1. plot alphas for a couple of sites ------------------------------
 # load estimates
+q <- 0.9
+load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"))
+#est_all <- as.data.frame(est_all_sf)
+# plot alpha values for Lancaster, Birmingham, Cromer
+cond_site_names <- c("Lancaster","Birmingham","Cromer")
+est_sites <- est_all_sf %>% filter(cond_site %in% cond_site_names) %>% mutate(cond_site=factor(cond_site,levels = cond_site_names))
+title_map <- ""
+misscol <- "aquamarine"
+legend_text_size <- 0.7
+point_size <- 0.6
+legend_title_size <- 1.2
+lims <- c(0,1)
+nrow_facet <- 1
+p <- tm_shape(est_sites) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by="cond_site",nrow = nrow_facet) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+tmap_save(p,filename=paste0(folder_name,"alpha_selected_sites.png"))
+lims <- c(0,0.5)
+p <- tm_shape(est_sites) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=lims,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by="cond_site",nrow = nrow_facet) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+tmap_save(p,filename=paste0(folder_name,"beta_selected_sites.png"))
+# remove objects
+rm(est_sites,p)
 
-# 2. plot of sigma values comparison -----------------------------------
+# calculate estimates from Birmingham to London
+
+
+# 3. plot of sigma values comparison -----------------------------------
 # load estimates
 load("data_processed/iterative_abmu_fixed_delta.RData")
 c12 <- c(
