@@ -389,6 +389,8 @@ deltau <- sapply(1:length(sites_index_diagonal),FUN = function (i) as.numeric(st
 
 #tmp <- sapply(1:length(sites_index_diagonal),FUN=abmu_par_est_ite,result=result,est_all_sf=est_all_sf,simplify=FALSE)
 tmp_fixed_deltas <- sapply(1:length(sites_index_diagonal),FUN=abmu_par_est_ite,result=result,est_all_sf=est_all_sf,deltal=mean(deltal),deltau=mean(deltau),folder_name = "abmu_iterative_fixed_deltas",simplify=FALSE)
+# save estimates
+save(tmp_fixed_deltas,file="data_processed/iterative_abmu_fixed_delta.RData")
 
 for (i in 6:11) {
 print(tmp_fixed_deltas[[1]][[i]])
