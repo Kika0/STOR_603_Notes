@@ -17,6 +17,7 @@ sapply(file.sources,source,.GlobalEnv)
 source("spatial_parameter_estimation.R") # for spatial_par_est function
 load("data_processed/temperature_data.RData")
 load("data_processed/spatial_helper.RData")
+q <- 0.9
 load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"))
 est_all <- as.data.frame(est_all_sf)
 
