@@ -508,6 +508,6 @@ tmp2 <- rbind(tmp2,tmp)
 
 tmp2 <- tmp2 %>% mutate(cond_site=factor(cond_site,levels=cond_site_names)) %>% filter(iteration>1)
 p1 <- ggplot(tmp2 %>% filter(par %in% c("phi0","phi2")),aes(x=cond_site,y=value,alpha=iteration/(Nite))) + geom_point()+ geom_line(aes(group=iteration)) + facet_wrap("par",ncol=2)
-p2 <- ggplot(tmp2 %>% filter(par %in% c("phi1","phi3")),aes(x=cond_site,y=value,alpha=iteration/(Nite))) + geom_point()+ geom_line(aes(group=iteration))+ facet_wrap("par",ncol=2)
+p2 <- ggplot(tmp2 %>% filter(par %in% c("phi1","phi3")),aes(x=cond_site,y=value,alpha=iteration/(Nite))) + geom_point()+ geom_line(aes(group=iteration))+ facet_wrap("par",ncol=2) + ylim(c(0,20))
 p <- grid.arrange(p1,p2)
-ggsave(p,filename="../Documents/Birmingham_Cromer_diagonal/allphis_iterativeabmu.png")
+ggsave(p,filename="../Documents/Birmingham_Cromer_diagonal/allphis_iterativeabmu.png",width=18,height=8)
