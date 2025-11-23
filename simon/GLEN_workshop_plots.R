@@ -42,7 +42,21 @@ tmap_save(p,filename=paste0(folder_name,"beta_selected_sites.png"))
 # remove objects
 rm(est_sites,p)
 
+# 2. spatial and temporal estimates from Birmingham to London
 # calculate estimates from Birmingham to London
+# identify diagonal sites
+# find indeces of start and end sites
+source("spatial_parameter_estimation.R") # for spatial_par_est function
+load("data_processed/temperature_data.RData") # for data_mod and data_mod_Lap
+q <- 0.9
+Birmingham <- c(-1.9032,52.4806)
+London <- c(-0.127676,51.529972)
+site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
+site_end <- find_site_index(site=London,grid_uk = xyUK20_sf)
+sites_index_diagonal <- c(192,193,175,157,137,117,99,100) # first is Birmingham and last is London
+site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_diagonal)-2)),"London")
+spatial_par_est(data_Lap = data_mod_Lap,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("diagonal_sites_Birmingham_London",q*100))
+
 
 
 # 3. plot of sigma values comparison -----------------------------------
