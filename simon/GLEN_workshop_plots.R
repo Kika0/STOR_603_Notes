@@ -58,10 +58,62 @@ site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_di
 spatial_par_est(data_Lap = data_mod_Lap,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("diagonal_sites_Birmingham_London",q*100))
 
 
-
-# 3. plot of sigma values comparison -----------------------------------
-# load estimates
+# 4. estimates of iterative approach compared with original ------------
+# show these for Birmingham and Cromer
 load("data_processed/iterative_abmu_fixed_delta.RData")
+# identify diagonal sites
+# find indeces of start and end sites
+Birmingham <- c(-1.9032,52.4806)
+Cromer <- c(1.28486,53.05349)
+site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
+site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
+sites_index_diagonal <- c(192,193,194,195,196,197,218,219,220,221,242,263) # first is Birmingham and last is Cromer
+site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_diagonal)-2)),"Cromer")
+# load also original estimates
+load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_Cromer90.RData")
+
+map_ab_iterative_difference <- function(site,cond_site_names=site_name_diagonal,cond_site_indeces=sites_index_diagonal,estimates=tmp_fixed_deltas) {
+legend_text_size <- 0.7
+point_size <- 0.6
+legend_title_size <- 1.2
+misscol <- "aquamarine" 
+cond_site <- cond_site_indeces[site]
+cond_site_name <- cond_site_names[site]
+est_ite <- estimates[[site]][[12]] %>% add_row(.before=cond_site)
+names(est_ite) <- paste0(names(est_ite),"_ite")
+tmpsf <- cbind(est_all_sf %>% filter(cond_site==cond_site_name),est_ite)
+
+tmpsf <- tmpsf %>% mutate(adiff=a_ite-a,bdiff=b_ite-b,mudiff = mu_agg_ite - mu_agg, sigldiff = sigl_ite - sigl, sigudiff = sigu_ite - sigu)
+toplabel <- c("New iterative approach","Original method","Difference")
+tmpa <- tmpsf %>% dplyr::select(a_ite,a,adiff) %>% pivot_longer(cols=c(a_ite,a,adiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("a_ite","a","adiff"))) 
+limits <- c(0,1)
+t1 <- tmpa %>% filter(parameter=="a_ite") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\alpha$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[1],legend.reverse = TRUE) 
+t2 <- tmpa %>% filter(parameter=="a") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\alpha$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[2],legend.reverse = TRUE) 
+limits <- c(-0.3,0.3)
+t3 <- tmpa %>% filter(parameter=="adiff") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\alpha$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[3],legend.reverse = TRUE) 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0(folder_name,"/a_",cond_site_name,"_iterative_original_difference.png"),width=8,height=6)
+
+tmpb <- tmpsf %>% dplyr::select(b_ite,b,bdiff) %>% pivot_longer(cols=c(b_ite,b,bdiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("b_ite","b","bdiff"))) 
+limits <- c(0,0.5)
+t1 <- tmpb %>% filter(parameter=="b_ite") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\beta$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[1],legend.reverse = TRUE) 
+t2 <- tmpb %>% filter(parameter=="b") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\beta$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[2],legend.reverse = TRUE) 
+limits <- c(-0.5,0.5)
+t3 <- tmpb %>% filter(parameter=="bdiff") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\beta$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[3],legend.reverse = TRUE) 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0(folder_name,"/b_",cond_site_name,"_iterative_original_difference.png"),width=8,height=6)
+}
+
+map_ab_iterative_difference(site=1)
+map_ab_iterative_difference(site=12)
+
+# 5. plot of sigma values comparison -----------------------------------
 c12 <- c(
   "#009ADA", "#C11432", # red
   "green4",
@@ -73,15 +125,6 @@ c12 <- c(
   "darkturquoise", "green1", 
   "darkorange4"
 )
-# identify diagonal sites
-# find indeces of start and end sites
-Birmingham <- c(-1.9032,52.4806)
-Cromer <- c(1.28486,53.05349)
-site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
-site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
-sites_index_diagonal <- c(192,193,194,195,196,197,218,219,220,221,242,263) # first is Birmingham and last is Cromer
-site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_diagonal)-2)),"Cromer")
-
 # plot sigmas against distance
 get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal,tmp = tmp_fixed_deltas,sig_which="sigu", cond_site_index = sites_index_diagonal) {
   sig <- tmp[[i]][[12]] %>% dplyr::select(contains(sig_which)) %>% pull()
