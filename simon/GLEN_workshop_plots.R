@@ -34,10 +34,10 @@ point_size <- 0.6
 legend_title_size <- 1.2
 lims <- c(0,1)
 nrow_facet <- 1
-p <- tm_shape(est_sites) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by="cond_site",nrow = nrow_facet) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+p <- tm_shape(est_sites) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by="cond_site",nrow = nrow_facet) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
 tmap_save(p,filename=paste0(folder_name,"alpha_selected_sites.png"))
 lims <- c(0,0.5)
-p <- tm_shape(est_sites) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=lims,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by="cond_site",nrow = nrow_facet) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+p <- tm_shape(est_sites) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) + tm_facets(by="cond_site",nrow = nrow_facet) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
 tmap_save(p,filename=paste0(folder_name,"beta_selected_sites.png"))
 # remove objects
 rm(est_sites,p)
@@ -55,8 +55,23 @@ site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
 site_end <- find_site_index(site=London,grid_uk = xyUK20_sf)
 sites_index_diagonal <- c(192,193,175,157,137,117,99,100) # first is Birmingham and last is London
 site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_diagonal)-2)),"London")
-spatial_par_est(data_Lap = data_mod_Lap,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("diagonal_sites_Birmingham_London",q*100))
+#spatial_par_est(data_Lap = data_mod_Lap,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("diagonal_sites_Birmingham_London",q*100))
+# load estimates
+load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_London90.RData")
+title_map <- ""
+misscol <- "aquamarine"
+legend_text_size <- 0.4
+point_size <- 0.5
+legend_title_size <- 0.6
+lims <- c(0,1)
+nrow_facet <- 1
+est_sites <- est_all_sf %>% filter(tau %in% c(0)) %>% mutate(cond_site=factor(cond_site,levels = site_name_diagonal))
+p <- tm_shape(est_sites) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by="cond_site",nrow = nrow_facet) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+tmap_save(p,filename=paste0(folder_name,"alpha_diagonal_sites.png"))
 
+est_sites <- est_all_sf %>% filter(cond_site %in% "Birmingham") %>% mutate(cond_site=factor(cond_site,levels = site_name_diagonal),tau=factor(tau,levels=c(-3:3)))
+p <- tm_shape(est_sites) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by="tau",nrow = nrow_facet) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+tmap_save(p,filename=paste0(folder_name,"alpha_Brimingham_temporal.png"))
 
 # 4. estimates of iterative approach compared with original ------------
 # show these for Birmingham and Cromer
@@ -108,6 +123,43 @@ t3 <- tmpb %>% filter(parameter=="bdiff") %>% tm_shape() + tm_dots(fill="value",
   tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[3],legend.reverse = TRUE) 
 t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0(folder_name,"/b_",cond_site_name,"_iterative_original_difference.png"),width=8,height=6)
+
+tmpmu <- tmpsf %>% dplyr::select(mu_agg_ite,mu_agg,mudiff) %>% pivot_longer(cols=c(mu_agg_ite,mu_agg,mudiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("mu_agg_ite","mu_agg","mudiff"))) 
+limits <- c(-2,2)
+t1 <- tmpmu %>% filter(parameter=="mu_agg_ite") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[1],legend.reverse = TRUE) 
+t2 <- tmpmu %>% filter(parameter=="mu_agg") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[2],legend.reverse = TRUE) 
+limits <- c(-2,2)
+t3 <- tmpmu %>% filter(parameter=="mudiff") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[3],legend.reverse = TRUE) 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0(folder_name,"/mu_agg_",cond_site_name,"_iterative_original_difference.png"),width=8,height=6)
+
+tmpsigl <- tmpsf %>% dplyr::select(sigl_ite,sigl,sigldiff) %>% pivot_longer(cols=c(sigl_ite,sigl,sigldiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("sigl_ite","sigl","sigldiff"))) 
+limits <- c(0,4)
+t1 <- tmpsigl %>% filter(parameter=="sigl_ite") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[1],legend.reverse = TRUE) 
+t2 <- tmpsigl %>% filter(parameter=="sigl") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[2],legend.reverse = TRUE) 
+limits <- c(-3,3)
+t3 <- tmpsigl %>% filter(parameter=="sigldiff") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[3],legend.reverse = TRUE) 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0(folder_name,"/sigl_",cond_site_name,"_iterative_original_difference.png"),width=8,height=6)
+
+tmpsigu <- tmpsf %>% dplyr::select(sigu_ite,sigu,sigudiff) %>% pivot_longer(cols=c(sigu_ite,sigu,sigudiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("sigu_ite","sigu","sigudiff"))) 
+limits <- c(0,4)
+t1 <- tmpsigu %>% filter(parameter=="sigu_ite") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\sigma_u$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[1],legend.reverse = TRUE) 
+t2 <- tmpsigu %>% filter(parameter=="sigu") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\sigma_u$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[2],legend.reverse = TRUE) 
+limits <- c(-3,3)
+t3 <- tmpsigu %>% filter(parameter=="sigudiff") %>% tm_shape() + tm_dots(fill="value",size=point_size,fill.scale =tm_scale_continuous(limits=limits,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$\\sigma_u$"))) + tm_facets("parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size, panel.labels = toplabel[3],legend.reverse = TRUE) 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0(folder_name,"/sigu_",cond_site_name,"_iterative_original_difference.png"),width=8,height=6)
+
 }
 
 map_ab_iterative_difference(site=1)
