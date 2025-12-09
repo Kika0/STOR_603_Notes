@@ -295,11 +295,68 @@ v <- 0.9
 aest <- tmp_fixed_deltas[[1]][[12]][,c(1)]
 best <- tmp_fixed_deltas[[1]][[12]][,c(2)]
 Z <- observed_residuals(df=data_mod_Lap,given=sites_index_diagonal[1],v = v,a=aest,b=best)
+U <- c(1:length(x))/(length(x)+1)
 # pick a site
-site <- sample(1:ncol(data_mod_Lap),1)[-sites_index_diagonal[1]]
+sites <- c(1:ncol(data_mod_Lap))[-sites_index_diagonal[1]]
+# set up dataframe
+tmp <- data.frame(x=numeric(),y=numeric(),"method"=character(),"res_site"=numeric())
+for (i in 1:(ncol(Z)-1)) {
+  site <- sites[i]
 # get estimates new
-AGGPars <- tmp_fixed_deltas[[1]][[12]][site,c(3,4,5,10,11)]
+AGGPars <- as.numeric(unlist(tmp_fixed_deltas[[1]][[12]][site,c(3,4,5,10,11)]))
 # get estimates old
 AGGParsOld <- as.numeric(unlist(st_drop_geometry(est_all_sf)[site,c(13:17)]))
+# construct PP plot
+x <- as.numeric(unlist(Z[,i]))
+Um <- pAGG(x=sort(x),theta = AGGPars)
+Umo <- pAGG(x=sort(x),theta = AGGParsOld)
+tmp <- rbind(tmp,data.frame(x=U,y=Umo,method="Original_estimates","res_site"=sites[i]),data.frame(x=U,y=Um,method="New_iterative_approach","res_site"=sites[i])) 
+}
+ggplot(tmp) + geom_line(aes(x=x,y=y,group=res_site),linewidth=0.1,alpha=0.9)+ geom_abline(slope=1,linetype="dashed") + facet_wrap("method")
 
-# 
+# plot conditional quantiles
+Lap_max <- apply(X=data_mod_Lap,MARGIN = c(2),FUN = max)
+conditional_quantiles <- function(x,model_pars,q_res=0.75,Y=data_mod_Lap, cond_site) {
+  a <- model_pars$a
+  b <- model_pars$b
+  mu <- model_pars$mu
+  sigl <- model_pars$sigl
+  sigu <- model_pars$sigu
+  deltal <- model_pars$deltal 
+  deltau <- model_pars$deltau
+  Zobs <- observed_residuals(df=Y,given = cond_site,a = a[!is.na(a)],b=b[!is.na(b)])
+  Zq1 <- apply(X=Zobs,MARGIN = 2,FUN=function(z)quantile(z,p=q_res))
+  Zq1 <- append(Zq1,NA,after = cond_site-1)
+  tm_shape(xyUK20_sf %>% mutate(Zq1=Zq1)) + tm_dots("Zq1")
+  Zq <- sapply(1:length(a),FUN=function(i)qAGG(p=q_res,theta = c(mu[i],sigl[i],sigu[i],deltal[i],deltau[i])))
+  #Zq <- rnorm(length(a))
+  return(a*x+ x^b*Zq)  
+}
+cond_quantiles_wrapper <- function(Lap_max,par_est_site,q_res,site_index,cond_site_name = "Birmingham",grid=xyUK20_sf) {
+  cond_site <- site_index  
+  x <- Lap_max[cond_site]
+  model_pars <- list("a"=par_est_site$a, "b" = par_est_site$b, "mu" = par_est_site$mu_agg, "sigl" = par_est_site$sigl, "sigu" = par_est_site$sigu, "deltal" = par_est_site$deltal, "deltau" = par_est_site$deltau)
+  return(data.frame(Ycond=conditional_quantiles(x=x,model_pars=model_pars,q_res=q_res,cond_site=cond_site),period=as.character(T)))
+}
+
+for (i in 1:length(sites_index_diagonal)) {
+par_est_new <- tmp_fixed_deltas[[i]][[12]] %>% add_row(.before=sites_index_diagonal[i])
+Q25 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.25,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
+Q75 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.75,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
+tmp <- rbind(xyUK20_sf %>% mutate(Q=Q25$Ycond,"Quantile"="q=0.25"),xyUK20_sf %>% mutate(Q=Q75$Ycond,"Quantile"="q=0.75"))
+t <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max[sites_index_diagonal[1]],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
+tmap_save(t,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".png"),width=9,height=7)
+tmap_save(t,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".pdf"),width=9,height=7)
+}
+
+for (i in 1:length(sites_index_diagonal)) {
+  par_est_new <- est_all_sf %>% filter(cond_site==site_name_diagonal[i])
+  Q25 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.25,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
+  Q75 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.75,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
+  tmp <- rbind(xyUK20_sf %>% mutate(Q=Q25$Ycond,"Quantile"="q=0.25"),xyUK20_sf %>% mutate(Q=Q75$Ycond,"Quantile"="q=0.75"))
+  t <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max[sites_index_diagonal[1]],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
+  tmap_save(t,filename=paste0(folder_name,"Qold_q",q*100,"_",site_name_diagonal[i],".png"),width=9,height=7)
+  tmap_save(t,filename=paste0(folder_name,"Qold_q",q*100,"_",site_name_diagonal[i],".pdf"),width=9,height=7)
+}
+
+# transform to original margins?
