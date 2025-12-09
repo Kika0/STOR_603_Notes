@@ -56,7 +56,7 @@ London <- c(-0.127676,51.529972)
 site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
 site_end <- find_site_index(site=London,grid_uk = xyUK20_sf)
 sites_index_diagonal <- c(192,193,175,157,137,117,99,100) # first is Birmingham and last is London
-site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_diagonal)-2)),"London")
+site_name_diagonal <- c("Birmingham", paste0("diag",1:(length(sites_index_diagonal)-2)),"London")
 #spatial_par_est(data_Lap = data_mod_Lap,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("diagonal_sites_Birmingham_London",q*100))
 # load estimates
 load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_London90.RData")
@@ -247,7 +247,7 @@ get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal
   sig <- tmp[[i]][[12]] %>% dplyr::select(contains(sig_which)) %>% pull()
   sig <- append(sig,NA,after=(cond_site_index[i]-1))
   dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index[i],],grid) %>%
-                                        units::set_units(mi)))
+                                        units::set_units(km)))
   sigd <- data.frame(sig=sig,dist=dist_cond_site) 
   return(sigd %>% mutate(cond_site = site_name_diagonal[i]))
 }
@@ -255,16 +255,51 @@ get_sigma_distance <- function(i, grid = xyUK20_sf,site_names=site_name_diagonal
 lims <- c(0,2.3)
 point_size <- 0.7
 tmp_sigl <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance,sig_which="sigl")) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
-p1 <- ggplot(tmp_sigl) + geom_point(aes(y=sig,x=dist,col=cond_site),size=point_size) + scale_color_manual(values = c12) + xlab("Distance [mi]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position="none") + ylim(lims)
+p1 <- ggplot(tmp_sigl) + geom_point(aes(y=sig,x=dist,col=cond_site),size=point_size) + scale_color_manual(values = c12) + xlab("Distance [km]") + ylab(TeX("$\\sigma_l$")) + theme(legend.position="none") + ylim(lims) + coord_fixed(ratio=300)
 tmp_sigu <- do.call(rbind,lapply(1:length(site_name_diagonal),FUN=get_sigma_distance,sig_which="sigu")) %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal))
-p2 <- ggplot(tmp_sigu) + geom_point(aes(y=sig,x=dist,col=cond_site),size=point_size) + scale_color_manual(values = c12) + xlab("Distance [mi]") + ylab(TeX("$\\sigma_u$")) + theme(legend.position="none") + ylim(lims)
+p2 <- ggplot(tmp_sigu) + geom_point(aes(y=sig,x=dist,col=cond_site),size=point_size) + scale_color_manual(values = c12) + xlab("Distance [km]") + ylab(TeX("$\\sigma_u$")) + theme(legend.position="none") + ylim(lims) + coord_fixed(ratio=300)
 tmp_sigmas <- data.frame("sigl"=tmp_sigl$sig, "sigu" = tmp_sigu$sig, "cond_site" = tmp_sigl$cond_site)
 p3 <- ggplot(tmp_sigmas) + geom_point(aes(y=sigu,x=sigl,col=cond_site),size=point_size) + scale_color_manual(values = c12) + xlab(TeX("$\\sigma_l$")) + ylab(TeX("$\\sigma_u$")) + xlim(lims) + ylim(lims) + coord_fixed() + labs(col="Conditioning site") + guides(col=guide_legend(override.aes=list(size=4))) + geom_abline(slope=1,linetype="dashed")
-p <- grid.arrange(p1,p2,p3,ncol=3)
+p <- grid.arrange(p1,p2,p3,ncol=3, widths=c(1,1,1.35))
 # save
-ggsave(p,filename=paste0(folder_name,"sigmas_distance.png"),width=15,height=3.5)
-ggsave(p,filename=paste0(folder_name,"sigmas_distance.pdf"),width=15,height=3.5)
+ggsave(p,filename=paste0(folder_name,"sigmas_distance.png"),width=12,height=3.5)
+ggsave(p,filename=paste0(folder_name,"sigmas_distance.pdf"),width=12,height=3.5)
 # remove
 rm(tmp_sigl,tmp_sigu,tmp_sigmas,lims,point_size,p1,p2,p3,p)
 
-# 7. iterative difference
+# 7. plot of phis against distance
+load("data_processed/iterative_abmu_fixed_delta.RData")
+tmpdf <- data.frame("value"=numeric(),"cond_site"=character(),"par"=character())
+tmp2 <- data.frame("value"=numeric(),"cond_site"=character(),"par"=character())
+Nite <- 10
+for (subscript in 0:3) {
+  
+  tmp1 <- sapply(1:length(sites_index_diagonal),FUN=function(i) {
+    rbind(tmpdf,data.frame("value"=tmp_fixed_deltas[[i]][[subscript+6]]) %>% mutate("cond_site"=site_name_diagonal[i],"par"=paste0("phi",subscript),"iteration"=1:(Nite+1)))
+    
+  },simplify=FALSE)
+  tmp <- do.call("rbind",tmp1)
+  tmp2 <- rbind(tmp2,tmp)
+}
+
+tmp2 <- tmp2 %>% mutate(cond_site=factor(cond_site,levels=site_name_diagonal)) %>% filter(iteration==Nite+1) %>% mutate("Parameter"=par)
+p1 <- ggplot(tmp2 %>% filter(par %in% c("phi0","phi2")),aes(x=cond_site,y=value)) + geom_line(aes(group=par))+ geom_point(aes(col=par),size=3)+  xlab("") + ylab("") + scale_colour_manual(values = c("#C11432","#009ADA"))
+p2 <- ggplot(tmp2 %>% filter(par %in% c("phi1","phi3")),aes(x=cond_site,y=value)) + geom_line(aes(group=par))+ geom_point(aes(col=par),size=3)+  xlab("") + ylab("") + scale_colour_manual(values = c("#FDD10A","#66A64F"))
+p <- grid.arrange(p1,p2,ncol=1)
+ggsave(p,filename=paste0(folder_name,"allphis_iterativeabmu.png"),width=10,height=5)
+ggsave(p,filename=paste0(folder_name,"allphis_iterativeabmu.pdf"),width=10,height=5)
+
+# try do a PP plot
+# calculate observed residuals
+v <- 0.9
+aest <- tmp_fixed_deltas[[1]][[12]][,c(1)]
+best <- tmp_fixed_deltas[[1]][[12]][,c(2)]
+Z <- observed_residuals(df=data_mod_Lap,given=sites_index_diagonal[1],v = v,a=aest,b=best)
+# pick a site
+site <- sample(1:ncol(data_mod_Lap),1)[-sites_index_diagonal[1]]
+# get estimates new
+AGGPars <- tmp_fixed_deltas[[1]][[12]][site,c(3,4,5,10,11)]
+# get estimates old
+AGGParsOld <- as.numeric(unlist(st_drop_geometry(est_all_sf)[site,c(13:17)]))
+
+# 
