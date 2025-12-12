@@ -344,19 +344,24 @@ par_est_new <- tmp_fixed_deltas[[i]][[12]] %>% add_row(.before=sites_index_diago
 Q25 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.25,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
 Q75 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.75,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
 tmp <- rbind(xyUK20_sf %>% mutate(Q=Q25$Ycond,"Quantile"="q=0.25"),xyUK20_sf %>% mutate(Q=Q75$Ycond,"Quantile"="q=0.75"))
-t <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max[sites_index_diagonal[1]],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
-tmap_save(t,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".png"),width=9,height=7)
-tmap_save(t,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".pdf"),width=9,height=7)
-}
+lims <- c(0,12)
+tnew <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max[sites_index_diagonal[1]],limits=lims,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
+tmap_save(tnew,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".png"),width=9,height=7)
+tmap_save(tnew,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".pdf"),width=9,height=7)
 
-for (i in 1:length(sites_index_diagonal)) {
   par_est_new <- est_all_sf %>% filter(cond_site==site_name_diagonal[i])
   Q25 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.25,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
   Q75 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.75,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
   tmp <- rbind(xyUK20_sf %>% mutate(Q=Q25$Ycond,"Quantile"="q=0.25"),xyUK20_sf %>% mutate(Q=Q75$Ycond,"Quantile"="q=0.75"))
-  t <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max[sites_index_diagonal[1]],values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
-  tmap_save(t,filename=paste0(folder_name,"Qold_q",q*100,"_",site_name_diagonal[i],".png"),width=9,height=7)
-  tmap_save(t,filename=paste0(folder_name,"Qold_q",q*100,"_",site_name_diagonal[i],".pdf"),width=9,height=7)
+  told <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max[sites_index_diagonal[1]],limits=lims,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
+  tmap_save(told,filename=paste0(folder_name,"Qold_q",q*100,"_",site_name_diagonal[i],".png"),width=9,height=7)
+  tmap_save(told,filename=paste0(folder_name,"Qold_q",q*100,"_",site_name_diagonal[i],".pdf"),width=9,height=7)
+  tnew <- tnew + tm_title("New iterative approach")
+  told <- told + tm_title("Original method")
+  tboth <- tmap_arrange(told,tnew,ncol=2)
+  tmap_save(tboth,filename=paste0(folder_name,"Q_q",q*100,"_",site_name_diagonal[i],".png"),width=15,height=7)
+  tmap_save(tboth,filename=paste0(folder_name,"Q_q",q*100,"_",site_name_diagonal[i],".pdf"),width=15,height=7)
+  
 }
 
 # transform to original margins?
