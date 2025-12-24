@@ -65,22 +65,20 @@ xy_sf <- xy_df %>%
 xy_sf <- cbind(xy_sf,xy_df)
 # map
 tmap_mode("view")
-tm_shape(xy_sf) + tm_dots(col="temp")
+tm_shape(xy_sf) + tm_dots("temp")
 # looks resonable, now subset over mainland UK
 lad <- st_read("data/LAD_boundary_UK/LAD_MAY_2022_UK_BFE_V3.shp")
 # UK is comprised of many polygons (islands), simplify to only
 # take mainland UK (Great Britain)
 uk_notsimplified <- (lad %>% st_union() %>% st_cast( "MULTIPOLYGON" ) %>% st_cast("POLYGON"))[1531]
 uk <- st_simplify(uk_notsimplified,dTolerance = 2000) %>% st_transform(crs = 4326)  
-# check
-# tm_shape(uk_notsimplified) + tm_polygons()
 # great, now subset
 xyUK_sf <- st_filter(xy_sf,uk)
 tm_shape(xyUK_sf) + tm_dots(fill="temp")
 # take only every fourth dot in each x and y
 x20 <- seq(from=4,to=dim(lon5.o)[1],by=4)
 y20 <- seq(from=4,to=dim(lon5.o)[2],by=4)
-xyUK20_sf <-xyUK_sf %>% filter(x %in% x20,y %in% y20)
+xyUK20_sf <- xyUK_sf %>% filter(x %in% x20,y %in% y20)
 # save sf objects used for spatial analysis
 save(uk,uk_notsimplified,xyUK20_sf,files_subset1,file="data_processed/spatial_helper.RData")
 
