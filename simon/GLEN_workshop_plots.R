@@ -87,7 +87,7 @@ site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
 sites_index_diagonal <- c(192,193,194,195,196,197,218,219,220,221,242,263) # first is Birmingham and last is Cromer
 site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_diagonal)-2)),"Cromer")
 # load also original estimates
-load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_Cromer90.RData")
+load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_Cromer90.RData",verbose = TRUE)
 
 map_ab_iterative_difference <- function(site,cond_site_names=site_name_diagonal,cond_site_indeces=sites_index_diagonal,estimates=tmp_fixed_deltas) {
 legend_text_size <- 0.7
@@ -292,30 +292,79 @@ ggsave(p,filename=paste0(folder_name,"allphis_iterativeabmu.pdf"),width=10,heigh
 # try do a PP plot
 # calculate observed residuals
 v <- 0.9
+aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(a),is.na)
+best <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(b),is.na)
+Zold <- observed_residuals(df=data_mod_Lap,given=sites_index_diagonal[1],v = v,a=aest,b=best)
 aest <- tmp_fixed_deltas[[1]][[12]][,c(1)]
 best <- tmp_fixed_deltas[[1]][[12]][,c(2)]
-Z <- observed_residuals(df=data_mod_Lap,given=sites_index_diagonal[1],v = v,a=aest,b=best)
-U <- c(1:length(x))/(length(x)+1)
+Znew <- observed_residuals(df=data_mod_Lap,given=sites_index_diagonal[1],v = v,a=aest,b=best)
+U <- c(1:(dim(data_mod_Lap)[1]*(1-v)))/(dim(data_mod_Lap)[1]*(1-v)+1)
 # pick a site
 sites <- c(1:ncol(data_mod_Lap))[-sites_index_diagonal[1]]
+# get estimates new
+est_new <- tmp_fixed_deltas[[1]][[12]] %>% add_row(.before=sites_index_diagonal[1])
 # set up dataframe
 tmp <- data.frame(x=numeric(),y=numeric(),"method"=character(),"res_site"=numeric())
 for (i in 1:(ncol(Z)-1)) {
   site <- sites[i]
-# get estimates new
-AGGPars <- as.numeric(unlist(tmp_fixed_deltas[[1]][[12]][site,c(3,4,5,10,11)]))
+AGGPars <- as.numeric(unlist(est_new[site,c(3,4,5,10,11)]))
 # get estimates old
 AGGParsOld <- as.numeric(unlist(st_drop_geometry(est_all_sf)[site,c(13:17)]))
 # construct PP plot
-x <- as.numeric(unlist(Z[,i]))
-Um <- pAGG(x=sort(x),theta = AGGPars)
-Umo <- pAGG(x=sort(x),theta = AGGParsOld)
-tmp <- rbind(tmp,data.frame(x=U,y=Umo,method="Original_estimates","res_site"=sites[i]),data.frame(x=U,y=Um,method="New_iterative_approach","res_site"=sites[i])) 
+xold <- as.numeric(unlist(Zold[,i]))
+xnew <- as.numeric(unlist(Znew[,i]))
+Um <- pAGG(x=xnew,theta = AGGPars)
+Umo <- pAGG(x=xold,theta = AGGParsOld)
+tmp_append_old <- data.frame(y=Umo,method="Original_method","res_site"=sites[i]) %>% arrange(y) %>% mutate("x"=U)
+tmp_append_new <- data.frame(x=U,y=Um,method="New_iterative_approach","res_site"=sites[i]) %>% arrange(y) %>% mutate("x"=U)
+tmp <- rbind(tmp,tmp_append_old,tmp_append_new) 
 }
-ggplot(tmp) + geom_line(aes(x=x,y=y,group=res_site),linewidth=0.1,alpha=0.9)+ geom_abline(slope=1,linetype="dashed") + facet_wrap("method")
+
+for (i in 1:5) {
+  print(tmp_fixed_deltas[[1]][[i]][res_site_over,])
+}
+
+p <- ggplot(tmp) + geom_line(aes(x=x,y=y,group=res_site),linewidth=0.01,alpha=0.9)+ geom_abline(slope=1,linetype="dashed") + facet_wrap("method") + xlab("Empirical") + ylab("Model")
+ggsave(p,filename=paste0(folder_name,"PP_Birmingham.pdf"),width=10,height=5)
+
+# examine outliers
+tmp <- tmp %>% mutate(diag_diff=y-x)
+res_site_over <- tmp[tmp$diag_diff==max(tmp$diag_diff),]$res_site
+res_site_under <-  tmp[tmp$diag_diff==min(tmp$diag_diff),]$res_site
+
+AGG_underestimate <- append(NA,(tmp %>% group_by(res_site) %>% summarise(n=max(diag_diff,na.rm=TRUE)) %>% pull(n)),after=sites_index_diagonal[1]-1)
+tm_shape(xyUK20_sf[1:555,] %>% mutate(diag_diff= ddif)) + tm_dots("AGG_underestimate")
+# examine on a map
+over_under <- rep(NA,nrow(xyUK20_sf))
+over_under[sites_index_diagonal[1]] <- "Conditioning_site"
+over_under[res_site_over] <- "Residual_site_underestimate"
+over_under[res_site_under] <- "Residual_site_overestimate"
+tmp_over_under <- xyUK20_sf %>% mutate("over_under"=over_under)
+t <- tm_shape(tmp_over_under) + tm_dots(fill="over_under",fill.scale = tm_scale_categorical(values=c("Residual_site_underestimate"="#C11432","Residual_site_overestimate" = "#009ADA", "Conditioning_site" = "aquamarine"))) 
+tmap_save(t,filename=paste0(folder_name,"PP_outliers_map_examine.png"))
+# examine over
+AGGPars <- as.numeric(unlist(st_drop_geometry(est_all_sf)[res_site_over,c(13:17)]))
+Zover <- as.numeric(unlist(Znew[,which(res_site_over==sites)]))
+# plot density and kernel smooth
+tmp <- data.frame(y=AGG_density(theta = AGGPars,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
+p1 <- ggplot(data.frame(Zover)) + geom_density(mapping = aes(x=Zover)) + geom_line(data=tmp,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX(paste0("$Z_{",res_site_over,"}$"))) + ylab("Residual density function") + ggtitle("Underestimation")
+# examine under
+AGGPars <- as.numeric(unlist(st_drop_geometry(est_all_sf)[res_site_under,c(13:17)]))
+Zunder <- as.numeric(unlist(Znew[,which(res_site_under==sites)]))
+# plot density and kernel smooth
+tmp <- data.frame(y=AGG_density(theta = AGGPars,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
+p2 <- ggplot(data.frame(Zunder)) + geom_density(mapping = aes(x=Zunder)) + geom_line(data=tmp,mapping = aes(x=x,y=y),col="#009ADA") + xlab(TeX(paste0("$Z_{",res_site_under,"}$"))) + ylab("Residual density function") + ggtitle("Overestimation")
+p <- grid.arrange(p1,p2,ncol=1)
+ggsave(p,filename=paste0(folder_name,"AGG_Birmingham_outliers.pdf"),width=10,height=10)
+
+# distance from conditioning side vs worst distance
+
+
+# repeat for new iterative method
+
 
 # plot conditional quantiles
-Lap_max <- apply(X=data_mod_Lap,MARGIN = c(2),FUN = max)
+Lap_max <- max(apply(X=data_mod_Lap,MARGIN = c(2),FUN = max))
 conditional_quantiles <- function(x,model_pars,q_res=0.75,Y=data_mod_Lap, cond_site) {
   a <- model_pars$a
   b <- model_pars$b
@@ -334,7 +383,7 @@ conditional_quantiles <- function(x,model_pars,q_res=0.75,Y=data_mod_Lap, cond_s
 }
 cond_quantiles_wrapper <- function(Lap_max,par_est_site,q_res,site_index,cond_site_name = "Birmingham",grid=xyUK20_sf) {
   cond_site <- site_index  
-  x <- Lap_max[cond_site]
+  x <- Lap_max
   model_pars <- list("a"=par_est_site$a, "b" = par_est_site$b, "mu" = par_est_site$mu_agg, "sigl" = par_est_site$sigl, "sigu" = par_est_site$sigu, "deltal" = par_est_site$deltal, "deltau" = par_est_site$deltau)
   return(data.frame(Ycond=conditional_quantiles(x=x,model_pars=model_pars,q_res=q_res,cond_site=cond_site),period=as.character(T)))
 }
@@ -344,8 +393,8 @@ par_est_new <- tmp_fixed_deltas[[i]][[12]] %>% add_row(.before=sites_index_diago
 Q25 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.25,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
 Q75 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.75,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
 tmp <- rbind(xyUK20_sf %>% mutate(Q=Q25$Ycond,"Quantile"="q=0.25"),xyUK20_sf %>% mutate(Q=Q75$Ycond,"Quantile"="q=0.75"))
-lims <- c(0,12)
-tnew <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max[sites_index_diagonal[1]],limits=lims,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
+lims <- c(0,15)
+tnew <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max,limits=lims,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
 tmap_save(tnew,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".png"),width=9,height=7)
 tmap_save(tnew,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".pdf"),width=9,height=7)
 
@@ -353,7 +402,7 @@ tmap_save(tnew,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal
   Q25 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.25,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
   Q75 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.75,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
   tmp <- rbind(xyUK20_sf %>% mutate(Q=Q25$Ycond,"Quantile"="q=0.25"),xyUK20_sf %>% mutate(Q=Q75$Ycond,"Quantile"="q=0.75"))
-  told <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max[sites_index_diagonal[1]],limits=lims,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
+  told <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max,limits=lims,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
   tmap_save(told,filename=paste0(folder_name,"Qold_q",q*100,"_",site_name_diagonal[i],".png"),width=9,height=7)
   tmap_save(told,filename=paste0(folder_name,"Qold_q",q*100,"_",site_name_diagonal[i],".pdf"),width=9,height=7)
   tnew <- tnew + tm_title("New iterative approach")
@@ -365,3 +414,40 @@ tmap_save(tnew,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal
 }
 
 # transform to original margins?
+load("../luna/kristina/P2q/ukgd_cpm85_5k_x84y20_MSp2q.RData",verb=TRUE)
+
+load("../luna/kristina/MSGpdParam/ukgd_cpm85_5k_x84y20.MSGpdParam.2025-02-26.RData",verb=TRUE)
+
+str(gpdpar)
+qgam.p2q.fn[[22846]](0.99)
+
+gpdpar[22846,]
+
+
+
+files <- list.files("../luna/kristina/MSdata01/")
+list_of_files <- list() #create empty list
+# only subset for x in x20 and y in y20
+files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSdata01.RData")})
+#loop through the files
+files_subset1 <- files_subset[files_subset %in% files]
+# could take only x and y divisible by 4 to subset and speed up data loading
+for (i in 1:length(files_subset1)) {
+  print(files_subset1[i])
+  load(paste0("../luna/kristina/MSdata01/", files_subset1[i]))
+  list_of_files[[i]] <- data01 #add files to list position
+}
+xyUK20_sf <- xyUK20_sf[files_subset %in% files_subset1,]
+
+# join the summer data together could try 1960-1999 for non-stationary data -----
+# June 1 is 152 doy, August 31 is 243 doy (92 days per year)
+# create a dataframe
+xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=92*40,nrow=nrow(xyUK20_sf))))
+names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(152:243,40),"_",rep(1960:1999,each=92)) 
+for (i in 1: length(list_of_files)) {
+  xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="obs",doy>=152,doy<=243, year<=1999) %>% pull(x) 
+}
+
+# explore issue with deltas Birmingham to Cromer
+summary(est_all_sf)
+est_all_sf %>% 
