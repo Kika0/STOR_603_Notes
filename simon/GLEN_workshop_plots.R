@@ -305,7 +305,7 @@ sites <- c(1:ncol(data_mod_Lap))[-sites_index_diagonal[1]]
 est_new <- tmp_fixed_deltas[[1]][[12]] %>% add_row(.before=sites_index_diagonal[1])
 # set up dataframe
 tmp <- data.frame(x=numeric(),y=numeric(),"method"=character(),"res_site"=numeric())
-for (i in 1:(ncol(Z)-1)) {
+for (i in 1:(ncol(Z))) {
   site <- sites[i]
 AGGPars <- as.numeric(unlist(est_new[site,c(3,4,5,10,11)]))
 # get estimates old
@@ -328,13 +328,26 @@ p <- ggplot(tmp) + geom_line(aes(x=x,y=y,group=res_site),linewidth=0.01,alpha=0.
 ggsave(p,filename=paste0(folder_name,"PP_Birmingham.pdf"),width=10,height=5)
 
 # examine outliers
-tmp <- tmp %>% mutate(diag_diff=y-x)
+plot_for_metho <- function(method_name = "original_method") {
+tmp <- tmp %>% dplyr::filter(method==method_name) %>% mutate(diag_diff=y-x)
 res_site_over <- tmp[tmp$diag_diff==max(tmp$diag_diff),]$res_site
 res_site_under <-  tmp[tmp$diag_diff==min(tmp$diag_diff),]$res_site
 
-AGG_underestimate <- append(NA,(tmp %>% group_by(res_site) %>% summarise(n=max(diag_diff,na.rm=TRUE)) %>% pull(n)),after=sites_index_diagonal[1]-1)
-tm_shape(xyUK20_sf[1:555,] %>% mutate(diag_diff= ddif)) + tm_dots("AGG_underestimate")
-# examine on a map
+AGG_underestimate <- append((tmp %>% group_by(res_site) %>% summarise(n=max(diag_diff,na.rm=TRUE)) %>% pull(n)),NA,after=sites_index_diagonal[1]-1)
+AGG_overestimate <- append((tmp %>% group_by(res_site) %>% summarise(n=min(diag_diff,na.rm=TRUE)) %>% pull(n)),NA,after=sites_index_diagonal[1]-1)
+
+tmpsf <- xyUK20_sf %>% mutate(AGG_underestimate,AGG_overestimate) %>% pivot_longer(cols=c(AGG_underestimate,AGG_overestimate),names_to="under_over",values_to = "diag_diff")
+title_map <- ""
+misscol <- "aquamarine"
+  legend_text_size <- 0.7
+  point_size <- 0.6
+  legend_title_size <- 1.2
+  lims <- c(-0.2,0.7)
+  nrow_facet <- 1
+t <- tm_shape(tmpsf) + tm_dots(fill="diag_diff",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size) + tm_facets(by="under_over") + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
+tmap_save(t,filename=paste0(folder_name,"PP_all_map_examine",method_name,".png"))
+
+# examine on a map only the worst case
 over_under <- rep(NA,nrow(xyUK20_sf))
 over_under[sites_index_diagonal[1]] <- "Conditioning_site"
 over_under[res_site_over] <- "Residual_site_underestimate"
@@ -359,8 +372,9 @@ ggsave(p,filename=paste0(folder_name,"AGG_Birmingham_outliers.pdf"),width=10,hei
 
 # distance from conditioning side vs worst distance
 
+}
 
-# repeat for new iterative method
+# run for both methods
 
 
 # plot conditional quantiles
