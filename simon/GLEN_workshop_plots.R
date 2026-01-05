@@ -328,7 +328,7 @@ p <- ggplot(tmp) + geom_line(aes(x=x,y=y,group=res_site),linewidth=0.01,alpha=0.
 ggsave(p,filename=paste0(folder_name,"PP_Birmingham.pdf"),width=10,height=5)
 
 # examine outliers
-plot_for_metho <- function(method_name = "original_method") {
+plot_AGG_diagnostics_method <- function(method_name = "Original_method") {
 tmp <- tmp %>% dplyr::filter(method==method_name) %>% mutate(diag_diff=y-x)
 res_site_over <- tmp[tmp$diag_diff==max(tmp$diag_diff),]$res_site
 res_site_under <-  tmp[tmp$diag_diff==min(tmp$diag_diff),]$res_site
@@ -345,7 +345,7 @@ misscol <- "aquamarine"
   lims <- c(-0.2,0.7)
   nrow_facet <- 1
 t <- tm_shape(tmpsf) + tm_dots(fill="diag_diff",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size) + tm_facets(by="under_over") + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
-tmap_save(t,filename=paste0(folder_name,"PP_all_map_examine",method_name,".png"))
+tmap_save(t,filename=paste0(folder_name,"PP_all_map_examine_",method_name,".png"))
 
 # examine on a map only the worst case
 over_under <- rep(NA,nrow(xyUK20_sf))
@@ -354,27 +354,49 @@ over_under[res_site_over] <- "Residual_site_underestimate"
 over_under[res_site_under] <- "Residual_site_overestimate"
 tmp_over_under <- xyUK20_sf %>% mutate("over_under"=over_under)
 t <- tm_shape(tmp_over_under) + tm_dots(fill="over_under",fill.scale = tm_scale_categorical(values=c("Residual_site_underestimate"="#C11432","Residual_site_overestimate" = "#009ADA", "Conditioning_site" = "aquamarine"))) 
-tmap_save(t,filename=paste0(folder_name,"PP_outliers_map_examine.png"))
+tmap_save(t,filename=paste0(folder_name,"PP_outliers_map_examine_",method_name,".png"))
 # examine over
+if (method_name=="Original_method") {
 AGGPars <- as.numeric(unlist(st_drop_geometry(est_all_sf)[res_site_over,c(13:17)]))
-Zover <- as.numeric(unlist(Znew[,which(res_site_over==sites)]))
+Zover <- as.numeric(unlist(Zold[,which(res_site_over==sites)]))
+}
+if (method_name=="New_iterative_approach") {
+  AGGPars <- as.numeric(unlist(est_new[res_site_over,c(3,4,5,10,11)]))
+  Zover <- as.numeric(unlist(Znew[,which(res_site_over==sites)]))
+}
 # plot density and kernel smooth
-tmp <- data.frame(y=AGG_density(theta = AGGPars,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
-p1 <- ggplot(data.frame(Zover)) + geom_density(mapping = aes(x=Zover)) + geom_line(data=tmp,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX(paste0("$Z_{",res_site_over,"}$"))) + ylab("Residual density function") + ggtitle("Underestimation")
+tmpd <- data.frame(y=AGG_density(theta = AGGPars,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
+p1 <- ggplot(data.frame(Zover)) + geom_density(mapping = aes(x=Zover)) + geom_line(data=tmpd,mapping = aes(x=x,y=y),col="#C11432") + xlab(TeX(paste0("$Z_{",res_site_over,"}$"))) + ylab("Residual density function") + ggtitle("Underestimation")
 # examine under
+if (method_name=="Original_method") {
 AGGPars <- as.numeric(unlist(st_drop_geometry(est_all_sf)[res_site_under,c(13:17)]))
 Zunder <- as.numeric(unlist(Znew[,which(res_site_under==sites)]))
+}
+if (method_name=="New_iterative_approach") {
+  AGGPars <- as.numeric(unlist(est_new[res_site_under,c(3,4,5,10,11)]))
+  Zunder <- as.numeric(unlist(Znew[,which(res_site_under==sites)]))
+}
+
 # plot density and kernel smooth
-tmp <- data.frame(y=AGG_density(theta = AGGPars,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
-p2 <- ggplot(data.frame(Zunder)) + geom_density(mapping = aes(x=Zunder)) + geom_line(data=tmp,mapping = aes(x=x,y=y),col="#009ADA") + xlab(TeX(paste0("$Z_{",res_site_under,"}$"))) + ylab("Residual density function") + ggtitle("Overestimation")
+tmpd <- data.frame(y=AGG_density(theta = AGGPars,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
+p2 <- ggplot(data.frame(Zunder)) + geom_density(mapping = aes(x=Zunder)) + geom_line(data=tmpd,mapping = aes(x=x,y=y),col="#009ADA") + xlab(TeX(paste0("$Z_{",res_site_under,"}$"))) + ylab("Residual density function") + ggtitle("Overestimation")
 p <- grid.arrange(p1,p2,ncol=1)
-ggsave(p,filename=paste0(folder_name,"AGG_Birmingham_outliers.pdf"),width=10,height=10)
+ggsave(p,filename=paste0(folder_name,"AGG_Birmingham_outliers_",method_name,".pdf"),width=10,height=10)
 
-# distance from conditioning side vs worst distance
+# distance from conditioning side vs worst distance of a given residual site
+dist_cond_site <- as.numeric(unlist(st_distance(xyUK20_sf[sites_index_diagonal[1],],xyUK20_sf) %>%
+                                      units::set_units(km)))
+p1 <- ggplot(data.frame(AGG_underestimate,dist_cond_site)) + geom_point(aes(x=dist_cond_site,y=AGG_underestimate))
+p2 <- ggplot(data.frame(AGG_overestimate,dist_cond_site)) + geom_point(aes(x=dist_cond_site,y=AGG_overestimate))
+p <- grid.arrange(p1,p2,ncol=1)
+ggsave(p,filename=paste0(folder_name,"AGG_Birmingham_distance_",method_name,".pdf"),width=10,height=10)
 
+#
 }
 
 # run for both methods
+plot_AGG_diagnostics_method(method_name="Original_method")
+plot_AGG_diagnostics_method(method_name="New_iterative_approach")
 
 
 # plot conditional quantiles
