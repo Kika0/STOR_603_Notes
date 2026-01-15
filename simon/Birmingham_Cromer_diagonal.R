@@ -211,7 +211,7 @@ p <- ggplot(tmp) + geom_point(aes(x=temp94diff,y=param_value,col=phi)) + geom_li
 ggsave(p,filename="../Documents/phis_temp94diff.png",width=5,height=5)
 
 # iterative a,b,mu and phis --------------------------------------------------
-load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData")
+load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData",verbose=TRUE)
 abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf,deltal=NULL,deltau=NULL,folder_name=NULL) {
 if(is.null(cond_site_names)) {
   cond_site_name <- names(sites)[site]
