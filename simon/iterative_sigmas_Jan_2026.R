@@ -33,13 +33,16 @@ NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),delt
   return(-sum(log_lik))
 }
 
-par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist, parest_site = result[[1]],Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL)  {
+par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,a,b,cond_site_dist, parest_site = result[[1]],Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL)  {
   d <- (ncol(dataLap)-1)
   N <- nrow(dataLap)
   res <- 1:d
-  a <- b <- mu_agg <- sigl <- sigu <- data.frame(matrix(ncol=(Nite),nrow = d))
+  mu_agg <- sigl <- sigu <- data.frame(matrix(ncol=(Nite),nrow = d))
   
-  phi0. <- phi1. <- phi2. <- phi3. <- c(1) 
+ phi1l. <- phi2l. <- phi1u. <- phi2u. <- c(1) 
+ phi0l. <- phi0u. <- c(0)
+  # calculate observed residuals
+  Z <- observed_residuals(df=dataLap,given=given,v = v,a=a,b=b)
   
   if (is.null(deltal)) {
     residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
@@ -61,13 +64,9 @@ par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist,
     if (k >1) {
       residual_pars <- list(sigl=phi2*(1-exp(-phi3*cond_site_dist)),sigu=phi0*(1-exp(-phi1*cond_site_dist)),deltal=deltal,deltau=deltau)
     }
-    # estimate a,b,mu
-    pe <- par_est_abmu(df=dataLap,v=v,given=given,res_margin_est=residual_pars)
-    # calculate observed residuals
-    Z <- observed_residuals(df=dataLap,given=given,v = v,a=pe$a,b=pe$b)
-    # update parameters
-    a[,k] <- pe$a
-    b[,k] <- pe$b
+    # estimate mu
+    pe <- par_est_mu(df=dataLap,v=v,given=given,res_margin_est=residual_pars,a=a,b=b)
+     # update parameters
     mu_agg[,k] <- pe$mu
     
     
@@ -96,99 +95,132 @@ par_est_ite <- function(dataLap=data_Laplace,v=q,given=cond_site,cond_site_dist,
   } else {return(par_sum)}
 }
 
-
-iter_sigmas_site <- function(j,Nite=5,sites=df_sites,cond_site_names=NULL,grid=xyUK20_sf,data=data_mod_Lap,par_est=est_all_sf,ite_delta = result,index_outliers = NULL, folder_name = "iterative_sigmas_res_margin") {
-  q <- 0.9
-  if(is.null(cond_site_names)) {
-    cond_site_name <- names(sites)[j]
-    cond_site_names <- names(sites)
-  } else {  cond_site_name <- cond_site_names[j] }
+par_est_mu <- function(df=sims,v=0.99,given=c(1),res_margin_est = res_margin_est,a,b) {
+  lik <- mu_hat <- res_var <- c()
+  names(df) <- paste0("Y",1:ncol(df))
+  d <- ncol(df)
+  for (j in given) {
+    Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
+    res <- c(1:d)[-j]
+    init_par <- c()
+    init_lik <- c()
+    sigl <- res_margin_est$sigl
+    sigu <- res_margin_est$sigu
+    deltal <- res_margin_est$deltal
+    deltau <- res_margin_est$deltau
+    for (i in 2:d) {
+      # optimise using the initial parameters
+      Y1 <- Y_given1extreme[,j]
+      Y2 <- Y_given1extreme[,res[i-1]]
+      init_par <- c(0.8,0.2,0)
+      opt <- optim(fn=NLL_AGG_onestep,x=data.frame(Y1,Y2),sigl_hat = sigl[i-1], sigu_hat = sigu[i-1], deltal_hat = deltal, deltau_hat = deltau,par=init_par,control=list(maxit=2000))
+      a_hat <- append(a_hat,opt$par[1])
+      b_hat <- append(b_hat,opt$par[2])
+      mu_hat <- append(mu_hat,opt$par[3])
+      lik <- append(lik,opt$value)
+      res_var <- append(res_var,res[i-1])
+    }
+  }
+  nas <- rep(NA,length(a_hat)) # NA values for parameters not used by a given method
+  par_sum <- data.frame("lik"=lik, 
+                        "a" = a_hat,"b" = b_hat,
+                        "mu" = mu_hat,
+                        "sigl" = sigl,"sigu" = sigu,
+                        "deltal" = deltal,"deltau" = deltau,
+                        "given" = rep(given,each=(d-1)),"res" = res_var)  
   
-  if (is.numeric(sites)) {cond_site <- sites[j]} else{
+  return(par_sum)
+}
+
+
+abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf,deltal=NULL,deltau=NULL,folder_name=NULL) {
+  if(is.null(cond_site_names)) {
+    cond_site_name <- names(sites)[site]
+    cond_site_names <- names(sites)
+  } else {  cond_site_name <- cond_site_names[site] }
+  
+  if (is.numeric(sites)) {cond_site <- sites[site]} else{
     cond_site_coord <- sites %>% dplyr::select(all_of(cond_site_name)) %>% pull()
     cond_site <- find_site_index(cond_site_coord,grid_uk = grid)    }
   
-  if (is.null(index_outliers)) {
-    est_site <- par_est %>% filter(cond_site==cond_site_name)
-    tmpsf <- ite_delta[[ which(cond_site_names==cond_site_name) ]]
-  } else {
-    # change NA to FALSE for subsetting the points
-    index_outliers[is.na(index_outliers)] <- FALSE
-    est_site <- par_est %>% filter(cond_site==cond_site_name)
-    est_site <- est_site[!index_outliers,] 
-    tmpsf <- ite_delta[[ which(names(df_sites)==cond_site_name) ]][!index_outliers,]
-    # subset data
-    data_mod_Lap <- data_mod_Lap[,!index_outliers]
-    # subset grid
-    grid <- grid[!index_outliers,]
-  }
-  
-  Z <- observed_residuals(df = data_mod_Lap, given = cond_site, v = q,a= discard(as.numeric(est_site$a),is.na),b = discard(as.numeric(est_site$b),is.na))
   # calculate distance from the conditioning site
-  dist_tmp <- as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))
-  # remove zero distance
+  dist_tmp <- as.numeric(unlist(st_distance(xyUK20_sf[cond_site,],xyUK20_sf)))
+  # remove zero distance (conditioning site)
   dist_tmp <- dist_tmp[dist_tmp>0]
   # normalise distance using a common constant
   distnorm <- dist_tmp/1000000
-  tmp <- sigmas_par_est_ite(data = Z, given = cond_site, cond_site_dist = distnorm, Nite = Nite, show_ite = TRUE, mu_init = discard(as.numeric(tmpsf$mu_agg_ite),is.na), sigl_init = discard(as.numeric(tmpsf$sigl_ite),is.na), sigu_init = discard(as.numeric(tmpsf$sigu_ite),is.na), deltal = as.numeric(tmpsf$deltal_ite[1]), deltau = as.numeric(tmpsf$deltau_ite[1]))
+  parest_site <- st_drop_geometry(result[[site]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
+  if (is.null(deltal)) {
+    try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE)
+  } else {
+    try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE,deltal=deltal,deltau=deltau) }
+  # print summary
+  sapply(1:12,function(i)print(summary(try7[[i]])),simplify=FALSE)
+  if (is.null(folder_name)) {
+    folder_name <- "abmu_iterative" 
+  }
   
-  # explore estimates
-  # plot phi estimates
-  tmp_phi <- rbind(data.frame("phi"=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi0"),
-                   data.frame("phi"=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "phi1"),
-                   data.frame("phi"=as.numeric(unlist(tmp[[6]])),iteration=1:(Nite+1),parameter = "phi2"),
-                   data.frame("phi"=as.numeric(unlist(tmp[[7]])),iteration=1:(Nite+1),parameter = "phi3"))
-  pphi <- ggplot(tmp_phi) + geom_point(aes(x=iteration,y=phi,col=parameter)) + scale_color_manual(values = c("#009ADA","#C11432","#66A64F","#FDD10A"), breaks = c("phi0","phi1","phi2","phi3"),labels = c(TeX("$\\phi_0$"),TeX("$\\phi_1$"),TeX("$\\phi_2$"),TeX("$\\phi_3$"))) + ylab("")
-  ggsave(pphi,filename=paste0("../Documents/",folder_name,"/phi_",cond_site_name,".png"),width=5,height=5)
+  # separate parameter estimation and analysis
+  p <- ggplot(try7[[1]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par") %>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\alpha"))
+  ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_alpha_",cond_site_name,".png"),height=5,width=10)
+  p <- ggplot(try7[[2]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\beta"))
+  ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_beta_",cond_site_name,".png"),height=5,width=10)
+  p <- ggplot(try7[[3]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\mu_{AGG}"))
+  ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_mu_",cond_site_name,".png"),height=5,width=10)
+  p <- ggplot(try7[[4]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_l"))
+  ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_sigmal_",cond_site_name,".png"),height=5,width=10)
+  p <- ggplot(try7[[5]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_u"))
+  ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_sigmau_",cond_site_name,".png"),height=5,width=10)
   
-  # plot also for a random site as a check for convergence
-  # plot across iterations for a selected site
-  random_site <- 100
-  tmp_all <- rbind(data.frame(delta=as.numeric(unlist(tmp[[1]][random_site,])),iteration=1:(Nite+1),parameter = "mu_agg"),
-                   data.frame(delta=as.numeric(unlist(tmp[[2]][random_site,])),iteration=1:(Nite+1),parameter = "sigma_lower"),
-                   data.frame(delta=as.numeric(unlist(tmp[[3]][random_site,])),iteration=1:(Nite+1),parameter = "sigma_upper"),
-                   data.frame(delta=as.numeric(unlist(tmp[[4]])),iteration=1:(Nite+1),parameter = "phi0"),
-                   data.frame(delta=as.numeric(unlist(tmp[[5]])),iteration=1:(Nite+1),parameter = "phi1"),
-                   data.frame(delta=as.numeric(unlist(tmp[[6]])),iteration=1:(Nite+1),parameter = "phi2"),
-                   data.frame(delta=as.numeric(unlist(tmp[[7]])),iteration=1:(Nite+1),parameter = "phi3")
-                   
-  )
-  # plot the final iteration
-  p1 <- ggplot(tmp_all) + geom_point(aes(x=iteration,y=delta,col=parameter)) + ylab("")
-  ggsave(p1,filename=paste0("../Documents/",folder_name,"/random_site_par_",cond_site_name,".png"),width=5,height=5)
+  p <- ggplot(data.frame("deltal"=try7[[10]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltal),size=1.5) +ylab(TeX("$\\delta_l"))
+  ggsave(p,file=paste0("../Documents/",folder_name,"/plot_deltal_",cond_site_name,".png"),height=5,width=10)
   
+  p <- ggplot(data.frame("deltau"=try7[[11]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltau),size=1.5) +ylab(TeX("$\\delta_u"))
+  ggsave(p,file=paste0("../Documents/",folder_name,"/plot_deltau_",cond_site_name,".png"),height=5,width=10)
+  
+  # look spatially to check
   # explore also spatial parameters
-  est_ite <- tmp[[8]] %>% add_row(.before=cond_site)
-  names(est_ite) <- paste0(names(est_ite),"_ite_sig")
-  tmpsf <- cbind(tmpsf,est_ite)
+  est_ite <- try7[[12]] %>% add_row(.before=cond_site)
+  names(est_ite) <- paste0(names(est_ite),"_ite")
+  tmpsf <- cbind(est_all_sf %>% filter(cond_site==cond_site_name),est_ite)
   # plot parameter estimates against distance
   # calculate distance from a conditioning site with st_distance()
-  mud <- data.frame(mu=tmpsf$mu_agg_ite_sig,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=mu,x=dist))
+  
+  mud <- data.frame(mu=tmpsf$mu_agg_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=mu,x=dist))
   ggsave(mud,filename=paste0("../Documents/",folder_name,"/muagg_distance_",cond_site_name,".png")) 
   
-  sigld <- data.frame(sigl=tmpsf$sigl_ite_sig,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigl,x=dist))
+  sigld <- data.frame(sigl=tmpsf$sigl_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigl,x=dist))
   ggsave(sigld,filename=paste0("../Documents/",folder_name,"/sigl_distance_",cond_site_name,".png")) 
   
-  sigud <- data.frame(sigu=tmpsf$sigu_ite_sig,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigu,x=dist))
+  sigud <- data.frame(sigu=tmpsf$sigu_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigu,x=dist))
   ggsave(sigud,filename=paste0("../Documents/",folder_name,"/sigu_distance_",cond_site_name,".png")) 
   
   
-  tmpsf <- tmpsf %>% mutate(mudiff = mu_agg_ite - mu_agg_ite_sig, sigldiff = sigl_ite - sigl_ite_sig, sigudiff = sigu_ite - sigu_ite_sig)
-  toplabel <- c(TeX("Iterative $\\delta$s method"),TeX("Iterative $\\phi$s method"),"Difference")
-  mu_limits <- c(-1.75,1.79)
-  t <- tmpsf %>% dplyr::select(mu_agg_ite,mu_agg_ite_sig,mudiff) %>% pivot_longer(cols=c(mu_agg_ite,mu_agg_ite_sig,mudiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu",limits=mu_limits),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel) 
+  tmpsf <- tmpsf %>% mutate(adiff=a_ite-a,bdiff=b_ite-b,mudiff = mu_agg_ite - mu_agg, sigldiff = sigl_ite - sigl, sigudiff = sigu_ite - sigu)
+  toplabel <- c("New iterative approach","Original method","Difference")
+  t <- tmpsf %>% dplyr::select(a_ite,a,adiff) %>% pivot_longer(cols=c(a_ite,a,adiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("a_ite","a","adiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\alpha$"))) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel,legend.reverse = TRUE) 
+  
+  tmap_save(t,filename=paste0("../Documents/",folder_name,"/a_",cond_site_name,".png"),width=8,height=6)
+  
+  t <- tmpsf %>% dplyr::select(b_ite,b,bdiff) %>% pivot_longer(cols=c(b_ite,b,bdiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("b_ite","b","bdiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\beta$"))) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel,legend.reverse = TRUE) 
+  
+  tmap_save(t,filename=paste0("../Documents/",folder_name,"/b_",cond_site_name,".png"),width=8,height=6)
+  
+  #mu_limits <- c(-2.61,1)
+  t <- tmpsf %>% dplyr::select(mu_agg_ite,mu_agg,mudiff) %>% pivot_longer(cols=c(mu_agg_ite,mu_agg,mudiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("mu_agg_ite","mu_agg","mudiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel,legend.reverse = TRUE) 
   
   tmap_save(t,filename=paste0("../Documents/",folder_name,"/mu_agg_",cond_site_name,".png"),width=8,height=6)
   
-  sigma_limits <- c(-1.32,2.3)
-  t <- tmpsf %>% dplyr::select(sigl_ite,sigl_ite_sig,sigldiff) %>% pivot_longer(cols=c(sigl_ite,sigl_ite_sig,sigldiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu",limits=sigma_limits),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 9, panel.labels = toplabel) 
+  #sigma_limits <- c(-1.32,2.3)
+  t <- tmpsf %>% dplyr::select(sigl_ite,sigl,sigldiff) %>% pivot_longer(cols=c(sigl_ite,sigl,sigldiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("sigl_ite","sigl","sigldiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\sigma_l$"))) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 9, panel.labels = toplabel,legend.reverse = TRUE) 
   tmap_save(t,filename=paste0("../Documents/",folder_name,"/sigma_lower_",cond_site_name,".png"),width=8,height=6)
   
-  t <- tmpsf %>% dplyr::select(sigu_ite,sigu_ite_sig,sigudiff) %>% pivot_longer(cols=c(sigu_ite,sigu_ite_sig,sigudiff),names_to = "parameter", values_to = "value" ) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu",limits=sigma_limits),fill.legend = tm_legend(title = TeX("$\\sigma_u$"))) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 9, panel.labels = toplabel) 
+  t <- tmpsf %>% dplyr::select(sigu_ite,sigu,sigudiff) %>% pivot_longer(cols=c(sigu_ite,sigu,sigudiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("sigu_ite","sigu","sigudiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\sigma_u$"))) + tm_facets("parameter") +
+    tm_layout(legend.position=c("right","top"),legend.height = 9, panel.labels = toplabel,legend.reverse = TRUE) 
   tmap_save(t,filename=paste0("../Documents/",folder_name,"/sigma_upper_",cond_site_name,".png"),width=8,height=6)
-  
-  return(tmpsf)
+  return(try7)
 }
