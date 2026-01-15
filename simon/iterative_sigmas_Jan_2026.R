@@ -154,8 +154,7 @@ abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site
     try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE)
   } else {
     try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite, show_ite=TRUE,deltal=deltal,deltau=deltau) }
-  # print summary
-  sapply(1:12,function(i)print(summary(try7[[i]])),simplify=FALSE)
+
   if (is.null(folder_name)) {
     folder_name <- "abmu_iterative" 
   }
@@ -172,11 +171,6 @@ abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site
   p <- ggplot(try7[[5]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_u"))
   ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_sigmau_",cond_site_name,".png"),height=5,width=10)
   
-  p <- ggplot(data.frame("deltal"=try7[[10]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltal),size=1.5) +ylab(TeX("$\\delta_l"))
-  ggsave(p,file=paste0("../Documents/",folder_name,"/plot_deltal_",cond_site_name,".png"),height=5,width=10)
-  
-  p <- ggplot(data.frame("deltau"=try7[[11]][2:(Nite+1)],"iteration"=1:Nite)) + geom_point(aes(x=factor(iteration),y=deltau),size=1.5) +ylab(TeX("$\\delta_u"))
-  ggsave(p,file=paste0("../Documents/",folder_name,"/plot_deltau_",cond_site_name,".png"),height=5,width=10)
   
   # look spatially to check
   # explore also spatial parameters
@@ -195,18 +189,8 @@ abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site
   sigud <- data.frame(sigu=tmpsf$sigu_ite,dist=as.numeric(unlist(st_distance(tmpsf[cond_site,],tmpsf)))) %>% ggplot() + geom_point(aes(y=sigu,x=dist))
   ggsave(sigud,filename=paste0("../Documents/",folder_name,"/sigu_distance_",cond_site_name,".png")) 
   
-  
-  tmpsf <- tmpsf %>% mutate(adiff=a_ite-a,bdiff=b_ite-b,mudiff = mu_agg_ite - mu_agg, sigldiff = sigl_ite - sigl, sigudiff = sigu_ite - sigu)
+  tmpsf <- tmpsf %>% mutate(mudiff = mu_agg_ite - mu_agg, sigldiff = sigl_ite - sigl, sigudiff = sigu_ite - sigu)
   toplabel <- c("New iterative approach","Original method","Difference")
-  t <- tmpsf %>% dplyr::select(a_ite,a,adiff) %>% pivot_longer(cols=c(a_ite,a,adiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("a_ite","a","adiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\alpha$"))) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel,legend.reverse = TRUE) 
-  
-  tmap_save(t,filename=paste0("../Documents/",folder_name,"/a_",cond_site_name,".png"),width=8,height=6)
-  
-  t <- tmpsf %>% dplyr::select(b_ite,b,bdiff) %>% pivot_longer(cols=c(b_ite,b,bdiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("b_ite","b","bdiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\beta$"))) + tm_facets("parameter") +
-    tm_layout(legend.position=c("right","top"),legend.height = 12, panel.labels = toplabel,legend.reverse = TRUE) 
-  
-  tmap_save(t,filename=paste0("../Documents/",folder_name,"/b_",cond_site_name,".png"),width=8,height=6)
   
   #mu_limits <- c(-2.61,1)
   t <- tmpsf %>% dplyr::select(mu_agg_ite,mu_agg,mudiff) %>% pivot_longer(cols=c(mu_agg_ite,mu_agg,mudiff),names_to = "parameter", values_to = "value" ) %>% mutate(parameter=factor(parameter,levels=c("mu_agg_ite","mu_agg","mudiff"))) %>% tm_shape() + tm_dots(fill="value",size=0.5,fill.scale =tm_scale_continuous(values="-brewer.rd_bu"),fill.legend = tm_legend(title = TeX("$\\mu_{AGG}$"))) + tm_facets("parameter") +
@@ -224,3 +208,7 @@ abmu_par_est_ite <- function(site,Nite=10,sites = sites_index_diagonal,cond_site
   tmap_save(t,filename=paste0("../Documents/",folder_name,"/sigma_upper_",cond_site_name,".png"),width=8,height=6)
   return(try7)
 }
+
+result <- sapply(1:1,FUN = iter_sigmas_site,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_diag1,folder_name = "Birmingham_Cromer_diagonal/sigmas",simplify = FALSE)
+
+
