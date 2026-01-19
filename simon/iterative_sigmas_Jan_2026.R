@@ -159,7 +159,7 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = re
   }
   par_sum <- data.frame("mu_agg" = as.numeric(mu_agg[,Nite]),"sigl" = as.numeric(sigl[,Nite]),"sigu" = as.numeric(sigu[,Nite]),"phi1u" = phi1u.[Nite], "phi2u" = phi2u.[Nite],"phi1l" = phi1l.[Nite], "phi2l" = phi2l.[Nite], "deltal" = deltal.[Nite], "deltau" = deltau.[Nite])
   if (show_ite == TRUE) {
-    return(list(mu_agg=mu_agg,sigl=sigl,sigu=sigu, phi0u=phi0u.,phi1u=phi1u., phi2u=phi2u.,phi0l=phi0l., phi1l=phi1l., phi2l=phi2l.,deltal=deltal., deltau=deltau.,par_sum))
+    return(list( "mu_agg" = mu_agg, "sigl" = sigl, "sigu" = sigu, "phi0u" = phi0u., "phi1u" = phi1u., "phi2u" = phi2u., "phi0l" = phi0l., "phi1l" = phi1l., "phi2l" = phi2l., "deltal" = deltal., "deltau" = deltau.,"par_sum" = par_sum))
   } else {return(par_sum)}
 }
 
@@ -196,21 +196,26 @@ AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagon
   }
   
   # separate parameter estimation and analysis
-  p <- ggplot(try7[[1]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par") %>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\alpha"))
-  ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_alpha_",cond_site_name,".png"),height=5,width=10)
-  p <- ggplot(try7[[2]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\beta"))
-  ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_beta_",cond_site_name,".png"),height=5,width=10)
-  p <- ggplot(try7[[3]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\mu_{AGG}"))
-  ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_mu_",cond_site_name,".png"),height=5,width=10)
-  p <- ggplot(try7[[4]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_l"))
+  p <- ggplot(try7$mu_agg %>% pivot_longer(everything(),names_to = "iteration",values_to = "par") %>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\mu_{AGG}$"))
+  ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_mu_agg_",cond_site_name,".png"),height=5,width=10)
+  p <- ggplot(try7$sigl %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_l$"))
   ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_sigmal_",cond_site_name,".png"),height=5,width=10)
-  p <- ggplot(try7[[5]] %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_u"))
+  p <- ggplot(try7$sigu %>% pivot_longer(everything(),names_to = "iteration",values_to = "par")%>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\sigma_u$"))
   ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_sigmau_",cond_site_name,".png"),height=5,width=10)
+  
+  tmp_phis <- rbind(try7$phi0l %>% pivot_longer(everything(),names_to = "iteration",values_to = "value") %>% mutate("par"="phi0l"),
+                    try7$phi1l %>% pivot_longer(everything(),names_to = "iteration",values_to = "value") %>% mutate("par"="phi1l"),
+                    try7$phi2l %>% pivot_longer(everything(),names_to = "iteration",values_to = "value") %>% mutate("par"="phi2l"),
+                    try7$phi0u %>% pivot_longer(everything(),names_to = "iteration",values_to = "value") %>% mutate("par"="phi0u"),
+                    try7$phi1u %>% pivot_longer(everything(),names_to = "iteration",values_to = "value") %>% mutate("par"="phi1u"),
+                    try7$phi2u %>% pivot_longer(everything(),names_to = "iteration",values_to = "value") %>% mutate("par"="phi2u"))
+  p <- ggplot(tmp_phis %>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=value,col=par)) +ylab(TeX("$\\phi$"))
+  ggsave(p,file=paste0("../Documents/",folder_name,"/iteration_phis_",cond_site_name,".png"),height=5,width=10)
   
   
   # look spatially to check
   # explore also spatial parameters
-  est_ite <- try7[[12]] %>% add_row(.before=cond_site)
+  est_ite <- try7$par_sum %>% add_row(.before=cond_site)
   names(est_ite) <- paste0(names(est_ite),"_ite")
   tmpsf <- cbind(est_all_sf %>% filter(cond_site==cond_site_name),est_ite)
   # plot parameter estimates against distance
