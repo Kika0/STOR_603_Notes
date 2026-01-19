@@ -1,3 +1,35 @@
+library(tmap)
+library(sf)
+library(tidyverse)
+library(latex2exp)
+library(gridExtra)
+
+theme_set(theme_bw())
+theme_replace(
+  panel.spacing = unit(2, "lines"),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.background = element_blank(),
+  panel.border = element_rect(colour = "black", fill = NA) )
+
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source,.GlobalEnv)
+#source("spatial_parameter_estimation.R") # for spatial_par_est function
+load("data_processed/temperature_data.RData",verbose=TRUE) # for data_mod_Lap
+load("data_processed/spatial_helper.RData",verbose = TRUE) # for xyUK20_sf
+q <- 0.9
+load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_Cromer90.RData",verbose=TRUE)
+est_all <- as.data.frame(est_all_sf)
+# load previous iterative estimates for initial values
+load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData",verbose=TRUE)
+
+# identify diagonal sites
+# find indeces of start and end sites
+Birmingham <- c(-1.9032,52.4806)
+Cromer <- c(1.28486,53.05349)
+site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
+site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
+
 # change functions to allow extra parameters phi0u (and optional also phi0l)
 
 # start with the likelihood function
@@ -35,7 +67,7 @@ NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),delt
 
 par_est_mu <- function(z,v=0.99,given=c(1),res_margin_est = res_margin_est) {
   lik <- mu_hat <- res_var <- c()
- # names(z) <- paste0("Z",res)
+  # names(z) <- paste0("Z",res)
   d <- ncol(z)+1
   for (j in given) {
     res <- c(1:d)[-j]
@@ -70,8 +102,8 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = re
   res <- 1:d[-given]
   mu_agg <- sigl <- sigu <- data.frame(matrix(ncol=(Nite),nrow = d))
   
- phi1l. <- phi2l. <- phi1u. <- phi2u. <- c(1) 
- phi0l. <- phi0u. <- c(0)
+  phi1l. <- phi2l. <- phi1u. <- phi2u. <- c(1) 
+  phi0l. <- phi0u. <- c(0)
   
   if (is.null(deltal)) {
     residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
@@ -157,8 +189,8 @@ AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagon
     try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE)
   } else {
     try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE,deltal=parest_site$deltal_ite[1],deltau= parest_site$deltau_ite[1]) 
-    }
-
+  }
+  
   if (is.null(folder_name)) {
     folder_name <- "mu_iterative" 
   }
@@ -213,38 +245,6 @@ AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagon
   return(try7)
 }
 
-library(tmap)
-library(sf)
-library(tidyverse)
-library(latex2exp)
-library(gridExtra)
-
-theme_set(theme_bw())
-theme_replace(
-  panel.spacing = unit(2, "lines"),
-  panel.grid.major = element_blank(),
-  panel.grid.minor = element_blank(),
-  strip.background = element_blank(),
-  panel.border = element_rect(colour = "black", fill = NA) )
-
-file.sources = list.files(pattern="*helpers.R")
-sapply(file.sources,source,.GlobalEnv)
-#source("spatial_parameter_estimation.R") # for spatial_par_est function
-load("data_processed/temperature_data.RData",verbose=TRUE) # for data_mod_Lap
-load("data_processed/spatial_helper.RData",verbose = TRUE) # for xyUK20_sf
-q <- 0.9
-load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_Cromer90.RData",verbose=TRUE)
-est_all <- as.data.frame(est_all_sf)
-# load previous iterative estimates for initial values
-load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData",verbose=TRUE)
-
-# identify diagonal sites
-# find indeces of start and end sites
-Birmingham <- c(-1.9032,52.4806)
-Cromer <- c(1.28486,53.05349)
-site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
-site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
 result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,result=result,folder_name = "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu",simplify = FALSE)
-
 
 summary(result[[1]])
