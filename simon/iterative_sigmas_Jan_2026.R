@@ -23,10 +23,10 @@ NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),delt
   deltau <- phi[6]
   phi0l <- phi[7]
   phi0u <- phi[8]
-  if(deltal<1 |deltau<1 | phi[1]<0 | phi[2] < 0 | phi[3]<0 | phi[4]<0 | phiBl<0 | phiBu<0 ){return(10e10)}
+  if(deltal<1 |deltau<1 | phi[1]<0 | phi[2] < 0 | phi[3]<0 | phi[4]<0 | phi0l<0 | phi0u<0 ){return(10e10)}
   
-  sigu <- phiBu + phi[1]*(1-exp(-(phi[2]*dij.)))
-  sigl <- phiBl + phi[3]*(1-exp(-(phi[4]*dij.)))
+  sigu <- phi0u + phi[1]*(1-exp(-(phi[2]*dij.)))
+  sigl <- phi0l + phi[3]*(1-exp(-(phi[4]*dij.)))
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
   log_lik[x<mu1] <- log(C_AGG[x<mu1])-((mu1[x<mu1]-x[x<mu1])/sigl[x<mu1])^deltal 
   log_lik[x>=mu1] <- log(C_AGG[x>=mu1])-((x[x>=mu1]-mu1[x>=mu1])/sigu[x>=mu1])^deltau 
@@ -38,7 +38,6 @@ par_est_mu <- function(z,v=0.99,given=c(1),res_margin_est = res_margin_est) {
  # names(z) <- paste0("Z",res)
   d <- ncol(z)+1
   for (j in given) {
-    Y_given1extreme <- df %>% filter(df[,j]>quantile(df[,j],v))
     res <- c(1:d)[-j]
     init_par <- c()
     init_lik <- c()
@@ -49,13 +48,12 @@ par_est_mu <- function(z,v=0.99,given=c(1),res_margin_est = res_margin_est) {
     for (i in 2:d) {
       # optimise using the initial parameters
       init_par <- c(0)
-      opt <- optim(fn=NLL_AGG,x=z,sigl_hat = sigl[i-1], sigu_hat = sigu[i-1], deltal_hat = deltal, deltau_hat = deltau,par=init_par,control=list(maxit=2000))
+      opt <- optim(fn=NLL_AGG,x=as.numeric(unlist(z[,i-1])),sigl_hat = sigl[i-1], sigu_hat = sigu[i-1], deltal_hat = deltal, deltau_hat = deltau,par=init_par,control=list(maxit=2000))
       mu_hat <- append(mu_hat,opt$par[1])
       lik <- append(lik,opt$value)
       res_var <- append(res_var,res[i-1])
     }
   }
-  nas <- rep(NA,length(a_hat)) # NA values for parameters not used by a given method
   par_sum <- data.frame("lik"=lik, 
                         "a" = a,"b" = b,
                         "mu" = mu_hat,
@@ -66,7 +64,7 @@ par_est_mu <- function(z,v=0.99,given=c(1),res_margin_est = res_margin_est) {
   return(par_sum)
 }
 
-par_est_ite <- function(z=Z,v=q,given=cond_site,a,b,cond_site_dist, parest_site = result[[1]],Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=NULL)  {
+par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = result[[1]],Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=NULL)  {
   d <- ncol(z)
   N <- nrow(z)
   res <- 1:d[-given]
@@ -74,8 +72,6 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,a,b,cond_site_dist, parest_site 
   
  phi1l. <- phi2l. <- phi1u. <- phi2u. <- c(1) 
  phi0l. <- phi0u. <- c(0)
-  # calculate observed residuals
-  Z <- observed_residuals(df=dataLap,given=given,v = v,a=a,b=b)
   
   if (is.null(deltal)) {
     residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
@@ -86,8 +82,8 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,a,b,cond_site_dist, parest_site 
     deltau. <- 2
     
   } else {
-    residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
-                          sigu = parest_site$sigu_ite_sigu,
+    residual_pars <- list("sigl" = parest_site$sigl_ite_sigl,
+                          "sigu" = parest_site$sigu_ite_sigu,
                           "deltal" = deltal,
                           "deltau" = deltau)
     deltal. <- deltal
@@ -102,7 +98,7 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,a,b,cond_site_dist, parest_site 
     # update mu parameters
     mu_agg[,k] <- pe$mu
     # estimate phi parameters
-    phi_init <- c(phi0u.[k],phi1u.[k],phi2u.[k],phi2.[k],phi2l.[k],deltal.[k],deltau.[k])
+    phi_init <- c(phi0u.[k],phi1u.[k],phi2u.[k],phi1l.[k],phi2l.[k],deltal.[k],deltau.[k])
     opt <- optim(fn=NLL_exp_phis,x = Z,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,k]),control=list(maxit=2000),par = phi_init,deltal=deltal,deltau=deltau,phi0l=0,method = "Nelder-Mead")
     phi1u <- opt$par[1]
     phi2u <- opt$par[2]
@@ -131,7 +127,7 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,a,b,cond_site_dist, parest_site 
   }
   par_sum <- data.frame("mu_agg" = as.numeric(mu_agg[,Nite]),"sigl" = as.numeric(sigl[,Nite]),"sigu" = as.numeric(sigu[,Nite]),"phi1u" = phi1u.[Nite], "phi2u" = phi2u.[Nite],"phi1l" = phi1l.[Nite], "phi2l" = phi2l.[Nite], "deltal" = deltal.[Nite], "deltau" = deltau.[Nite])
   if (show_ite == TRUE) {
-    return(list(a=a,b=b,mu_agg=mu_agg,sigl=sigl,sigu=sigu, phi0u=phi0u.,phi1u=phi1u., phi2u=phi2u.,phi0l=phi0l., phi1l=phi1l., phi2l=phi2l.,deltal=deltal., deltau=deltau.,par_sum))
+    return(list(mu_agg=mu_agg,sigl=sigl,sigu=sigu, phi0u=phi0u.,phi1u=phi1u., phi2u=phi2u.,phi0l=phi0l., phi1l=phi1l., phi2l=phi2l.,deltal=deltal., deltau=deltau.,par_sum))
   } else {return(par_sum)}
 }
 
@@ -153,13 +149,18 @@ AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagon
   # normalise distance using a common constant
   distnorm <- dist_tmp/1000000
   parest_site <- st_drop_geometry(result[[site]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
+  # calculate observed residuals
+  aest <- discard(est_all_sf %>% filter(cond_site==cond_site) %>% pull(a),is.na)
+  best <- discard(est_all_sf %>% filter(cond_site==cond_site) %>% pull(b),is.na)
+  Z <- observed_residuals(df=data_mod_Lap,given=cond_site,v = v,a=aest,b=best)
   if (is.null(deltal)) {
-    try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE)
+    try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE)
   } else {
-    try7 <- par_est_ite(dataLap=data_mod_Lap,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE,deltal=deltal,deltau=deltau) }
+    try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE,deltal=parest_site$deltal_ite[1],deltau= parest_site$deltau_ite[1]) 
+    }
 
   if (is.null(folder_name)) {
-    folder_name <- "abmu_iterative" 
+    folder_name <- "mu_iterative" 
   }
   
   # separate parameter estimation and analysis
@@ -243,7 +244,7 @@ Birmingham <- c(-1.9032,52.4806)
 Cromer <- c(1.28486,53.05349)
 site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
 site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
-result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,par_est = est_all_sf,result=result,folder_name = "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu",simplify = FALSE)
+result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,result=result,folder_name = "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu",simplify = FALSE)
 
 
-AGG_par_est_ite()
+summary(result[[1]])
