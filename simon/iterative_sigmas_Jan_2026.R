@@ -22,7 +22,7 @@ load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_Cromer90.RD
 est_all <- as.data.frame(est_all_sf)
 # load previous iterative estimates for initial values
 load("data_processed/iterative_sigmal_estimates_Birmingham_Cromer_diagonal.RData",verbose=TRUE)
-
+result_previous <- result 
 # identify diagonal sites
 # find indeces of start and end sites
 Birmingham <- c(-1.9032,52.4806)
@@ -55,7 +55,7 @@ NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),delt
   deltau <- phi[6]
   phi0l <- phi[7]
   phi0u <- phi[8]
-  if(deltal<1 |deltau<1 | phi[1]<0 | phi[2] < 0 | phi[3]<0 | phi[4]<0 | phi0l<0 | phi0u<0 ){return(10e10)}
+  if(deltal<1 |deltau<1 | phi[1]<0 | phi[2] < 0 | phi[3]<0 | phi[4]<0 | phi0l<0.1 | phi0u<0 ){return(10e10)}
   
   sigu <- phi0u + phi[1]*(1-exp(-(phi[2]*dij.)))
   sigl <- phi0l + phi[3]*(1-exp(-(phi[4]*dij.)))
@@ -96,14 +96,14 @@ par_est_mu <- function(z,v=0.99,given=c(1),res_margin_est = res_margin_est) {
   return(par_sum)
 }
 
-par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = result[[1]],Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=NULL)  {
+par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = result[[1]],Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
   d <- ncol(z)
   N <- nrow(z)
   res <- 1:d[-given]
   mu_agg <- sigl <- sigu <- data.frame(matrix(ncol=(Nite),nrow = d))
   
   phi1l. <- phi2l. <- phi1u. <- phi2u. <- c(1) 
-  phi0l. <- phi0u. <- c(0)
+  phi0l. <- phi0u. <- c(0.2)
   
   if (is.null(deltal)) {
     residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
@@ -121,6 +121,7 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = re
     deltal. <- deltal
     deltau. <- deltau   
   }
+  phi0l_init <- phi0l
   for (k in 1:Nite) {
     if (k >1) {
       residual_pars <- list(sigl=phi0l + phi1l *(1-exp(-phi2l*cond_site_dist)),sigu=phi0u + phi1u*(1-exp(-phi2u*cond_site_dist)),deltal=deltal,deltau=deltau)
@@ -130,8 +131,13 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = re
     # update mu parameters
     mu_agg[,k] <- pe$mu
     # estimate phi parameters
-    phi_init <- c(phi0u.[k],phi1u.[k],phi2u.[k],phi1l.[k],phi2l.[k],deltal.[k],deltau.[k])
-    opt <- optim(fn=NLL_exp_phis,x = Z,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,k]),control=list(maxit=2000),par = phi_init,deltal=deltal,deltau=deltau,phi0l=0,method = "Nelder-Mead")
+    if (is.null(phi0l_init)) {
+    phi_init <- c(phi1u.[k],phi2u.[k],phi1l.[k],phi2l.[k],phi0l.[k],phi0u.[k])
+    } else {
+      phi_init <- c(phi1u.[k],phi2u.[k],phi1l.[k],phi2l.[k],phi0u.[k])
+    }
+      
+    opt <- optim(fn=NLL_exp_phis,x = Z,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,k]),control=list(maxit=2000),par = phi_init,deltal=deltal,deltau=deltau,phi0l=phi0l_init,method = "Nelder-Mead")
     phi1u <- opt$par[1]
     phi2u <- opt$par[2]
     phi1l <- opt$par[3]
@@ -144,7 +150,7 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = re
     }
     if (!is.numeric(phi0u) & !is.numeric(phi0l)) {
       phi0l <- opt$par[5]
-      phi0u <- opt$par[5]
+      phi0u <- opt$par[6]
     }
     phi0u. <- append(phi0u.,phi0u)
     phi1u. <- append(phi1u.,phi1u)
@@ -164,7 +170,7 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = re
 }
 
 
-AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf,deltal=NULL,deltau=NULL,folder_name=NULL) {
+AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf,deltal=NULL,deltau=NULL,phi0l=NULL,folder_name=NULL) {
   if(is.null(cond_site_names)) {
     cond_site_name <- names(sites)[site]
     cond_site_names <- names(sites)
@@ -188,7 +194,7 @@ AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagon
   if (is.null(deltal)) {
     try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE)
   } else {
-    try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE,deltal=parest_site$deltal_ite[1],deltau= parest_site$deltau_ite[1]) 
+    try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,show_ite=TRUE,deltal=parest_site$deltal_ite[1],deltau= parest_site$deltau_ite[1],phi0l=phi0l) 
   }
   
   if (is.null(folder_name)) {
@@ -246,7 +252,7 @@ AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagon
   return(try7)
 }
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu"
-result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result,folder_name = folder_name,simplify = FALSE)
+result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,folder_name = folder_name,simplify = FALSE)
 
 summary(result[[1]])
 
@@ -334,7 +340,16 @@ plot_AGG_diagnostics_method <- function(method_name = "Original_method") {
     p2 <- ggplot(data.frame(Zunder)) + geom_density(mapping = aes(x=Zunder)) + geom_line(data=tmpd,mapping = aes(x=x,y=y),col="#009ADA") + xlab(TeX(paste0("$Z_{",res_site_under,"}$"))) + ylab("Residual density function") + ggtitle("Overestimation")
     p <- grid.arrange(p1,p2,ncol=1)
     ggsave(p,filename=paste0("../Documents/",folder_name,"/AGG_Birmingham_outliers_",method_name,".pdf"),width=10,height=10)
+    # compare worst fit with original approach
+    # plot density and kernel smooth
+    AGGParsorg <- as.numeric(unlist(st_drop_geometry(est_all_sf)[res_site_under,c(13:17)]))
+    tmpdorg <- data.frame(y=AGG_density(theta = AGGParsorg,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
+    tmpd <- data.frame(y=AGG_density(theta = AGGPars,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
+    p3 <- ggplot(data.frame(Zunder)) + geom_density(mapping = aes(x=Zunder)) + geom_line(data=tmpd,mapping = aes(x=x,y=y),col="#FDD10A") + geom_line(data=tmpdorg,mapping = aes(x=x,y=y),col="#66A64F")+ xlab(TeX(paste0("$Z_{",res_site_under,"}$"))) + ylab("Residual density function") + ggtitle("Overestimation")
+    ggsave(p3,filename=paste0("../Documents/",folder_name,"/AGG_Birmingham_outliers_compare",method_name,".pdf"),width=10,height=10)
     
+    
+      
     # distance from conditioning side vs worst distance of a given residual site
     dist_cond_site <- as.numeric(unlist(st_distance(xyUK20_sf[sites_index_diagonal[1],],xyUK20_sf) %>%
                                           units::set_units(km)))
@@ -349,3 +364,10 @@ plot_AGG_diagnostics_method <- function(method_name = "Original_method") {
 # run for both methods
 plot_AGG_diagnostics_method(method_name="Original_method")
 plot_AGG_diagnostics_method(method_name="New_iterative_approach")
+
+# repeat for phi0l also being estimated
+folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu"
+result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,phi0l=NULL,est_all_sf = est_all_sf,Nite=10,result=result_previous,folder_name = folder_name,simplify = FALSE)
+
+
+
