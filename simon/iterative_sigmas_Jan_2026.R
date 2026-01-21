@@ -170,7 +170,7 @@ par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = re
 }
 
 
-AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf,deltal=NULL,deltau=NULL,phi0l=NULL,folder_name=NULL) {
+AGG_par_est_ite <- function(data_mod_Lap,site,v=0.9,Nite=10,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,q=0.9,grid=xyUK20_sf,result,est_all_sf,deltal=NULL,deltau=NULL,phi0l=NULL,folder_name=NULL) {
   if(is.null(cond_site_names)) {
     cond_site_name <- names(sites)[site]
     cond_site_names <- names(sites)
@@ -191,11 +191,11 @@ AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagon
   aest <- discard(est_all_sf %>% filter(cond_site==cond_site) %>% pull(a),is.na)
   best <- discard(est_all_sf %>% filter(cond_site==cond_site) %>% pull(b),is.na)
   Z <- observed_residuals(df=data_mod_Lap,given=cond_site,v = v,a=aest,b=best)
-  if (is.null(deltal)) {
-    try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE)
-  } else {
+  #if (is.null(deltal)) {
+   # try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,phi0l=0, show_ite=TRUE)
+  #} else {
     try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,show_ite=TRUE,deltal=parest_site$deltal_ite[1],deltau= parest_site$deltau_ite[1],phi0l=phi0l) 
-  }
+ # }
   
   if (is.null(folder_name)) {
     folder_name <- "mu_iterative" 
@@ -252,7 +252,7 @@ AGG_par_est_ite <- function(data_mod_Lap,site,Nite=10,sites = sites_index_diagon
   return(try7)
 }
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu"
-result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,folder_name = folder_name,simplify = FALSE)
+result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,folder_name = folder_name,phi0l=0,simplify = FALSE)
 
 summary(result[[1]])
 
@@ -366,7 +366,7 @@ plot_AGG_diagnostics_method(method_name="Original_method")
 plot_AGG_diagnostics_method(method_name="New_iterative_approach")
 
 # repeat for phi0l also being estimated
-folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu"
+folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu_phi0l_phiul"
 result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,phi0l=NULL,est_all_sf = est_all_sf,Nite=10,result=result_previous,folder_name = folder_name,simplify = FALSE)
 
 
