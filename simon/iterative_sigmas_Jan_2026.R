@@ -33,7 +33,22 @@ site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
 # change functions to allow extra parameters phi0u (and optional also phi0l)
 
 # start with the likelihood function
-NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),deltal=2,deltau=2,phi0l=NULL,phi0u=NULL) {
+#' Title
+#'
+#' @param phi A vector of parameters
+#' @param x A dataframe of observed residuals
+#' @param d1j A vector of distance from the conditioning site
+#' @param mu1 A vector of mu parameters
+#' @param deltal Optional fixed value of deltal
+#' @param deltau Optional fixed value of deltau
+#' @param phi0l Optional fixed value of phi0l
+#' @param phi0u Optional fixed value of phi0u
+#'
+#' @return
+#' @export
+#'
+#' @examples
+NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),deltal=NULL,deltau=NULL,phi0l=NULL,phi0u=NULL) {
   N <- nrow(x)
   mu1 <- rep(mu1, each = N)
   z <- as.numeric(unlist(x))
@@ -55,7 +70,8 @@ NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),delt
   deltau <- phi[6]
   phi0l <- phi[7]
   phi0u <- phi[8]
-  if(deltal<1 |deltau<1 | phi[1]<0 | phi[2] < 0 | phi[3]<0 | phi[4]<0 | phi0l<0.1 | phi0u<0 ){return(10e10)}
+  if(deltal<1 |deltau<1 | phi[1]<0 | phi[2] < 0 | phi[3]<0 | phi[4]<0 | phi0l<0 | phi0u<0 ){return(10e10)}
+ # if(deltal<1 |deltau<1 | phi[1]<0 | phi[2] < 0 | phi[3]<0 | phi[4]<0 | phi0l<0.1 | phi0u<0 ){return(10e10)}
   
   sigu <- phi0u + phi[1]*(1-exp(-(phi[2]*dij.)))
   sigl <- phi0l + phi[3]*(1-exp(-(phi[4]*dij.)))
@@ -87,7 +103,6 @@ par_est_mu <- function(z,v=0.99,given=c(1),res_margin_est = res_margin_est) {
     }
   }
   par_sum <- data.frame("lik"=lik, 
-                        "a" = a,"b" = b,
                         "mu" = mu_hat,
                         "sigl" = sigl,"sigu" = sigu,
                         "deltal" = deltal,"deltau" = deltau,
@@ -96,7 +111,7 @@ par_est_mu <- function(z,v=0.99,given=c(1),res_margin_est = res_margin_est) {
   return(par_sum)
 }
 
-par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site = result[[1]],Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
+par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site ,Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
   d <- ncol(z)
   N <- nrow(z)
   res <- 1:d[-given]
@@ -252,47 +267,47 @@ AGG_par_est_ite <- function(data_mod_Lap,site,v=0.9,Nite=10,sites = sites_index_
   return(try7)
 }
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu"
-result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,folder_name = folder_name,phi0l=0,simplify = FALSE)
+result_new <- sapply(2:12,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,folder_name = folder_name,phi0l=0,simplify = FALSE)
 
-summary(result[[1]])
-
-# try do a PP plot
-# calculate observed residuals
-aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(a),is.na)
-best <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(b),is.na)
-Z <- observed_residuals(df=data_mod_Lap,given=sites_index_diagonal[1],v = q,a=aest,b=best)
-U <- c(1:(dim(data_mod_Lap)[1]*(1-q)))/(dim(data_mod_Lap)[1]*(1-q)+1)
-# pick a site
-sites <- c(1:ncol(data_mod_Lap))[-sites_index_diagonal[1]]
-# get estimates new
-est_new <- result[[1]][[12]] %>% add_row(.before=sites_index_diagonal[1])
-# set up dataframe
-tmp <- data.frame(x=numeric(),y=numeric(),"method"=character(),"res_site"=numeric())
-for (i in 1:(ncol(Z))) {
-  site <- sites[i]
-  AGGPars <- as.numeric(unlist(est_new[site,c(1:3,8,9)]))
-  # get estimates old
-  AGGParsOld <- as.numeric(unlist(st_drop_geometry(est_all_sf)[site,c(13:17)]))
-  # construct PP plot
-  x <- as.numeric(unlist(Z[,i]))
-  Um <- pAGG(x=x,theta = AGGPars)
-  Umo <- pAGG(x=x,theta = AGGParsOld)
-  tmp_append_old <- data.frame(y=Umo,method="Original_method","res_site"=sites[i]) %>% arrange(y) %>% mutate("x"=U)
-  tmp_append_new <- data.frame(x=U,y=Um,method="New_iterative_approach","res_site"=sites[i]) %>% arrange(y) %>% mutate("x"=U)
-  tmp <- rbind(tmp,tmp_append_old,tmp_append_new) 
-}
-
-p <- ggplot(tmp) + geom_line(aes(x=x,y=y,group=res_site),linewidth=0.01,alpha=0.9)+ geom_abline(slope=1,linetype="dashed") + facet_wrap("method") + xlab("Empirical") + ylab("Model")
-ggsave(p,filename=paste0("../Documents/",folder_name,"/PP_Birmingham.pdf"),width=10,height=5)
+summary(result_new[[1]])
 
 # examine outliers
-plot_AGG_diagnostics_method <- function(method_name = "Original_method") {
+plot_AGG_diagnostics_method <- function(site=1,method_name = "Original_method") {
+  # try do a PP plot
+  # calculate observed residuals
+  aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[site]) %>% pull(a),is.na)
+  best <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[site]) %>% pull(b),is.na)
+  Z <- observed_residuals(df=data_mod_Lap,given=sites_index_diagonal[site],v = q,a=aest,b=best)
+  U <- c(1:(dim(data_mod_Lap)[1]*(1-q)))/(dim(data_mod_Lap)[1]*(1-q)+1)
+  # pick a site
+  sites <- c(1:ncol(data_mod_Lap))[-sites_index_diagonal[site]]
+  # get estimates new
+  est_new <- result[[site]][[12]] %>% add_row(.before=sites_index_diagonal[site])
+  # set up dataframe
+  tmp <- data.frame(x=numeric(),y=numeric(),"method"=character(),"res_site"=numeric())
+  for (i in 1:(ncol(Z))) {
+    site_res <- sites[i]
+    AGGPars <- as.numeric(unlist(est_new[site_res,c(1:3,8,9)]))
+    # get estimates old
+    AGGParsOld <- as.numeric(unlist(st_drop_geometry(est_all_sf)[site_res,c(13:17)]))
+    # construct PP plot
+    x <- as.numeric(unlist(Z[,i]))
+    Um <- pAGG(x=x,theta = AGGPars)
+    Umo <- pAGG(x=x,theta = AGGParsOld)
+    tmp_append_old <- data.frame(y=Umo,method="Original_method","res_site"=site_res) %>% arrange(y) %>% mutate("x"=U)
+    tmp_append_new <- data.frame(x=U,y=Um,method="New_iterative_approach","res_site"=site_res) %>% arrange(y) %>% mutate("x"=U)
+    tmp <- rbind(tmp,tmp_append_old,tmp_append_new) 
+  }
+  
+  p <- ggplot(tmp) + geom_line(aes(x=x,y=y,group=res_site),linewidth=0.01,alpha=0.9)+ geom_abline(slope=1,linetype="dashed") + facet_wrap("method") + xlab("Empirical") + ylab("Model")
+  ggsave(p,filename=paste0("../Documents/",folder_name,"/PP_Birmingham.pdf"),width=10,height=5)
+  
   tmp <- tmp %>% dplyr::filter(method==method_name) %>% mutate(diag_diff=y-x)
   res_site_over <- tmp[tmp$diag_diff==max(tmp$diag_diff),]$res_site
   res_site_under <-  tmp[tmp$diag_diff==min(tmp$diag_diff),]$res_site
   
-  AGG_underestimate <- append((tmp %>% group_by(res_site) %>% summarise(n=max(diag_diff,na.rm=TRUE)) %>% pull(n)),NA,after=sites_index_diagonal[1]-1)
-  AGG_overestimate <- append((tmp %>% group_by(res_site) %>% summarise(n=min(diag_diff,na.rm=TRUE)) %>% pull(n)),NA,after=sites_index_diagonal[1]-1)
+  AGG_underestimate <- append((tmp %>% group_by(res_site) %>% summarise(n=max(diag_diff,na.rm=TRUE)) %>% pull(n)),NA,after=sites_index_diagonal[site]-1)
+  AGG_overestimate <- append((tmp %>% group_by(res_site) %>% summarise(n=min(diag_diff,na.rm=TRUE)) %>% pull(n)),NA,after=sites_index_diagonal[site]-1)
   
   tmpsf <- xyUK20_sf %>% mutate(AGG_underestimate,AGG_overestimate) %>% pivot_longer(cols=c(AGG_underestimate,AGG_overestimate),names_to="under_over",values_to = "diag_diff")
   title_map <- ""
@@ -300,14 +315,14 @@ plot_AGG_diagnostics_method <- function(method_name = "Original_method") {
     legend_text_size <- 0.7
     point_size <- 0.6
     legend_title_size <- 1.2
-    lims <- c(-0.7,0.3)
+    lims <- c(-0.2,0.2)
     nrow_facet <- 1
     t <- tm_shape(tmpsf) + tm_dots(fill="diag_diff",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size) + tm_facets(by="under_over") + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
     tmap_save(t,filename=paste0("../Documents/",folder_name,"/PP_all_map_examine_",method_name,".png"))
     
     # examine on a map only the worst case
     over_under <- rep(NA,nrow(xyUK20_sf))
-    over_under[sites_index_diagonal[1]] <- "Conditioning_site"
+    over_under[sites_index_diagonal[site]] <- "Conditioning_site"
     over_under[res_site_over] <- "Residual_site_underestimate"
     over_under[res_site_under] <- "Residual_site_overestimate"
     tmp_over_under <- xyUK20_sf %>% mutate("over_under"=over_under)
@@ -351,7 +366,7 @@ plot_AGG_diagnostics_method <- function(method_name = "Original_method") {
     
       
     # distance from conditioning side vs worst distance of a given residual site
-    dist_cond_site <- as.numeric(unlist(st_distance(xyUK20_sf[sites_index_diagonal[1],],xyUK20_sf) %>%
+    dist_cond_site <- as.numeric(unlist(st_distance(xyUK20_sf[sites_index_diagonal[site],],xyUK20_sf) %>%
                                           units::set_units(km)))
     p1 <- ggplot(data.frame(AGG_underestimate,dist_cond_site)) + geom_point(aes(x=dist_cond_site,y=AGG_underestimate))
     p2 <- ggplot(data.frame(AGG_overestimate,dist_cond_site)) + geom_point(aes(x=dist_cond_site,y=AGG_overestimate))
@@ -361,13 +376,15 @@ plot_AGG_diagnostics_method <- function(method_name = "Original_method") {
     #
 }
 
-# run for both methods
-plot_AGG_diagnostics_method(method_name="Original_method")
-plot_AGG_diagnostics_method(method_name="New_iterative_approach")
+# run diagnostics for both methods
+sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="Original_method")
+sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="New_iterative_approach")
 
 # repeat for phi0l also being estimated
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu_phi0l_phiul"
 result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,phi0l=NULL,est_all_sf = est_all_sf,Nite=10,result=result_previous,folder_name = folder_name,simplify = FALSE)
 
-
+# run diagnostics for both methods
+plot_AGG_diagnostics_method(site=1,method_name="Original_method")
+plot_AGG_diagnostics_method(site=1,method_name="New_iterative_approach")
 
