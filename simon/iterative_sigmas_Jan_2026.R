@@ -272,7 +272,7 @@ result_new <- sapply(2:12,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,site
 summary(result_new[[1]])
 
 # examine outliers
-plot_AGG_diagnostics_method <- function(site=1,method_name = "Original_method") {
+plot_AGG_diagnostics_method <- function(site=1,method_name = "Original_method",result=result_new) {
   # try do a PP plot
   # calculate observed residuals
   aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[site]) %>% pull(a),is.na)
@@ -289,7 +289,7 @@ plot_AGG_diagnostics_method <- function(site=1,method_name = "Original_method") 
     site_res <- sites[i]
     AGGPars <- as.numeric(unlist(est_new[site_res,c(1:3,8,9)]))
     # get estimates old
-    AGGParsOld <- as.numeric(unlist(st_drop_geometry(est_all_sf)[site_res,c(13:17)]))
+    AGGParsOld <- as.numeric(unlist(st_drop_geometry(est_all_sf%>% filter(cond_site==site_name_diagonal[site]))[site_res,c(13:17)]))
     # construct PP plot
     x <- as.numeric(unlist(Z[,i]))
     Um <- pAGG(x=x,theta = AGGPars)
@@ -377,8 +377,8 @@ plot_AGG_diagnostics_method <- function(site=1,method_name = "Original_method") 
 }
 
 # run diagnostics for both methods
-sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="Original_method")
-sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="New_iterative_approach")
+sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="Original_method",result=result_new)
+sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="New_iterative_approach",result=result_new)
 
 # repeat for phi0l also being estimated
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu_phi0l_phiul"
