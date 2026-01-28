@@ -388,3 +388,8 @@ result <- sapply(1:1,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = s
 plot_AGG_diagnostics_method(site=1,method_name="Original_method")
 plot_AGG_diagnostics_method(site=1,method_name="New_iterative_approach")
 
+# plot outliers 260 and 321 against Birmingham
+p1 <- ggplot(data_mod_Lap %>% filter(Y192>quantile(Y192,q))) + geom_point(aes(x=Y192,y=Y260),size=0.5)
+p2 <- ggplot(data_mod_Lap %>% filter(Y192>quantile(Y192,q))) + geom_point(aes(x=Y192,y=Y321),size=0.5)
+p <- grid.arrange(p1,p2,ncol=2)
+ggsave(p,filename=paste0("../Documents/",folder_name,"/AGG_Birmingham_outliers_Y.pdf"),width=10,height=5)
