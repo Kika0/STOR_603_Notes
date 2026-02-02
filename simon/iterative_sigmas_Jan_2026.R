@@ -48,7 +48,7 @@ site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
 #' @export
 #'
 #' @examples
-NLL_exp_phis <- function(phi,x = Z, d1j, mu1=as.numeric(unlist(mu_agg[,1])),deltal=NULL,deltau=NULL,phi0l=NULL,phi0u=NULL) {
+NLL_exp_phis <- function(phi,x, d1j, mu1=as.numeric(unlist(mu_agg[,1])),deltal=NULL,deltau=NULL,phi0l=NULL,phi0u=NULL) {
   N <- nrow(x)
   mu1 <- rep(mu1, each = N)
   z <- as.numeric(unlist(x))
@@ -109,7 +109,25 @@ par_est_mu <- function(z,v,given,res_margin_est) {
   return(par_sum)
 }
 
-par_est_ite <- function(z=Z,v=q,given=cond_site,cond_site_dist, parest_site ,Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
+#' Title
+#'
+#' @param z A dataframe of observed residuals
+#' @param v A quantile threshold
+#' @param given An numeric index of condiitoning site
+#' @param cond_site_dist A numeric vector of distance from conditioning site
+#' @param parest_site A list of parameters: sigl,sigu,optional:deltal,deltau
+#' @param Nite A numeric number of iterations
+#' @param show_ite A logical, if TRUE, estimates are saved for each iteration
+#' @param deltal A numeric fixed deltal value, if NULL deltal is also estimated
+#' @param deltau A numeric fixed deltau value, if NULL deltau is also estimated
+#' @param phi0u A numeric fixed phi0u value, if NULL phi0u is estimated
+#' @param phi0l A numeric fixed phi0l value, if NULL phi0l is estimated
+#'
+#' @return A list of estimated, depends on show_ite, last item par_sum are final iteration estimates
+#' @export
+#'
+#' @examples
+par_est_ite <- function(z,v=q,given=cond_site,cond_site_dist, parest_site ,Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
   d <- ncol(z)
   N <- nrow(z)
   res <- 1:d[-given]
