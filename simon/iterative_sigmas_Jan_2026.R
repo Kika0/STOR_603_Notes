@@ -70,6 +70,7 @@ NLL_exp_phis <- function(phi,x, d1j, mu1=as.numeric(unlist(mu_agg[,1])),deltal=N
   deltau <- phi[6]
   phi0l <- phi[7]
   phi0u <- phi[8]
+  # parameter value constraints
   if(deltal<1 |deltau<1 | phi[1]<0 | phi[2] < 0 | phi[3]<0 | phi[4]<0 | phi0l<0 | phi0u<0 ){return(10e10)}
  # if(deltal<1 |deltau<1 | phi[1]<0 | phi[2] < 0 | phi[3]<0 | phi[4]<0 | phi0l<0.1 | phi0u<0 ){return(10e10)}
   
@@ -81,18 +82,27 @@ NLL_exp_phis <- function(phi,x, d1j, mu1=as.numeric(unlist(mu_agg[,1])),deltal=N
   return(-sum(log_lik))
 }
 
+#' Title
+#'
+#' @param z A dataframe of observed residuals
+#' @param v A quantile threshold
+#' @param given A numeric index of conditioning variable
+#' @param res_margin_est A list of parameters: sigl,sigu,optional:deltal,deltau
+#'
+#' @return A list of residual margin estimates plus likelihood, conditioning index and residual site
+#' @export
+#'
+#' @examples
 par_est_mu <- function(z,v,given,res_margin_est) {
   lik <- mu_hat <- res <- c()
-  # names(z) <- paste0("Z",res)
   d <- ncol(z)+1
-
-    res <- c(1:d)[-given]
-    init_par <- c()
-    init_lik <- c()
-    sigl <- res_margin_est$sigl
-    sigu <- res_margin_est$sigu
-    deltal <- res_margin_est$deltal
-    deltau <- res_margin_est$deltau
+  res <- c(1:d)[-given]
+  init_par <- c()
+  init_lik <- c()
+  sigl <- res_margin_est$sigl
+  sigu <- res_margin_est$sigu
+  deltal <- res_margin_est$deltal
+  deltau <- res_margin_est$deltau
     for (i in 2:d) {
       # optimise using the initial parameters
       init_par <- c(0)
@@ -113,7 +123,7 @@ par_est_mu <- function(z,v,given,res_margin_est) {
 #'
 #' @param z A dataframe of observed residuals
 #' @param v A quantile threshold
-#' @param given An numeric index of condiitoning site
+#' @param given A numeric index of conditioning site
 #' @param cond_site_dist A numeric vector of distance from conditioning site
 #' @param parest_site A list of parameters: sigl,sigu,optional:deltal,deltau
 #' @param Nite A numeric number of iterations
@@ -127,7 +137,7 @@ par_est_mu <- function(z,v,given,res_margin_est) {
 #' @export
 #'
 #' @examples
-par_est_ite <- function(z,v=q,given=cond_site,cond_site_dist, parest_site ,Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
+par_est_ite <- function(z,v=q,given=cond_site,cond_site_dist, parest_site, Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
   d <- ncol(z)
   N <- nrow(z)
   res <- 1:d[-given]
