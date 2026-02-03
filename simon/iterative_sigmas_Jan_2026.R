@@ -381,15 +381,16 @@ plot_AGG_diagnostics_method <- function(site=1,q=0.9,cond_site_names,grid20km=xy
     tmpd <- data.frame(y=AGG_density(theta = AGGPars,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
     p2 <- ggplot(data.frame(Zunder)) + geom_density(mapping = aes(x=Zunder)) + geom_line(data=tmpd,mapping = aes(x=x,y=y),col="#009ADA") + xlab(TeX(paste0("$Z_{",res_site_under,"}$"))) + ylab("Residual density function") + ggtitle("Overestimation")
     p <- grid.arrange(p1,p2,ncol=1)
-    ggsave(p,filename=paste0("../Documents/",folder_name,"/AGG_outliers_",method_name,".pdf"),width=10,height=10)
+    ggsave(p,filename=paste0("../Documents/",folder_name,"/AGG_outliers_",method_name,"_",cond_site_names[site],".pdf"),width=10,height=10)
     # compare worst fit with original approach
     # plot density and kernel smooth
     AGGParsorg <- as.numeric(unlist(st_drop_geometry(est_all_sf)[res_site_under,c(13:17)]))
     tmpdorg <- data.frame(y=AGG_density(theta = AGGParsorg,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
     tmpd <- data.frame(y=AGG_density(theta = AGGPars,x=seq(-7.5,5,0.01)),x=seq(-7.5,5,0.01))
-    p3 <- ggplot(data.frame(Zunder)) + geom_density(mapping = aes(x=Zunder)) + geom_line(data=tmpd,mapping = aes(x=x,y=y),col="#FDD10A") + geom_line(data=tmpdorg,mapping = aes(x=x,y=y),col="#66A64F")+ xlab(TeX(paste0("$Z_{",res_site_under,"}$"))) + ylab("Residual density function") + ggtitle("Overestimation")
-    ggsave(p3,filename=paste0("../Documents/",folder_name,"/AGG_outliers_compare",method_name,"_",cond_site_names[site],".pdf"),width=10,height=10)
-    
+    if (method_name=="New_iterative_approach") {
+      p3 <- ggplot(data.frame(Zunder)) + geom_density(mapping = aes(x=Zunder)) + geom_line(data=tmpd,mapping = aes(x=x,y=y),col="#FDD10A") + geom_line(data=tmpdorg,mapping = aes(x=x,y=y),col="#66A64F")+ xlab(TeX(paste0("$Z_{",res_site_under,"}$"))) + ylab("Residual density function") + ggtitle("Overestimation")
+    ggsave(p3,filename=paste0("../Documents/",folder_name,"/AGG_outliers_compare_",method_name,"_",cond_site_names[site],".pdf"),width=10,height=10)
+    }
     
       
     # distance from conditioning side vs worst distance of a given residual site
