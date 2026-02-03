@@ -291,7 +291,7 @@ AGG_par_est_ite <- function(data_mod_Lap,site,v=0.9,Nite=10,sites = sites_index_
 }
 
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu"
-result_new <- sapply(1:2,FUN = function(site_order){AGG_par_est_ite(site=site_order,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,deltal=deltal,deltau=deltau,folder_name = folder_name,phi0l=0)},simplify = FALSE)
+result_new <- sapply(1:12,FUN = function(site_order){AGG_par_est_ite(site=site_order,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,deltal=deltal,deltau=deltau,folder_name = folder_name,phi0l=0)},simplify = FALSE)
 
 summary(result_new[[1]])
 
@@ -358,7 +358,7 @@ plot_AGG_diagnostics_method <- function(site=1,q=0.9,cond_site_names,grid20km=xy
     # examine over
     if (method_name=="Original_method") {
       AGGPars <- as.numeric(unlist(st_drop_geometry(est_all_sf)[res_site_over,c(13:17)]))
-      Zover <- as.numeric(unlist(Z%>% dplyr::select(paste0("Z",res_site_over))))
+      Zover <- as.numeric(unlist(Z %>% dplyr::select(paste0("Z",res_site_over))))
     }
     if (method_name=="New_iterative_approach") {
       AGGPars <- as.numeric(unlist(est_new[res_site_over,c(1:3,8,9)]))
@@ -370,7 +370,7 @@ plot_AGG_diagnostics_method <- function(site=1,q=0.9,cond_site_names,grid20km=xy
     # examine under
     if (method_name=="Original_method") {
       AGGPars <- as.numeric(unlist(st_drop_geometry(est_all_sf)[res_site_under,c(13:17)]))
-      Zunder <- as.numeric(unlist(ZZ %>% dplyr::select(paste0("Z",res_site_under))))
+      Zunder <- as.numeric(unlist(Z %>% dplyr::select(paste0("Z",res_site_under))))
     }
     if (method_name=="New_iterative_approach") {
       AGGPars <- as.numeric(unlist(est_new[res_site_under,c(1:3,8,9)]))
