@@ -77,8 +77,8 @@ NLL_exp_phis <- function(phi,x, d1j, mu1=as.numeric(unlist(mu_agg[,1])),deltal=N
   sigu <- phi0u + phi[1]*(1-exp(-(phi[2]*dij.)))
   sigl <- phi0l + phi[3]*(1-exp(-(phi[4]*dij.)))
   C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
-  log_lik[x<mu1] <- log(C_AGG[x<mu1])-((mu1[x<mu1]-x[x<mu1])/sigl[x<mu1])^deltal 
-  log_lik[x>=mu1] <- log(C_AGG[x>=mu1])-((x[x>=mu1]-mu1[x>=mu1])/sigu[x>=mu1])^deltau 
+  log_lik[z<mu1] <- log(C_AGG[z<mu1])-((mu1[z<mu1]-z[z<mu1])/sigl[z<mu1])^deltal 
+  log_lik[z>=mu1] <- log(C_AGG[z>=mu1])-((z[z>=mu1]-mu1[z>=mu1])/sigu[z>=mu1])^deltau 
   return(-sum(log_lik))
 }
 
@@ -137,7 +137,7 @@ par_est_mu <- function(z,v,given,res_margin_est) {
 #' @export
 #'
 #' @examples
-par_est_ite <- function(z,v=q,given=cond_site,cond_site_dist, parest_site, Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
+par_est_ite <- function(z,v,given,cond_site_dist, parest_site, Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
   d <- ncol(z)
   N <- nrow(z)
   res <- 1:d[-given]
@@ -178,7 +178,7 @@ par_est_ite <- function(z,v=q,given=cond_site,cond_site_dist, parest_site, Nite=
       phi_init <- c(phi1u.[k],phi2u.[k],phi1l.[k],phi2l.[k],phi0u.[k])
     }
       
-    opt <- optim(fn=NLL_exp_phis,x = Z,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,k]),control=list(maxit=2000),par = phi_init,deltal=deltal,deltau=deltau,phi0l=phi0l_init,method = "Nelder-Mead")
+    opt <- optim(fn=NLL_exp_phis,x = z,d1j=cond_site_dist,mu1=as.numeric(mu_agg[,k]),control=list(maxit=2000),par = phi_init,deltal=deltal,deltau=deltau,phi0l=phi0l_init,method = "Nelder-Mead")
     print(opt)
     phi1u <- opt$par[1]
     phi2u <- opt$par[2]
@@ -235,11 +235,9 @@ AGG_par_est_ite <- function(data_mod_Lap,site,v=0.9,Nite=10,sites = sites_index_
   aest <- discard(est_all_sf %>% filter(cond_site==cond_site) %>% pull(a),is.na)
   best <- discard(est_all_sf %>% filter(cond_site==cond_site) %>% pull(b),is.na)
   Z <- observed_residuals(df=data_mod_Lap,given=cond_site,v = v,a=aest,b=best)
-print(names(Z))
-    try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,show_ite=TRUE,deltal=deltal,deltau= deltau,phi0l=phi0l) 
+  print(names(Z)[180:220])
+  try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,show_ite=TRUE,deltal=deltal,deltau= deltau,phi0l=phi0l) 
 
-  
- 
   # separate parameter estimation and analysis
   p <- ggplot(try7$mu_agg %>% pivot_longer(everything(),names_to = "iteration",values_to = "par") %>% mutate(iteration=factor(iteration,levels=paste0("X",1:Nite)))) + geom_boxplot(aes(x=iteration,y=par)) +ylab(TeX("$\\mu_{AGG}$"))
   ggsave(p,file=paste0("../Documents/",folder_name,"/boxplot_mu_agg_",cond_site_name,".png"),height=5,width=10)
@@ -257,7 +255,7 @@ print(names(Z))
   # explore also spatial parameters
   est_ite <- try7$par_sum %>% add_row(.before=cond_site)
   names(est_ite) <- paste0(names(est_ite),"_ite")
-  tmpsf <- cbind(est_all_sf %>% filter(cond_site==cond_site_name),est_ite)
+  tmpsf <- cbind(est_all_sf %>% filter(cond_site==cond_site),est_ite)
   # plot parameter estimates against distance
   # calculate distance from a conditioning site with st_distance()
   
@@ -290,8 +288,9 @@ print(names(Z))
   tmap_save(t,filename=paste0("../Documents/",folder_name,"/sigma_upper_",cond_site_name,".png"),width=8,height=6)
   return(try7)
 }
+
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu"
-result_new <- sapply(1:12,FUN = function(site_order){AGG_par_est_ite(site=site_order,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,deltal=deltal,deltau=deltau,folder_name = folder_name,phi0l=0)},simplify = FALSE)
+result_new <- sapply(1:2,FUN = function(site_order){AGG_par_est_ite(site=site_order,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,deltal=deltal,deltau=deltau,folder_name = folder_name,phi0l=0)},simplify = FALSE)
 
 summary(result_new[[1]])
 
