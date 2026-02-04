@@ -170,6 +170,8 @@ par_est_ite <- function(z,v,given,cond_site_dist, parest_site, Nite=10, show_ite
     }
     # estimate mu
     pe <- par_est_mu(z=z,v=v,given=given,res_margin_est=residual_pars)
+    print(summary(pe))
+    print(glimpse(pe))
     # update mu parameters
     mu_agg[,k] <- pe$mu
     # estimate phi parameters
@@ -227,14 +229,20 @@ AGG_par_est_ite <- function(data_mod_Lap,site,v=0.9,Nite=10,sites = sites_index_
   # calculate distance from the conditioning site
   dist_tmp <- as.numeric(unlist(st_distance(grid20km[cond_site,],grid20km)))
   # remove zero distance (conditioning site)
-  dist_tmp <- dist_tmp[dist_tmp>0]
+  dist_tmp <- dist_tmp[dist_tmp>1]
   # normalise distance using a common constant
   distnorm <- dist_tmp/1000000
   print(summary(distnorm))
   parest_site <- st_drop_geometry(result[[site]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
   # calculate observed residuals
-  aest <- discard(est_all_sf %>% filter(cond_site==cond_site) %>% pull(a),is.na)
-  best <- discard(est_all_sf %>% filter(cond_site==cond_site) %>% pull(b),is.na)
+  aest <- discard(est_all_sf %>% filter(cond_site==cond_site_name) %>% pull(a),is.na)
+  print("Check alpha")
+  print(summary(aest))
+  print(length(aest))
+  best <- discard(est_all_sf %>% filter(cond_site==cond_site_name) %>% pull(b),is.na)
+  print("Check beta")
+  print(summary(best))
+  print(length(best))
   Z <- observed_residuals(df=data_mod_Lap,given=cond_site,v = v,a=aest,b=best)
   print(names(Z)[180:220])
   try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = parest_site,Nite=Nite,show_ite=TRUE,deltal=deltal,deltau= deltau,phi0l=phi0l) 
@@ -256,7 +264,7 @@ AGG_par_est_ite <- function(data_mod_Lap,site,v=0.9,Nite=10,sites = sites_index_
   # explore also spatial parameters
   est_ite <- try7$par_sum %>% add_row(.before=cond_site)
   names(est_ite) <- paste0(names(est_ite),"_ite")
-  tmpsf <- cbind(est_all_sf %>% filter(cond_site==cond_site),est_ite)
+  tmpsf <- cbind(est_all_sf %>% filter(cond_site==cond_site_name),est_ite)
   # plot parameter estimates against distance
   # calculate distance from a conditioning site with st_distance()
   
@@ -403,12 +411,13 @@ plot_AGG_diagnostics_method <- function(site=1,q=0.9,cond_site_names,grid20km=xy
 }
 
 # run diagnostics for both methods
-sapply(1:2,FUN=plot_AGG_diagnostics_method,method_name="Original_method",result=result_new,cond_site_names = site_name_diagonal)
-sapply(1:2,FUN=plot_AGG_diagnostics_method,method_name="New_iterative_approach",result=result_new,cond_site_names = site_name_diagonal)
+sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="Original_method",result=result_new,cond_site_names = site_name_diagonal)
+sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="New_iterative_approach",result=result_new,cond_site_names = site_name_diagonal)
 
 # repeat for phi0l also being estimated
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu_phi0l_phiul"
-result_new <- sapply(1:12,FUN = AGG_par_est_ite,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,cond_site_names = site_name_diagonal,phi0l=NULL,est_all_sf = est_all_sf,Nite=10,result=result_previous,folder_name = folder_name,simplify = FALSE)
+result_new <- sapply(1:12,FUN = function(site_order){AGG_par_est_ite(site=site_order,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,phi0l=NULL,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,deltal=deltal,deltau=deltau,folder_name = folder_name)},simplify = FALSE)
+
 sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="Original_method",result=result_new,cond_site_names = site_name_diagonal)
 sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="New_iterative_approach",result=result_new,cond_site_names = site_name_diagonal)
 
