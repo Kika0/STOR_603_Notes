@@ -417,6 +417,9 @@ sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="New_iterative_approach"
 # repeat for phi0l also being estimated
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu_phi0l_phiul"
 result_new <- sapply(1:12,FUN = function(site_order){AGG_par_est_ite(site=site_order,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,phi0l=NULL,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,deltal=deltal,deltau=deltau,folder_name = folder_name)},simplify = FALSE)
+# save data
+save(result_new, file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData")
+
 
 sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="Original_method",result=result_new,cond_site_names = site_name_diagonal)
 sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="New_iterative_approach",result=result_new,cond_site_names = site_name_diagonal)
