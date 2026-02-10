@@ -27,6 +27,12 @@ dev.off()
 apply(data_mod_Lap,MARGIN=c(2),max)[c(192,260,321)]
 
 # transform onto new Laplace margins
-
-
+data_mod_Lap_star <- as.data.frame((data_mod_Lap %>% apply(c(2),FUN=row_number))/(nrow(data_mod_Lap)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+# check a couple of sites
+head(data_mod_Lap[,1:5])
+head(data_mod_Lap_star[,1:5])
 # estimate alpha and beta
+pe <- par_est(df=data_mod_Lap,v=q,given=192,keef_constraints = c(1,2))
+# compare with existing estimates
+summary(pe$a)
+summary(est_all_sf %>% dplyr::select(cond_site=="Birmingham") %>% pull(a))
