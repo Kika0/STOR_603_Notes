@@ -32,7 +32,13 @@ data_mod_Lap_star <- as.data.frame((data_mod_Lap %>% apply(c(2),FUN=row_number))
 head(data_mod_Lap[,1:5])
 head(data_mod_Lap_star[,1:5])
 # estimate alpha and beta
-pe <- par_est(df=data_mod_Lap,v=q,given=192,keef_constraints = c(1,2))
+pe <- par_est(df=data_mod_Lap_star,v=q,given=192,keef_constraints = c(1,2),margin="Normal",method="sequential2")
 # compare with existing estimates
-summary(pe$a)
-summary(est_all_sf %>% dplyr::select(cond_site=="Birmingham") %>% pull(a))
+summary(pe$b)
+summary(est_all_sf %>% dplyr::filter(cond_site=="Birmingham") %>% pull(b))
+
+a <- est_all_sf %>% dplyr::filter(cond_site=="Birmingham") %>% pull(a)
+b <- est_all_sf %>% dplyr::filter(cond_site=="Birmingham") %>% pull(b)
+a_star <- pe$a
+b_star <- pe$b
+
