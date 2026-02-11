@@ -42,3 +42,7 @@ b <- est_all_sf %>% dplyr::filter(cond_site=="Birmingham") %>% pull(b)
 a_star <- pe$a
 b_star <- pe$b
 
+# histogram comparison
+tmpa <- rbind(data.frame("alpha"=a,"method"="original_estimate"),data.frame("alpha"=a_star,"method"="new_estimate"))
+tmpb <- rbind(data.frame("beta"=b,"method"="original_estimate"),data.frame("beta"=b_star,"method"="new_estimate"))
+p1 <- ggplot(tmpa) + geom_density(aes(x=alpha,fill=method),alpha=0.5) + scale_fill_manual(values=c("original_estimate"="black","new_estimate"="#C11432"))
