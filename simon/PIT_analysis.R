@@ -1,5 +1,5 @@
-#library(tmap)
-#library(sf)
+library(tmap)
+library(sf)
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
@@ -42,7 +42,7 @@ b <- est_all_sf %>% dplyr::filter(cond_site=="Birmingham") %>% pull(b) %>% na.om
 a_star <- pe$a
 b_star <- pe$b
 
-# histogram comparison
+# density comparison
 tmpa <- rbind(data.frame("alpha"=a,"method"="original_estimate"),data.frame("alpha"=a_star,"method"="new_estimate"))
 tmpb <- rbind(data.frame("beta"=b,"method"="original_estimate"),data.frame("beta"=b_star,"method"="new_estimate"))
 p1 <- ggplot(tmpa) + geom_density(aes(x=alpha,fill=method),alpha=0.5) + scale_fill_manual(values=c("original_estimate"="black","new_estimate"="#C11432"))
@@ -74,3 +74,23 @@ tmap_save(t,filename=paste0("../Documents/ab_compare_PIT_map_values.png"),width=
 # plot observed residuals
 Z <- observed_residuals(df=data_mod_Lap,given=192,v = q,a=a,b=b)
 Z_star <- observed_residuals(df=data_mod_Lap_star,given=192,v = q,a=a_star,b=b_star)
+
+# calculate mean
+Zmean <- apply(Z,MARGIN=c(2),FUN=mean)
+Zmean_star <- apply(Z_star,MARGIN=c(2),FUN=mean)
+# calculate variance
+Zvar <- apply(Z,MARGIN=c(2),FUN=var)
+Zvar_star <- apply(Z_star,MARGIN=c(2),FUN=var)
+tmpmean <- rbind(data.frame("Zmean"=Zmean,"method"="original_estimate"),data.frame("Zmean"=Zmean_star,"method"="new_estimate"))
+tmpvar <- rbind(data.frame("Zvar"=Zvar,"method"="original_estimate"),data.frame("Zvar"=Zvar_star,"method"="new_estimate"))
+p1 <- ggplot(tmpmean) + geom_density(aes(x=Zmean,fill=method),alpha=0.5) + scale_fill_manual(values=c("original_estimate"="black","new_estimate"="#C11432"))
+p2 <- ggplot(tmpvar) + geom_density(aes(x=Zvar,fill=method),alpha=0.5) + scale_fill_manual(values=c("original_estimate"="black","new_estimate"="#C11432"))
+p <- grid.arrange(p1,p2,ncol=2)
+ggsave(p,filename="../Documents/Z_mean_var_compare_PIT.png",width=10,height=5)
+
+# plot selected sites
+p260 <- ggplot() + geom_density(Z,mapping=aes(x=Z260),fill="black",alpha=0.5) + geom_density(Z_star,mapping=aes(x=Z260),fill="#C11432",alpha=0.5)
+p321 <- ggplot() + geom_density(Z,mapping=aes(x=Z321),fill="black",alpha=0.5) + geom_density(Z_star,mapping=aes(x=Z321),fill="#C11432",alpha=0.5)
+p <- grid.arrange(p260,p321,ncol=2)
+ggsave(p,filename="../Documents/Z_selected_sites_compare_PIT.png",width=10,height=5)
+
