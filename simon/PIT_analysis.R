@@ -94,3 +94,23 @@ p321 <- ggplot() + geom_density(Z,mapping=aes(x=Z321),fill="black",alpha=0.5) + 
 p <- grid.arrange(p260,p321,ncol=2)
 ggsave(p,filename="../Documents/Z_selected_sites_compare_PIT.png",width=10,height=5)
 
+# estimate all parameters for all sites
+# find indeces of start and end sites
+source("spatial_parameter_estimation.R") # for spatial_par_est function
+Birmingham <- c(-1.9032,52.4806)
+Cromer <- c(1.28486,53.05349)
+site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
+site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
+
+sites_index_diagonal <- c(192,193,194,195,196,197,218,219,220,221,242,263) # first is Birmingham and last is Cromer
+site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_diagonal)-2)),"Cromer")
+# plot these points on a map
+uk_diag <- xyUK20_sf %>% mutate(siteID=as.numeric(1:nrow(xyUK20_sf)))
+uk_diag <- uk_diag %>% mutate(sites_diagonal=factor(case_match(siteID,c(site_start) ~ "Birmingham",c(site_end)~"Cromer",sites_index_diagonal[2:(length(site_name_diagonal)-1)]~"diagonal_sites")))
+tmap_mode("plot")
+
+# estimate parameters along
+spatial_par_est(data_Lap = data_mod_Lap_star,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = 0,v=q,Ndays_season = 90,title = paste0("diagonal_sites_Birmingham_Cromer_star_",q*100))
+# load estimates to calculate observed residuals
+load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_Cromer_star_90.RData")
+summary(est_all_sf)
