@@ -19,6 +19,7 @@ sapply(file.sources,source,.GlobalEnv)
 load("data_processed/temperature_data.RData",verbose=TRUE) # for data_mod_Lap
 load("data_processed/spatial_helper.RData",verbose = TRUE) # for xyUK20_sf
 q <- 0.9
+load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_Cromer90.RData")
 
 # check maxima for each site
 hist(apply(data_mod_Lap,MARGIN=c(2),max))
@@ -113,4 +114,20 @@ tmap_mode("plot")
 spatial_par_est(data_Lap = data_mod_Lap_star,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = 0,v=q,Ndays_season = 90,title = paste0("diagonal_sites_Birmingham_Cromer_star_",q*100))
 # load estimates to calculate observed residuals
 load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_Cromer_star_90.RData")
+est_all_sf_star <- est_all_sf
 summary(est_all_sf)
+summary(est_all_sf_star)
+summary(est_all_sf_star-est_all_sf)
+for (i in 1:12) {
+  print(site_name_diagonal[i])
+  print(summary(est_all_sf_star %>% filter(cond_site==site_name_diagonal[i]) %>% select(a,b,mu_agg,sigl,sigu,deltal,deltau)-est_all_sf %>% filter(cond_site==site_name_diagonal[i]) %>% select(a,b,mu_agg,sigl,sigu,deltal,deltau)))
+}
+
+est_all_diag1 <- est_all_sf_star %>% mutate(cond_site = factor(as.character(cond_site),levels=as.character(site_name_diagonal)))
+tm <- map_param(tmp_est=est_all_diag1, method = "AGG", facet_var = c("cond_site"), title_map = "Sites from Birmingham to Cromer")
+condmodel_params <- c("a","b","mu","sig","muagg","sigl","sigu","sigdiff","deltal","deltau","deltadiff")
+
+save_map_i <- function(i,tm_list=tm,doc_folder = "Birmingham_Cromer_diagonal_star",w = 8,h = 8,par_vect = condmodel_params) {
+  tmap_save(tm_list[[i]],filename = paste0("../Documents/",doc_folder,"/allsites_",par_vect[i],"_original.png"),width = w,height = h) 
+}
+sapply(1:length(condmodel_params),FUN = save_map_i)
