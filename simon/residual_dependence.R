@@ -2,6 +2,7 @@ library(tmap) # spatial map plots
 library(sf) # for handling spatial sf objects
 library(viridis)
 library(tidyverse)
+library(units) # manage units for distance
 library(latex2exp) # latex expressions for plot labels
 theme_set(theme_bw())
 theme_replace(
@@ -60,9 +61,9 @@ est_iteN <- as.data.frame(t(ZN)) %>% add_row(.before=sites_index_diagonal[1])
 est_iteU <- as.data.frame(t(ZU)) %>% add_row(.before=sites_index_diagonal[1])
 
 # find 10 largest days
-hot_temps <- sort(as.numeric(unlist(data_mod_Lap[,sites_index_diagonal[1]][data_mod_Lap[,sites_index_diagonal[1]]>quantile(data_mod_Lap[,sites_index_diagonal[1]],v)])),decreasing=TRUE)[1:10]
+hot_temps <- sort(as.numeric(unlist(data_mod_Lap[,sites_index_diagonal[1]][data_mod_Lap[,sites_index_diagonal[1]]>quantile(data_mod_Lap[,sites_index_diagonal[1]],q)])),decreasing=TRUE)[1:10]
 # find the corresponding rows
-hot_temps_index <- sort(as.numeric(unlist(data_mod_Lap[,sites_index_diagonal[1]][data_mod_Lap[,sites_index_diagonal[1]]>quantile(data_mod_Lap[,sites_index_diagonal[1]],v)])),decreasing=TRUE,index.return=TRUE)$ix[1:10]
+hot_temps_index <- sort(as.numeric(unlist(data_mod_Lap[,sites_index_diagonal[1]][data_mod_Lap[,sites_index_diagonal[1]]>quantile(data_mod_Lap[,sites_index_diagonal[1]],q)])),decreasing=TRUE,index.return=TRUE)$ix[1:10]
 # check data
 for (i in hot_temps_index) {
 print(summary(as.numeric(unlist(Z[i,]))) ) }
@@ -110,3 +111,20 @@ tU <- tm_shape(tmpU %>% mutate("name"=factor(name, levels=unique(tmp$name)))) + 
 tmap_save(tm=tN, filename=paste0("../Documents/new_residual_dependence_Birmingham_normal.png"),width=10,height=8)
 tmap_save(tm=tU, filename=paste0("../Documents/new_residual_dependence_Birmingham_uniform.png"),width=10,height=8)
   
+# calculate correlation matrix
+gaus_cor <- function(i,j,h,cond_index=192) {
+  (mat_cor(h[i,j]) - mat_cor(h[cond_index,i])* mat_cor(h[cond_index,j]) )/ (1-(mat_cor(h[cond_index,i])^2)^(1/2) * (1-mat_cor(h[cond_index,j])^2)^(1/2))
+}
+library(fields)
+mat_cor <- function(x) {
+  Matern(x,range=1,smoothness=1)
+}
+# calculate distance matrix
+h <- (st_distance(xyUK20_sf,xyUK20_sf) %>% drop_units() )/1000
+
+Zcor <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
+for (i in 1:(ncol(Z)+1)) {
+  for (j in 1:(ncol(Z)+1)) {
+    Zcor[i,j] <- gaus_cor(i=i,j=j,h=h)
+  }
+}
