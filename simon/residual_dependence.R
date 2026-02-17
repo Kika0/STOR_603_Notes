@@ -39,7 +39,7 @@ est_all <- as.data.frame(est_all_sf)
 sites_index_diagonal <- c(192,193,194,195,196,197,218,219,220,221,242,263) # first is Birmingham and last is Cromer
 site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_diagonal)-2)),"Cromer")
 
-# load other estimates
+# residuals: new iterative approach with 4 phi parameters ---------------------
 load(file="data_processed/iterative_sigmas_estimates_Birmingham_Cromer_diagonal.RData",verbose = TRUE)
 pe <- as.data.frame(result[[1]] %>% select(a,b,mu_agg_ite_sig,sigl_ite_sig,sigu_ite_sig,deltal_ite,deltau_ite)) %>% drop_na()
 names(pe) <- c("a","b","mu","sigl","sigu","deltal","deltau")
@@ -56,8 +56,6 @@ ZN <- sapply(1:ncol(Z),FUN=function(k) {AGG_Normal_PIT(z = Z[,k],theta=c(pe$mu[k
 # add empty row for Birmingham and transform back to spatial
 est_iteN <- as.data.frame(t(ZN)) %>% add_row(.before=sites_index_diagonal[1])
 est_iteU <- as.data.frame(t(ZU)) %>% add_row(.before=sites_index_diagonal[1])
-
-# check the transform
 
 # find 10 largest days
 hot_temps <- sort(as.numeric(unlist(data_mod_Lap[,sites_index_diagonal[1]][data_mod_Lap[,sites_index_diagonal[1]]>quantile(data_mod_Lap[,sites_index_diagonal[1]],q)])),decreasing=TRUE)[1:10]
@@ -76,11 +74,10 @@ tmpU <- st_as_sf(cbind(est_iteU %>% dplyr::select(all_of(hot_temps_index)),resul
 misscol <- "aquamarine"
 tN <- tm_shape(tmpN %>% mutate("name"=factor(name, levels=unique(tmpN$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-8,8),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^N$"))) + tm_facets(by="name",ncol=5)
 tU <- tm_shape(tmpU %>% mutate("name"=factor(name, levels=unique(tmpU$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(0,1),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^U$"))) + tm_facets(by="name",ncol=5)
-  
 tmap_save(tm=tN, filename=paste0("../Documents/residual_dependence_Birmingham_normal.png"),width=10,height=8)
 tmap_save(tm=tU, filename=paste0("../Documents/residual_dependence_Birmingham_uniform.png"),width=10,height=8)
 
-# repeat with new residuals ----------------------------------------------------
+# repeat with residuals: new iterative approach with 6 phi parameters -------------------------------
 load(file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose = TRUE)
 aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(a),is.na)
 best <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(b),is.na)
@@ -101,16 +98,56 @@ for (i in hot_temps_index) {
   print(summary(as.numeric(unlist(Zemp[i,]))) ) 
   print(summary(as.numeric(unlist(ZU[i,]))) ) }
 
-tmpN <- st_as_sf(cbind(est_iteN %>% select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
-tmpU <- st_as_sf(cbind(est_iteU %>% select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
+tmpN <- st_as_sf(cbind(est_iteN %>% dplyr::select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
+tmpU <- st_as_sf(cbind(est_iteU %>% dplyr::select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
 misscol <- "aquamarine"
-tN <- tm_shape(tmpN %>% mutate("name"=factor(name, levels=unique(tmp$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-8,8),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^N$"))) + tm_facets(by="name",ncol=5)
-tU <- tm_shape(tmpU %>% mutate("name"=factor(name, levels=unique(tmp$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(0,1),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^U$"))) + tm_facets(by="name",ncol=5)
-  
+tN <- tm_shape(tmpN %>% mutate("name"=factor(name, levels=unique(tmpN$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-8,8),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^N$"))) + tm_facets(by="name",ncol=5)
+tU <- tm_shape(tmpU %>% mutate("name"=factor(name, levels=unique(tmpU$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(0,1),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^U$"))) + tm_facets(by="name",ncol=5)
 tmap_save(tm=tN, filename=paste0("../Documents/new_residual_dependence_Birmingham_normal.png"),width=10,height=8)
 tmap_save(tm=tU, filename=paste0("../Documents/new_residual_dependence_Birmingham_uniform.png"),width=10,height=8)
+
+# repeat with residuals: separate parameters -------------------------------
+aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(a),is.na)
+best <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(b),is.na)
+pe <- as.data.frame(result[[1]] %>% select(mu_agg,sigl,sigu,deltal,deltau)) %>% drop_na()
+names(pe) <- c("mu","sigl","sigu","deltal","deltau")
+# calculate observed residuals
+Z <- observed_residuals(df=data_mod_Lap,given=sites_index_diagonal[1],v = q,a=aest,b=best)
+ZU <- sapply(1:ncol(Z),FUN=function(k) {pAGG(x = Z[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))})
+ZN <- sapply(1:ncol(Z),FUN=function(k) {AGG_Normal_PIT(z = Z[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))})
+# add empty row for Birmingham and transform back to spatial
+est_iteU <- as.data.frame(t(ZU)) %>% add_row(.before=sites_index_diagonal[1])
+est_iteN <- as.data.frame(t(ZN)) %>% add_row(.before=sites_index_diagonal[1])
+# check data
+for (i in hot_temps_index) {
+  print(summary(as.numeric(unlist(Z[i,]))) ) }
+Zemp <- as.data.frame((Z %>% apply(c(2),FUN=row_number))/(nrow(Z)+1)) 
+for (i in hot_temps_index) {
+  print(summary(as.numeric(unlist(Zemp[i,]))) ) 
+  print(summary(as.numeric(unlist(ZU[i,]))) ) }
+
+tmpN <- st_as_sf(cbind(est_iteN %>% dplyr::select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
+tmpU <- st_as_sf(cbind(est_iteU %>% dplyr::select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
+misscol <- "aquamarine"
+  tN <- tm_shape(tmpN %>% mutate("name"=factor(name, levels=unique(tmpN$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-8,8),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^N$"))) + tm_facets(by="name",ncol=5)
+  tU <- tm_shape(tmpU %>% mutate("name"=factor(name, levels=unique(tmpU$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(0,1),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^U$"))) + tm_facets(by="name",ncol=5)
+  tmap_save(tm=tN, filename=paste0("../Documents/separate_residual_dependence_Birmingham_normal.png"),width=10,height=8)
+  tmap_save(tm=tU, filename=paste0("../Documents/separate_residual_dependence_Birmingham_uniform.png"),width=10,height=8)
+
+# also include empirical residuals ---------------------------------------------
+ZN <- sapply(1:ncol(Z),FUN=function(k) {qnorm(Zemp[,k])})
+est_iteU <- as.data.frame(t(Zemp)) %>% add_row(.before=sites_index_diagonal[1])
+est_iteN <- as.data.frame(t(ZN)) %>% add_row(.before=sites_index_diagonal[1])
+tmpN <- st_as_sf(cbind(est_iteN %>% dplyr::select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
+tmpU <- st_as_sf(cbind(est_iteU %>% dplyr::select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
+misscol <- "aquamarine"
+tN <- tm_shape(tmpN %>% mutate("name"=factor(name, levels=unique(tmpN$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-8,8),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^N$"))) + tm_facets(by="name",ncol=5)
+tU <- tm_shape(tmpU %>% mutate("name"=factor(name, levels=unique(tmpU$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(0,1),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^U$"))) + tm_facets(by="name",ncol=5)
+tmap_save(tm=tN, filename=paste0("../Documents/empirical_residual_dependence_Birmingham_normal.png"),width=10,height=8)
+tmap_save(tm=tU, filename=paste0("../Documents/empirical_residual_dependence_Birmingham_uniform.png"),width=10,height=8)
   
-# calculate correlation matrix
+  
+# calculate correlation matrix -------------------------------------------------
 gaus_cor <- function(i,j,h,cond_index=192) {
   (mat_cor(h[i,j]) - mat_cor(h[cond_index,i])* mat_cor(h[cond_index,j]) )/ ((1-(mat_cor(h[cond_index,i])^2))^(1/2) * (1-mat_cor(h[cond_index,j])^2)^(1/2))
 }
