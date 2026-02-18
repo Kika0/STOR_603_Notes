@@ -168,4 +168,8 @@ summary(Zcor[,190:199])
 # replace NA with 0
 Zcor[,cond_index] <- Zcor[cond_index,] <- 0
 Zcor[cond_index,cond_index] <- 1
-rmvnorm(n=1,Sigma = Zcor)
+random10 <- as.data.frame(t(rmvnorm(n=10,Sigma = Zcor)))
+names(random10) <- paste0("random",1:10)
+tmpsf <- st_as_sf(cbind(random10,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-8,8),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_Birmingham_normal.png"),width=10,height=8)
