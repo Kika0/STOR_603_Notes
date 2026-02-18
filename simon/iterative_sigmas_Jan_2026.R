@@ -147,16 +147,16 @@ par_est_ite <- function(z,v,given,cond_site_dist, parest_site, Nite=10, show_ite
   phi0l. <- phi0u. <- c(0.2)
   
   if (is.null(deltal)) {
-    residual_pars <- list(sigl = parest_site$sigl_ite_sigl,
-                          sigu = parest_site$sigu_ite_sigu,
-                          deltal = parest_site$deltal_ite[1],
-                          deltau = parest_site$deltau_ite[1])
+    residual_pars <- list(sigl = parest_site$sigl,
+                          sigu = parest_site$sigu,
+                          deltal = parest_site$deltal[1],
+                          deltau = parest_site$deltau[1])
     deltal. <- 2
     deltau. <- 2
     
   } else {
-    residual_pars <- list("sigl" = parest_site$sigl_ite_sigl,
-                          "sigu" = parest_site$sigu_ite_sigu,
+    residual_pars <- list("sigl" = parest_site$sigl,
+                          "sigu" = parest_site$sigu,
                           "deltal" = deltal,
                           "deltau" = deltau)
     deltal. <- deltal
@@ -234,6 +234,7 @@ AGG_par_est_ite <- function(data_mod_Lap,site,v=0.9,Nite=10,sites = sites_index_
   distnorm <- dist_tmp/1000000
   print(summary(distnorm))
   parest_site <- st_drop_geometry(result[[site]]) %>% dplyr::select(sigl_ite_sigl,sigu_ite_sigu,deltal_ite,deltau_ite) %>% na.omit()
+  names(parest_site) <- c("sigl","sigu","deltal","deltau")
   # calculate observed residuals
   aest <- discard(est_all_sf %>% filter(cond_site==cond_site_name) %>% pull(a),is.na)
   print("Check alpha")
