@@ -215,7 +215,7 @@ AGG_par_est_ite <- function(data_mod_Lap,site,v=0.9,Nite=10,sites = sites_index_
 }
 # load result_new for deltal and deltau
 load("data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose=TRUE)
-# requires loading functions from iterative_sigmas_Jan
+# requires loading functions from iterative_sigmas_Jan_2026
 deltal <- result_new[[1]]$deltal[1]
 deltau <- result_new[[1]]$deltau[1]
 folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu_star"
