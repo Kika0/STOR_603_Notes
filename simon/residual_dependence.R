@@ -2,6 +2,7 @@ library(tmap) # spatial map plots
 library(sf) # for handling spatial sf objects
 library(viridis)
 library(tidyverse)
+library(mvtnorm) # for multivariate normal distribution functions
 library(units) # manage units for distance
 library(latex2exp) # latex expressions for plot labels
 theme_set(theme_bw())
@@ -153,28 +154,37 @@ gaus_cor <- function(i,j,h,cond_index=192) {
 }
 library(fields)
 mat_cor <- function(x) {
-  fields::Matern(x,range=50,smoothness=1)
+  fields::Matern(x,range=200,smoothness=1)
+}
+
+gaus_cov <- function(i,j,h,cond_index=192) {
+  (mat_cor(h[i,j]) - mat_cor(h[cond_index,i])* mat_cor(h[cond_index,j]) )
 }
 # calculate distance matrix
 h <- (st_distance(xyUK20_sf,xyUK20_sf) %>% drop_units() )/1000
 
-Zcor <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
+Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
 for (i in 1:(ncol(Z)+1)) {
   for (j in 1:(ncol(Z)+1)) {
-    Zcor[i,j] <- gaus_cor(i=i,j=j,h=h)
+    Zcov[i,j] <- gaus_cov(i=i,j=j,h=h)
   }
 }
-summary(Zcor[,190:199])
+summary(Zcov[,190:199])
 # replace NA with 0
 cond_index <- 192
-Zcor[,cond_index] <- Zcor[cond_index,] <- 0
-Zcor[cond_index,cond_index] <- 1
-random10 <- as.data.frame(t(  rmvnorm(n=100000,Sigma = Zcor)  ))
-top10_index <- sort(abs(as.numeric(unlist(random10[192,]))), index.return=TRUE,decreasing = FALSE)$ix[1:10]
-random10 <- random10[,top10_index]
+Zcov[,cond_index] <- Zcov[cond_index,] <- 0
+Zcov[cond_index,cond_index] <- 1
+# random10 <- as.data.frame(t(  rmvnorm(n=100000,Sigma = Zcov)  ))
+# top10_index <- sort(abs(as.numeric(unlist(random10[192,]))), index.return=TRUE,decreasing = FALSE)$ix[1:10]
+# random10 <- random10[,top10_index]
+random10 <- as.data.frame(t(  rmvnorm(n=10,Sigma = Zcov)  ))
 names(random10) <- paste0("random",1:10)
 random10[cond_index,] <- NA
 tmpsf <- st_as_sf(cbind(random10,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
 
-t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-8,8),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
 tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_Birmingham_normal.png"),width=10,height=8)
+
+NLL_range <- function(x) {
+  dmvnorm()
+}
