@@ -1,5 +1,6 @@
 library(tidyverse)
 library(tmap)
+library(lubridate)
 theme_set(theme_bw())
 theme_replace(
   panel.spacing = unit(2, "lines"),
@@ -13,18 +14,24 @@ theme_replace(
 load("data_processed/temperature_data.RData",verbose = TRUE)
 load("data_processed/spatial_helper.RData", verbose = TRUE)
 
-# transform to original margins
+# load to determine index
 load("../luna/kristina/P2q/ukgd_cpm85_5k_x84y20_MSp2q.RData", verbose = TRUE)
-
+# add column for date
+x=seq.Date(from=as.Date("1960-01-01"), to=as.Date("2023-12-31"), by="day")
+data01_obs <- data01 %>% rowid_to_column() %>% filter(class=="obs") %>% mutate("date"=as.Date(x))
+# filter date
+july3_1976 <- data01_obs %>% filter("date"==as.Date("1976-07-19")) %>% pull(rowid)
+data01 %>% rowid_to_column() %>% filter(class=="mod",time<2022.55,time>2022.54)
+# compare P2q of the observed 22846 and model 38362 data
 load("../luna/kristina/MSGpdParam/ukgd_cpm85_5k_x84y20.MSGpdParam.2025-02-26.RData", verbose = TRUE)
-
-str(gpdpar)
-qgam.p2q.fn[[22846]](0.99)
-
-gpdpar[22846,]
-
+gpdpar[c(22846,38362),]
+qgam.p2q.fn[[22845]](data01$u[22845])
+qgam.p2q.fn[[38362]](data01$u[22846])
+data01[c(22846,38362),]
 
 
+
+#
 files <- list.files("../luna/kristina/MSdata01/")
 list_of_files <- list() #create empty list
 # only subset for x in x20 and y in y20
