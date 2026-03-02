@@ -36,7 +36,7 @@ data01[c(22846,38362),]
 # load below threshold functions ---------------------------------------------
 folder_p2q_below94 <- "../luna/kristina/P2q/"
 files <- list.files(folder_p2q_below94)
-list_of_files <- list() #create empty list
+P2q_sites <- list() #create empty list
 # only subset for x in x20 and y in y20
 files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSp2q.RData")})
 #loop through the files
@@ -48,30 +48,30 @@ tmap_save(t,filename = "../Documents/missing_p2q_files.png")
 for (i in 1:length(files_subset1)) {
   print(files_subset1[i])
   load(paste0(folder_p2q_below94, files_subset1[i]))
-  list_of_files[[i]] <- qgam.p2q.fn[[july3_1976]] #add files to list position
+  P2q_sites[[i]] <- qgam.p2q.fn[[july3_1976]] #add files to list position
 }
 
 # load GPD parameters ---------------------------------------------------------
-folder_p2q_below94 <- "../luna/kristina/P2q/"
-files <- list.files(folder_p2q_below94)
-list_of_files <- list() #create empty dataframe
+folder_gpd_above94 <- "../luna/kristina/MSGpdParam/"
+files <- list.files(folder_gpd_above94)
+gpdpar_sites <- as.data.frame(matrix(ncol=3,nrow=nrow(xyUK20_sf))) #create empty dataframe
+names(gpdpar_sites) <- c("scale","shape","threshold")
 # only subset for x in x20 and y in y20
-files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSp2q.RData")})
+files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],".MSGpdParam.2025-02-26.RData")})
 #loop through the files
 files_subset1 <- files_subset[files_subset %in% files]
-# plot the missing files
-t <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(xyUK20_sf %>% filter(x %in% 96,!(y %in% c(120,124,128,132,136,140,144)))) + tm_dots("red")
-tmap_save(t,filename = "../Documents/missing_p2q_files.png")
 # could take only x and y divisible by 4 to subset and speed up data loading
 for (i in 1:length(files_subset1)) {
   print(files_subset1[i])
-  load(paste0(folder_p2q_below94, files_subset1[i]))
-  list_of_files[[i]] <- qgam.p2q.fn[[july3_1976]] #add files to list position
+  load(paste0(folder_gpd_above94, files_subset1[i]))
+  gpdpar_sites[i,] <- gpdpar[july3_1976,] #add files to list position
 }
-
 
 # find july 3rd in the observed data
 july3_obs <- as.numeric(unlist(data_obs[(92*(1976-1960)+34),]))
+
+# transform margin to original
+unif_orig_P2q(data=july3_obs,P2q=P2q_sites,gpdpar = gpdpar_sites)
 
 # join the summer data together could try 1960-1999 for non-stationary data -----
 # June 1 is 152 doy, August 31 is 243 doy (92 days per year)
