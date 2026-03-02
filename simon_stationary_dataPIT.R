@@ -105,7 +105,7 @@ save(uk,uk_notsimplified,xyUK20_sf,files_subset1,file="data_processed/spatial_he
 xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=92*40,nrow=nrow(xyUK20_sf))))
 names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(152:243,40),"_",rep(1960:1999,each=92)) 
 for (i in 1: length(list_of_files)) {
-  xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="obs",doy>=152,doy<=243, year<=1999) %>% pull(x) 
+  xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% dplyr::filter(class=="obs",doy>=152,doy<=243, year<=1999) %>% pull(x) 
 }
 # setup for par_est
 data_obs <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
@@ -117,7 +117,7 @@ data_obs_Lap <- as.data.frame((data_obs %>% apply(c(2),FUN=row_number))/(nrow(da
 xyUK20_stat <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=92*64,nrow=nrow(xyUK20_sf))))
 names(xyUK20_stat)[5:ncol(xyUK20_stat)] <- paste0(rep(152:243,64),"_",rep(1960:2023,each=92)) 
 for (i in 1: length(list_of_files)) {
-  u <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="obs",doy>=152,doy<=243) %>% pull(u) 
+  u <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% dplyr::filter(class=="obs",doy>=152,doy<=243) %>% pull(u) 
   u[is.na(u)] <- 0.01
   xyUK20_stat[i,5:ncol(xyUK20_stat)] <- u
 }
