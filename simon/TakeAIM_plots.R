@@ -1,5 +1,7 @@
 library(tidyverse)
 library(tmap)
+library(tmaptools)
+library(sf)
 library(lubridate)
 theme_set(theme_bw())
 theme_replace(
@@ -8,11 +10,13 @@ theme_replace(
   panel.grid.minor = element_blank(),
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
+folder_name <- "../Documents/TakeAIM2026/"
 
 # load observed data
 #source("spatial_parameter_estimation.R") # for spatial_par_est function
 load("data_processed/temperature_data.RData",verbose = TRUE)
 load("data_processed/spatial_helper.RData", verbose = TRUE)
+source("simon/P2q_function_helpers.R")
 
 # load to determine index
 load("../luna/kristina/P2q/ukgd_cpm85_5k_x84y20_MSp2q.RData", verbose = TRUE)
@@ -36,25 +40,25 @@ data01[c(22846,38362),]
 # load below threshold functions ---------------------------------------------
 folder_p2q_below94 <- "../luna/kristina/P2q/"
 files <- list.files(folder_p2q_below94)
-P2q_sites <- list() #create empty list
+P2q_sites1 <-P2q_sites2 <-P2q_sites3 <- list() #create empty list
 # only subset for x in x20 and y in y20
 files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSp2q.RData")})
 #loop through the files
 files_subset1 <- files_subset[files_subset %in% files]
-# plot the missing files
-t <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(xyUK20_sf %>% filter(x %in% 96,!(y %in% c(120,124,128,132,136,140,144)))) + tm_dots("red")
-tmap_save(t,filename = "../Documents/missing_p2q_files.png")
 # could take only x and y divisible by 4 to subset and speed up data loading
 for (i in 1:length(files_subset1)) {
   print(files_subset1[i])
   load(paste0(folder_p2q_below94, files_subset1[i]))
-  P2q_sites[[i]] <- qgam.p2q.fn[[july3_1976]] #add files to list position
+  P2q_sites1[[i]] <- qgam.p2q.fn[[july3_1976]] #add files to list position
+  P2q_sites2[[i]] <- qgam.p2q.fn[[july3_2026]] #add files to list position
+  P2q_sites3[[i]] <- qgam.p2q.fn[[july3_2076]] #add files to list position
+  
 }
 
 # load GPD parameters ---------------------------------------------------------
 folder_gpd_above94 <- "../luna/kristina/MSGpdParam/"
 files <- list.files(folder_gpd_above94)
-gpdpar_sites <- as.data.frame(matrix(ncol=3,nrow=nrow(xyUK20_sf))) #create empty dataframe
+gpdpar_sites1 <- gpdpar_sites2 <-gpdpar_sites3 <- as.data.frame(matrix(ncol=3,nrow=nrow(xyUK20_sf))) #create empty dataframe
 names(gpdpar_sites) <- c("scale","shape","threshold")
 # only subset for x in x20 and y in y20
 files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],".MSGpdParam.2025-02-26.RData")})
@@ -64,24 +68,29 @@ files_subset1 <- files_subset[files_subset %in% files]
 for (i in 1:length(files_subset1)) {
   print(files_subset1[i])
   load(paste0(folder_gpd_above94, files_subset1[i]))
-  gpdpar_sites[i,] <- gpdpar[july3_1976,] #add files to list position
+  gpdpar_sites1[i,] <- gpdpar[july3_1976,] #add files to df position
+  gpdpar_sites2[i,] <- gpdpar[july3_2026,] #add files to df position
+  gpdpar_sites3[i,] <- gpdpar[july3_2076,] #add files to df position
+  
 }
 
 # find july 3rd in the observed data
-july3_obs <- as.numeric(unlist(data_obs[(92*(1976-1960)+34),]))
+july3_obs <- as.numeric(unlist(data_obs_stationary[(92*(1976-1960)+34),]))
 
-# transform margin to original
-unif_orig_P2q(data=july3_obs,P2q=P2q_sites,gpdpar = gpdpar_sites)
+# transform margin to original to check
+july3_P2q <- unif_orig_P2q(u=july3_obs,P2q=P2q_sites1,gpdpar = gpdpar_sites1)
+# compare with observed data
+july3_obs1 <- as.numeric(unlist(data_obs[(92*(1976-1960)+34),]))
+# plot check
+plot(july3_P2q,july3_obs1)
 
-# join the summer data together could try 1960-1999 for non-stationary data -----
-# June 1 is 152 doy, August 31 is 243 doy (92 days per year)
-# create a dataframe
-xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=92*40,nrow=nrow(xyUK20_sf))))
-names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(152:243,40),"_",rep(1960:1999,each=92)) 
-for (i in 1: length(list_of_files)) {
-  xyUK20[i,5:ncol(xyUK20)] <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="obs",doy>=152,doy<=243, year<=1999) %>% pull(x) 
-}
-
-# explore issue with deltas Birmingham to Cromer
-summary(est_all_sf)
-est_all_sf %>% 
+# repeat transform for model functions
+july3_2026t <- unif_orig_P2q(u=july3_obs,P2q=P2q_sites2,gpdpar = gpdpar_sites2)
+july3_2076t <- unif_orig_P2q(u=july3_obs,P2q=P2q_sites3,gpdpar = gpdpar_sites3)
+tmp <- xyUK20_sf %>% mutate(july3_P2q,july3_2026t,july3_2076t)
+lims <- c(16,42)
+t1 <- tm_shape(tmp) + tm_dots(fill="july3_P2q",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 1976") 
+t2 <- tm_shape(tmp) + tm_dots(fill="july3_2026t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 2026 (projection)") 
+t3 <- tm_shape(tmp) + tm_dots(fill="july3_2076t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 2076 (projection)") 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0(folder_name,"heatwave1976_future.png"),height=6,width=8)
