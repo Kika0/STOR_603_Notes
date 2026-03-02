@@ -17,11 +17,14 @@ load("data_processed/spatial_helper.RData", verbose = TRUE)
 # load to determine index
 load("../luna/kristina/P2q/ukgd_cpm85_5k_x84y20_MSp2q.RData", verbose = TRUE)
 # add column for date
-x=seq.Date(from=as.Date("1960-01-01"), to=as.Date("2023-12-31"), by="day")
-data01_obs <- data01 %>% rowid_to_column() %>% filter(class=="obs") %>% mutate("date"=as.Date(x))
+data01_obs <- data01 %>% rowid_to_column() %>% filter(class=="obs") %>% mutate("date_obs"=seq(ymd('1960-01-01'),ymd('2023-12-31'),by='days') )
 # filter date
-july3_1976 <- data01_obs %>% filter("date"==as.Date("1976-07-19")) %>% pull(rowid)
-data01 %>% rowid_to_column() %>% filter(class=="mod",time<2022.55,time>2022.54)
+july3_1976 <- data01_obs %>% dplyr::filter(date_obs==lubridate::ymd("1976-07-03")) %>% pull(rowid)
+# find future dates that match from model data
+which.min(abs(data01$time[data01$class=="mod"]- (data01_obs$time[july3_1976] +50)))
+july3_2026 <- which.min(abs(data01$time[data01$class=="mod"]- (data01_obs$time[july3_1976] +50))) + nrow(data01_obs)
+july3_2076 <- which.min(abs(data01$time[data01$class=="mod"]- (data01_obs$time[july3_1976] +100))) + nrow(data01_obs)
+
 # compare P2q of the observed 22846 and model 38362 data
 load("../luna/kristina/MSGpdParam/ukgd_cpm85_5k_x84y20.MSGpdParam.2025-02-26.RData", verbose = TRUE)
 gpdpar[c(22846,38362),]
@@ -30,21 +33,45 @@ qgam.p2q.fn[[38362]](data01$u[22846])
 data01[c(22846,38362),]
 
 
-
-#
-files <- list.files("../luna/kristina/MSdata01/")
+# load below threshold functions ---------------------------------------------
+folder_p2q_below94 <- "../luna/kristina/P2q/"
+files <- list.files(folder_p2q_below94)
 list_of_files <- list() #create empty list
 # only subset for x in x20 and y in y20
-files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSdata01.RData")})
+files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSp2q.RData")})
 #loop through the files
 files_subset1 <- files_subset[files_subset %in% files]
+# plot the missing files
+t <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(xyUK20_sf %>% filter(x %in% 96,!(y %in% c(120,124,128,132,136,140,144)))) + tm_dots("red")
+tmap_save(t,filename = "../Documents/missing_p2q_files.png")
 # could take only x and y divisible by 4 to subset and speed up data loading
 for (i in 1:length(files_subset1)) {
   print(files_subset1[i])
-  load(paste0("../luna/kristina/MSdata01/", files_subset1[i]))
-  list_of_files[[i]] <- data01 #add files to list position
+  load(paste0(folder_p2q_below94, files_subset1[i]))
+  list_of_files[[i]] <- qgam.p2q.fn[[july3_1976]] #add files to list position
 }
-xyUK20_sf <- xyUK20_sf[files_subset %in% files_subset1,]
+
+# load GPD parameters ---------------------------------------------------------
+folder_p2q_below94 <- "../luna/kristina/P2q/"
+files <- list.files(folder_p2q_below94)
+list_of_files <- list() #create empty dataframe
+# only subset for x in x20 and y in y20
+files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],"_MSp2q.RData")})
+#loop through the files
+files_subset1 <- files_subset[files_subset %in% files]
+# plot the missing files
+t <- tm_shape(xyUK20_sf) + tm_dots() + tm_shape(xyUK20_sf %>% filter(x %in% 96,!(y %in% c(120,124,128,132,136,140,144)))) + tm_dots("red")
+tmap_save(t,filename = "../Documents/missing_p2q_files.png")
+# could take only x and y divisible by 4 to subset and speed up data loading
+for (i in 1:length(files_subset1)) {
+  print(files_subset1[i])
+  load(paste0(folder_p2q_below94, files_subset1[i]))
+  list_of_files[[i]] <- qgam.p2q.fn[[july3_1976]] #add files to list position
+}
+
+
+# find july 3rd in the observed data
+july3_obs <- as.numeric(unlist(data_obs[(92*(1976-1960)+34),]))
 
 # join the summer data together could try 1960-1999 for non-stationary data -----
 # June 1 is 152 doy, August 31 is 243 doy (92 days per year)
