@@ -63,7 +63,7 @@ unif_orig_P2q <- function(u,P2q,gpdpar,ms.thgpd.u=0.94) {
         #   y[i] <- gpdpar[i,3] + gpdpar[i,1]*(m^(gpdpar[i,2]) - 1)/gpdpar[i,2] # coles p81
         # } else  y[i] <- gpdpar[i,3] + gpdpar[i,1]*log(m)                            # coles p81
         gpd_prob <- 1- (1 - u[i]) / (1 - ms.thgpd.u)
-        y[i] <- qgpd(p=gpd_prob,loc=gpdpar_sites[i,3],scale=gpdpar_sites[i,1],shape=gpdpar_sites[i,2])
+        y[i] <- qgpd(p=gpd_prob,loc=gpdpar[i,3],scale=gpdpar[i,1],shape=gpdpar[i,2])
       }
       
     }
