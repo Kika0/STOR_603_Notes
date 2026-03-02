@@ -36,7 +36,7 @@
 
 #' Transform a field on a given date
 #'
-#' @param data A vector of 556 (0,1) data
+#' @param u A vector of 556 (0,1) data
 #' @param P2q A list of 556 functions
 #' @param gpdpar A dataframe of 556 and 3 columns
 #' @param ms.thgpd.u A quantile GPD threshold
@@ -45,24 +45,25 @@
 #' @export
 #'
 #' @examples
-unif_orig_P2q <- function(data,P2q,gpdpar,ms.thgpd.u=0.94) {
-  y <- rep(0,length(data))
-  for (i in seq_along(data)) {
+unif_orig_P2q <- function(u,P2q,gpdpar,ms.thgpd.u=0.94) {
+  y <- rep(0,length(u))
+  for (i in seq_along(u)) {
     
-    if(!is.na(data[i])) {
+    if(!is.na(u[i])) {
       
-      if(y[i]<=ms.thgpd.u) {
+      if(u[i]<=ms.thgpd.u) {
         
-        y[i] <- P2q[[i]](o.u[i])
+        y[i] <- P2q[[i]](u[i])
         
       } else {
         
-        m <- (1-ms.thgpd.u) / (1-o.u[i])
-        
-        if(gpdpar[i,2]!=0) {
-          y[i] <- gpdpar[i,3] + gpdpar[i,1]*(m^(gpdpar[i,2]) - 1)/gpdpar[i,2] # coles p81
-        } else  y[i] <- gpdpar[i,3] + gpdpar[i,1]*log(m)                            # coles p81
-        
+        # m <- (1-ms.thgpd.u) / (1-u[i])
+        # 
+        # if(gpdpar[i,2]!=0) {
+        #   y[i] <- gpdpar[i,3] + gpdpar[i,1]*(m^(gpdpar[i,2]) - 1)/gpdpar[i,2] # coles p81
+        # } else  y[i] <- gpdpar[i,3] + gpdpar[i,1]*log(m)                            # coles p81
+        gpd_prob <- 1- (1 - u[i]) / (1 - ms.thgpd.u)
+        y[i] <- qgpd(p=gpd_prob,loc=gpdpar_sites[i,3],scale=gpdpar_sites[i,1],shape=gpdpar_sites[i,2])
       }
       
     }
