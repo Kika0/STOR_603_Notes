@@ -79,9 +79,6 @@ tm_shape(xyUK_sf) + tm_dots(fill="temp")
 x20 <- seq(from=4,to=dim(lon5.o)[1],by=4)
 y20 <- seq(from=4,to=dim(lon5.o)[2],by=4)
 xyUK20_sf <- xyUK_sf %>% filter(x %in% x20,y %in% y20)
-# save sf objects used for spatial analysis
-save(uk,uk_notsimplified,xyUK20_sf,files_subset1,file="data_processed/spatial_helper.RData")
-
 
 # start here to get data-----------------------------------------------
 tm_shape(xyUK20_sf) + tm_dots(fill="temp")
@@ -99,9 +96,11 @@ for (i in 1:length(files_subset1)) {
   list_of_files[[i]] <- data01 #add files to list position
 }
 xyUK20_sf <- xyUK20_sf[files_subset %in% files_subset1,]
+# save sf objects used for spatial analysis
+save(uk,uk_notsimplified,xyUK20_sf,files_subset1,file="data_processed/spatial_helper.RData")
 
-# join the summer data together could try 1960-1999 for non-stationary data -----
-# June 1 is 152 doy, August 31 is 243 doy (92 days per year)
+# create dataframe 1960-1999 for non-stationary data --------------------------
+# June 1 is 152 doy, August 31 is 243 doy (92 days per year) -leap years are May 31 to August 30
 # create a dataframe
 xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=92*40,nrow=nrow(xyUK20_sf))))
 names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(152:243,40),"_",rep(1960:1999,each=92)) 
@@ -110,36 +109,46 @@ for (i in 1: length(list_of_files)) {
 }
 # setup for par_est
 data_obs <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
-# ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
 colnames(data_obs) <- paste0("Y",1:ncol(data_obs))
 # transform to Laplace margins
 data_obs_Lap <- as.data.frame((data_obs %>% apply(c(2),FUN=row_number))/(nrow(data_obs)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 
-# create a dataframe for stationary data ----
+# create a dataframe for stationary observed data -----------------------------
+xyUK20_stat <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=92*64,nrow=nrow(xyUK20_sf))))
+names(xyUK20_stat)[5:ncol(xyUK20_stat)] <- paste0(rep(152:243,64),"_",rep(1960:2023,each=92)) 
+for (i in 1: length(list_of_files)) {
+  u <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="obs",doy>=152,doy<=243) %>% pull(u) 
+  u[is.na(u)] <- 0.1
+  xyUK20_stat[i,5:ncol(xyUK20_stat)] <- u
+}
+# setup for par_est
+data_obs_stationary <- xyUK20_stat %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
+colnames(data_obs_stationary) <- paste0("Y",1:ncol(data_obs_stationary))
+# transform to Laplace margins
+data_obs_stationary_Lap <- data_obs_stationary %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
+# NA values are probablu all values below 0.01
+summary(apply(data_obs_stationary,c(2),min))
+
+# create a dataframe for stationary model data --------------------------------------
 xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=90*100,nrow=nrow(xyUK20_sf))))
 names(xyUK20)[5:ncol(xyUK20)] <- paste0(rep(91:180,40),"_",rep(1981:2080,each=90)) 
 
 for (i in 1: length(list_of_files)) {
   u <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="mod",doy>=151,doy<=240) %>% pull(u) 
  # u[is.na(u)] <- runif(sum(is.na(u)),0.01,0.2)
-  u[is.na(u)] <- 0.1
+  u[is.na(u)] <- 0.01
   xyUK20[i,5:ncol(xyUK20)] <- u
 }
 # setup for par_est
 data_mod <- xyUK20 %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
-# ordered alphabetically so Y1 Birmingham, Y2 Glasgow and Y3 is London
 colnames(data_mod) <- paste0("Y",1:ncol(data_mod))
 # transform to Laplace margins
 data_mod_Lap <- data_mod %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 
-plot(data_mod_Lap_old[,1])
-plot(data_mod_Lap[,1])
-plot(data_obs_Lap[,1])
-
 # save as R object for further analysis
-save(data_obs,data_obs_Lap,data_mod,data_mod_Lap,file = "data_processed/temperature_data.RData")
+save(data_obs,data_obs_Lap,data_obs_stationary,data_obs_stationary_Lap,data_mod,data_mod_Lap,file = "data_processed/temperature_data.RData")
 
-# explore other datasets
+# explore 94-quantile thresholds ----------------------------------------------
 files <- list.files("../luna/kristina/MSGpdParam_CPM5km_member1_20x20/scratch/hadsx/heatwave/HadUKGrid/dur-clim/CPM5km/v2kristina/UK/01/MakeStationary/MSGpdParam/")
 list_of_files <- list() #create empty list
 # only subset for x in x20 and y in y20
