@@ -118,7 +118,7 @@ xyUK20_stat <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbi
 names(xyUK20_stat)[5:ncol(xyUK20_stat)] <- paste0(rep(152:243,64),"_",rep(1960:2023,each=92)) 
 for (i in 1: length(list_of_files)) {
   u <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% filter(class=="obs",doy>=152,doy<=243) %>% pull(u) 
-  u[is.na(u)] <- 0.1
+  u[is.na(u)] <- 0.01
   xyUK20_stat[i,5:ncol(xyUK20_stat)] <- u
 }
 # setup for par_est
