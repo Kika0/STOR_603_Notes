@@ -25,7 +25,7 @@
 /data
 
 # Temperature data
-/data_processed/temperature_data.RData
+data_processed/temperature_data.RData
 
 # RStudio files
 .Rproj.user/
