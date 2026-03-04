@@ -34,7 +34,7 @@ df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,C
 #spatial_par_est saves parameter estimates as est_all_sf sf object in ../Documents folder
 q <- 0.9 # quantile threshold
 # load all three parameter estimates sf objects
-load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"))
+load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose = TRUE)
 est_all <- as.data.frame(est_all_sf)
 
 sites_index_diagonal <- c(192,193,194,195,196,197,218,219,220,221,242,263) # first is Birmingham and last is Cromer
@@ -156,12 +156,12 @@ gaus_cor <- function(i,j,h,cond_index=192) {
   (mat_cor(h[i,j]) - mat_cor(h[cond_index,i])* mat_cor(h[cond_index,j]) )/ ((1-(mat_cor(h[cond_index,i])^2))^(1/2) * (1-mat_cor(h[cond_index,j])^2)^(1/2))
 }
 library(fields)
-mat_cor <- function(x,sig=200) {
-  fields::Matern(x,range=sig,smoothness=1)
+mat_cor <- function(x,sig=200,smooth_par=1) {
+  fields::Matern(x,range=sig,smoothness=smooth_par)
 }
 
-gaus_cov <- function(i,j,h,cond_index=192,sig=200) {
-  (mat_cor(x=h[i,j],sig=sig) - mat_cor(x=h[cond_index,i],sig=sig)* mat_cor(x=h[cond_index,j],sig=sig ))
+gaus_cov <- function(i,j,h,cond_index=192,sig=200,smooth_par=1) {
+  (mat_cor(x=h[i,j],sig=sig,smooth_par=smooth_par) - mat_cor(x=h[cond_index,i],sig=sig,smooth_par=smooth_par)* mat_cor(x=h[cond_index,j],sig=sig,smooth_par=smooth_par ))
 }
 
 Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
@@ -218,3 +218,30 @@ tmpsf <- st_as_sf(cbind(random10,xyUK20_sf)) %>% pivot_longer(cols=contains("ran
 
 t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
 tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_Birmingham_normal_range_fitted.png"),width=10,height=8)
+
+# optimise for both parameters ------------------------------------------------
+NLL_range_smooth <- function(x=ZN,theta,cond_index=192,h) {
+  if (theta[1]<1 | theta[2]<=0) {return(10e10)}
+  Zcov <- matrix(ncol=ncol(x)+1,nrow=ncol(x)+1)
+  for (i in 1:(ncol(x)+1)) {
+    for (j in 1:(ncol(x)+1)) {
+      Zcov[i,j] <- gaus_cov(i=i,j=j,h=h,sig=theta[1],smooth_par=theta[2])
+    }
+  }
+  Zcov <- Zcov[-c(cond_index),-c(cond_index)]
+  return(-sum(mvtnorm::dmvnorm(x=x,sigma=Zcov,log=TRUE)))
+}
+
+Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
+for (i in 1:(ncol(Z)+1)) {
+  for (j in 1:(ncol(Z)+1)) {
+    Zcov[i,j] <- gaus_cov(i=i,j=j,h=h,sig=200,smooth_par = 1.1)
+  }
+}
+Zcov[1:5,1:5]
+
+x <- NLL_range_smooth(x=ZN,theta=c(200,0.5),h=h)
+
+opt2 <- optim(par=c(range_best,1),fn=NLL_range_smooth,x=ZN,h=h)
+range_best <- opt$par2[1]
+smooth_best <- opt$par2[2]
