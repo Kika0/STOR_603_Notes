@@ -243,5 +243,62 @@ Zcov[1:5,1:5]
 x <- NLL_range_smooth(x=ZN,theta=c(200,0.5),h=h)
 
 opt2 <- optim(par=c(range_best,1),fn=NLL_range_smooth,x=ZN,h=h)
-range_best <- opt$par2[1]
-smooth_best <- opt$par2[2]
+range_best <- opt2$par[1]
+smooth_best <- opt2$par[2]
+
+# produce 10 random samples using this range
+Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
+for (i in 1:(ncol(Z)+1)) {
+  for (j in 1:(ncol(Z)+1)) {
+    Zcov[i,j] <- gaus_cov(i=i,j=j,h=h,sig=range_best,smooth_par = smooth_best)
+  }
+}
+Zcov <- Zcov[-c(cond_index),-c(cond_index)]
+random10 <- as.data.frame(t(  spam::rmvnorm(n=10,Sigma = Zcov)  ))
+names(random10) <- paste0("random",1:10)
+random10 <- random10 %>% add_row(.before=cond_index)
+tmpsf <- st_as_sf(cbind(random10,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_Birmingham_normal_range_smoothness_fitted.png"),width=10,height=8)
+
+# plot sd of observed and simulated residuals
+# Open a pdf file
+pdf("../Documents/sd_distance_residual.pdf")
+par(mfrow = c(1,2))
+plot(apply(Z,c(2),sd))
+# simulate 900 fields
+random900 <- as.data.frame(  spam::rmvnorm(n=900,Sigma = Zcov)  )
+names(random900) <- names(Z)
+plot(apply(random900,c(2),sd))
+dev.off()
+
+# Close the pdf file
+dev.off() 
+#map these
+observed <- append(as.numeric(unlist(apply(Z,c(2),sd))),NA,after=cond_index-1)
+simulated <- append(as.numeric(unlist(apply(random900,c(2),sd))),NA,after=cond_index-1)
+lims <- c(-0.4,1.7)
+tmp <- xyUK20_sf %>% mutate(observed,simulated,diff=observed-simulated) %>% pivot_longer(cols=c(observed,simulated,diff),names_to = "residuals")
+t1 <- tm_shape(tmp %>% dplyr::filter(residuals=="observed")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Observed residuals") 
+t2 <- tm_shape(tmp %>% dplyr::filter(residuals=="simulated")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Simulated residuals") 
+t3 <- tm_shape(tmp %>% dplyr::filter(residuals=="diff")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Difference") 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0("../Documents/","sd_distance_residual_map",".png"),height=6,width=8)
+
+AGG_Normal_PIT1 <- function(z,theta,zcov) {
+  return(qnorm( pAGG(x=z,theta=theta),sd=sqrt(zcov)))
+}
+ZN1 <- sapply(1:ncol(Z),FUN=function(k) {AGG_Normal_PIT1(z = Z[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]),zcov=diag(Zcov)[k])})
+ZN1 <- sapply(1:ncol(Z),FUN=function(k) {qnorm(Zemp[,k],sd=sqrt(diag(Zcov)[k]))})
+
+#map these
+observed <- append(as.numeric(unlist(apply(ZN1,c(2),sd))),NA,after=cond_index-1)
+simulated <- append(as.numeric(unlist(apply(random900,c(2),sd))),NA,after=cond_index-1)
+lims <- c(-0.4,1.7)
+tmp <- xyUK20_sf %>% mutate(observed,simulated,diff=observed-simulated) %>% pivot_longer(cols=c(observed,simulated,diff),names_to = "residuals")
+t1 <- tm_shape(tmp %>% dplyr::filter(residuals=="observed")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Observed residuals") 
+t2 <- tm_shape(tmp %>% dplyr::filter(residuals=="simulated")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Simulated residuals") 
+t3 <- tm_shape(tmp %>% dplyr::filter(residuals=="diff")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Difference") 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0("../Documents/","sd_distance_residual_map1",".png"),height=6,width=8)
