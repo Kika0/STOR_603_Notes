@@ -341,10 +341,31 @@ for (i in 1:(ncol(Z)+1)) {
 Zcov <- Zcov[-c(cond_index),-c(cond_index)]
 random10 <- as.data.frame(t(  spam::rmvnorm(n=10,Sigma = Zcov)  ))
 names(random10) <- paste0("random",1:10)
-random10 <- random10 %>% add_row(.before=cond_index)
-tmpsf <- st_as_sf(cbind(random10,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
-
-t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
-tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_Birmingham_normal_range_smoothness_fitted_normal.png"),width=10,height=8)
 
 # transform onto the original scale
+Normal_AGG_PIT <- function(z,theta) {
+  return(qAGG(pnorm(x=z),theta=theta))
+}
+# transform
+load(file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose = TRUE)
+aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(a),is.na)
+best <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(b),is.na)
+pe <- as.data.frame(result_new[[1]][[12]] %>% dplyr::select(mu_agg,sigl,sigu,deltal,deltau))
+names(pe) <- c("mu","sigl","sigu","deltal","deltau")
+# tranform 10 random fields to AGG scale
+random10N <- sapply(1:ncol(random10),FUN=function(k) {Normal_AGG_PIT(z = random10[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))})
+
+
+random10 <- random10 %>% add_row(.before=cond_index)
+random10N <- random10N %>% add_row(.before=cond_index)
+
+# plot on standard Normal scale
+tmpsf <- st_as_sf(cbind(random10,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_Birmingham_normal_range_smoothness_fitted_normal_standard.png"),width=10,height=8)
+
+# repeat plot for AGG scale
+tmpsf <- st_as_sf(cbind(random10N,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_Birmingham_normal_range_smoothness_fitted_AGG.png"),width=10,height=8)
+
