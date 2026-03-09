@@ -152,8 +152,8 @@ tmap_save(tm=tU, filename=paste0("../Documents/empirical_residual_dependence_Bir
 cond_index <- 192
 # calculate distance matrix
 h <- (st_distance(xyUK20_sf,xyUK20_sf) %>% drop_units() )/1000
-gaus_cor <- function(i,j,h,cond_index=192) {
-  (mat_cor(h[i,j]) - mat_cor(h[cond_index,i])* mat_cor(h[cond_index,j]) )/ ((1-(mat_cor(h[cond_index,i])^2))^(1/2) * (1-mat_cor(h[cond_index,j])^2)^(1/2))
+gaus_cor <- function(i,j,h,cond_index=192,sig=200,smooth_par=1) {
+  (mat_cor(h[i,j],sig=sig,smooth_par=smooth_par) - mat_cor(h[cond_index,i],sig=sig,smooth_par=smooth_par)* mat_cor(h[cond_index,j],sig=sig,smooth_par=smooth_par) )/ ((1-(mat_cor(h[cond_index,i],sig=sig,smooth_par=smooth_par)^2))^(1/2) * (1-mat_cor(h[cond_index,j],sig=sig,smooth_par=smooth_par)^2)^(1/2))
 }
 library(fields)
 mat_cor <- function(x,sig=200,smooth_par=1) {
@@ -302,3 +302,49 @@ t2 <- tm_shape(tmp %>% dplyr::filter(residuals=="simulated")) + tm_dots(fill="va
 t3 <- tm_shape(tmp %>% dplyr::filter(residuals=="diff")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Difference") 
 t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0("../Documents/","sd_distance_residual_map1",".png"),height=6,width=8)
+
+# try with correlation matrix
+NLL_range_smooth <- function(x=ZN,theta,cond_index=192,h) {
+  if (theta[1]<1 | theta[2]<=0) {return(10e10)}
+  Zcov <- matrix(ncol=ncol(x)+1,nrow=ncol(x)+1)
+  for (i in 1:(ncol(x)+1)) {
+    for (j in 1:(ncol(x)+1)) {
+      Zcov[i,j] <- gaus_cor(i=i,j=j,h=h,sig=theta[1],smooth_par=theta[2])
+    }
+  }
+  Zcov <- Zcov[-c(cond_index),-c(cond_index)]
+  return(-sum(mvtnorm::dmvnorm(x=x,sigma=Zcov,log=TRUE)))
+}
+
+Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
+for (i in 1:(ncol(Z)+1)) {
+  for (j in 1:(ncol(Z)+1)) {
+    Zcov[i,j] <- gaus_cor(i=i,j=j,h=h,sig=200,smooth_par = 1.1)
+  }
+}
+Zcov[1:5,1:5]
+Zcov[190:195,190:195]
+
+x <- NLL_range_smooth(x=ZN,theta=c(range_best,0.5),h=h)
+
+opt2 <- optim(par=c(range_best,1),fn=NLL_range_smooth,x=ZN,h=h)
+range_best <- opt2$par[1]
+smooth_best <- opt2$par[2]
+
+# produce 10 random samples using this range
+Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
+for (i in 1:(ncol(Z)+1)) {
+  for (j in 1:(ncol(Z)+1)) {
+    Zcov[i,j] <- gaus_cor(i=i,j=j,h=h,sig=range_best,smooth_par = smooth_best)
+  }
+}
+Zcov <- Zcov[-c(cond_index),-c(cond_index)]
+random10 <- as.data.frame(t(  spam::rmvnorm(n=10,Sigma = Zcov)  ))
+names(random10) <- paste0("random",1:10)
+random10 <- random10 %>% add_row(.before=cond_index)
+tmpsf <- st_as_sf(cbind(random10,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_Birmingham_normal_range_smoothness_fitted_normal.png"),width=10,height=8)
+
+# transform onto the original scale
