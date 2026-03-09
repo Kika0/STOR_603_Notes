@@ -3,6 +3,8 @@ library(tmap)
 library(tmaptools)
 library(sf)
 library(lubridate)
+library(gridExtra)
+library(LaplacesDemon)
 theme_set(theme_bw())
 theme_replace(
   panel.spacing = unit(2, "lines"),
@@ -94,3 +96,31 @@ t2 <- tm_shape(tmp) + tm_dots(fill="july3_2026t",size=0.5,fill.scale = tm_scale_
 t3 <- tm_shape(tmp) + tm_dots(fill="july3_2076t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 2076 (projection)") 
 t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0(folder_name,"heatwave1976_future.png"),height=6,width=8)
+
+# 1. plot of London/Birmingham and London/Inverness on original margins -------
+Birm_index <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
+London_index <- find_site_index(site=London,grid_uk = xyUK20_sf)
+Inverness_index <- find_site_index(site=Inverness,grid_uk = xyUK20_sf)
+tmp <- data_obs[,c(Birm_index,London_index,Inverness_index)]
+names(tmp) <- names(df_sites)[c(1,3,4)]
+p1 <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham),size=0.5)
+p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness),size=0.5)
+p <- grid.arrange(p1,p2,ncol=2)
+ggsave(p,filename= "../Documents/London_Birmingham_Inverness_original.png",width=8,height=4)
+
+# 2. plot illustrating conditioning on a variable ------
+tmp <- data_obs[,c(Birm_index,London_index,Inverness_index)]
+names(tmp) <- names(df_sites)[c(1,3,4)]
+q <- 0.9
+vL <- quantile(tmp[,1],q)
+tmp$tf <- (tmp$London>vL)
+limx <-limy <-  c(7,36)
+p1 <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham),size=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_2$")) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy) 
+p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness),size=0.5) + xlab(TeX("$Y_1$")) + ylab(TeX("$Y_3$")) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy)  
+p1n <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham,col=tf),size=0.5) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy)  + geom_vline(xintercept=vL,color="#009ADA",linetype="dashed")
+p2n <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness,col=tf),size=0.5)  + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy)  + geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") 
+p <- grid.arrange(p1,p2,ncol=2)
+ggsave(p,filename="../Documents/condmodel_illustration.png",width=8,height=4)
+pn <- grid.arrange(p1n,p2n,ncol=2)
+ggsave(pn,filename="../Documents/condmodel_illustrationvL.png",width=8,height = 4)
+
