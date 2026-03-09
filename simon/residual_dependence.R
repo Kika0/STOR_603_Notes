@@ -57,6 +57,7 @@ ZN <- sapply(1:ncol(Z),FUN=function(k) {AGG_Normal_PIT(z = Z[,k],theta=c(pe$mu[k
 # add empty row for Birmingham and transform back to spatial
 est_iteN <- as.data.frame(t(ZN)) %>% add_row(.before=sites_index_diagonal[1])
 est_iteU <- as.data.frame(t(ZU)) %>% add_row(.before=sites_index_diagonal[1])
+est_iteo <- as.data.frame(t(Z)) %>% add_row(.before=sites_index_diagonal[1])
 
 # find 10 largest days
 hot_temps <- sort(as.numeric(unlist(data_mod_Lap[,sites_index_diagonal[1]][data_mod_Lap[,sites_index_diagonal[1]]>quantile(data_mod_Lap[,sites_index_diagonal[1]],q)])),decreasing=TRUE)[1:10]
@@ -72,11 +73,16 @@ for (i in hot_temps_index) {
 
 tmpN <- st_as_sf(cbind(est_iteN %>% dplyr::select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
 tmpU <- st_as_sf(cbind(est_iteU %>% dplyr::select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
+tmpo <- st_as_sf(cbind(est_iteo %>% dplyr::select(all_of(hot_temps_index)),result[[1]] %>% dplyr::select(geometry)) %>% pivot_longer(cols=starts_with("V")))
+
 misscol <- "aquamarine"
 tN <- tm_shape(tmpN %>% mutate("name"=factor(name, levels=unique(tmpN$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-8,8),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^N$"))) + tm_facets(by="name",ncol=5)
 tU <- tm_shape(tmpU %>% mutate("name"=factor(name, levels=unique(tmpU$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(0,1),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^U$"))) + tm_facets(by="name",ncol=5)
+to <- tm_shape(tmpo %>% mutate("name"=factor(name, levels=unique(tmpU$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = TeX("$Z^U$"))) + tm_facets(by="name",ncol=5)
+
 tmap_save(tm=tN, filename=paste0("../Documents/residual_dependence_Birmingham_normal.png"),width=10,height=8)
 tmap_save(tm=tU, filename=paste0("../Documents/residual_dependence_Birmingham_uniform.png"),width=10,height=8)
+tmap_save(tm=to, filename=paste0("../Documents/residual_dependence_Birmingham_original.png"),width=10,height=8)
 
 # repeat with residuals: new iterative approach with 6 phi parameters -------------------------------
 load(file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose = TRUE)
@@ -344,7 +350,7 @@ names(random10) <- paste0("random",1:10)
 
 # transform onto the original scale
 Normal_AGG_PIT <- function(z,theta) {
-  return(qAGG(pnorm(x=z),theta=theta))
+  return(qAGG(pnorm(z),theta=theta))
 }
 # transform
 load(file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose = TRUE)
@@ -353,7 +359,8 @@ best <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull
 pe <- as.data.frame(result_new[[1]][[12]] %>% dplyr::select(mu_agg,sigl,sigu,deltal,deltau))
 names(pe) <- c("mu","sigl","sigu","deltal","deltau")
 # tranform 10 random fields to AGG scale
-random10N <- sapply(1:ncol(random10),FUN=function(k) {Normal_AGG_PIT(z = random10[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))})
+random10N <- sapply(1:ncol(random10),FUN=function(k) {Normal_AGG_PIT(z = random10[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))}) %>% as.data.frame()
+names(random10) <- paste0("random",1:10)
 
 
 random10 <- random10 %>% add_row(.before=cond_index)
@@ -369,3 +376,18 @@ tmpsf <- st_as_sf(cbind(random10N,xyUK20_sf)) %>% pivot_longer(cols=contains("ra
 t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
 tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_Birmingham_normal_range_smoothness_fitted_AGG.png"),width=10,height=8)
 
+#map these
+# simulate 900 fields
+random900 <- as.data.frame(  spam::rmvnorm(n=900,Sigma = Zcov)  )
+random900N <- sapply(1:ncol(random900),FUN=function(k) {Normal_AGG_PIT(z = random900[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))}) %>% as.data.frame()
+
+names(random900N) <- names(Z)
+observed <- append(as.numeric(unlist(apply(Z,c(2),sd))),NA,after=cond_index-1)
+simulated <- append(as.numeric(unlist(apply(random900N,c(2),sd))),NA,after=cond_index-1)
+lims <- c(-0.4,1.7)
+tmp <- xyUK20_sf %>% mutate(observed,simulated,diff=observed-simulated) %>% pivot_longer(cols=c(observed,simulated,diff),names_to = "residuals")
+t1 <- tm_shape(tmp %>% dplyr::filter(residuals=="observed")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Observed residuals") 
+t2 <- tm_shape(tmp %>% dplyr::filter(residuals=="simulated")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Simulated residuals") 
+t3 <- tm_shape(tmp %>% dplyr::filter(residuals=="diff")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Difference") 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0("../Documents/","sd_distance_residual_map_original_margin",".png"),height=6,width=8)
