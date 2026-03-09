@@ -126,8 +126,19 @@ data_obs_stationary <- xyUK20_stat %>% dplyr::select(-all_of(1:4)) %>% t() %>% a
 colnames(data_obs_stationary) <- paste0("Y",1:ncol(data_obs_stationary))
 # transform to Laplace margins
 data_obs_stationary_Lap <- data_obs_stationary %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
-# NA values are probablu all values below 0.01
+# NA values are probably all values below 0.01
 summary(apply(data_obs_stationary,c(2),min))
+
+# create also dataframe for all observed data
+xyUK20_stat <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=92*64,nrow=nrow(xyUK20_sf))))
+names(xyUK20_stat)[5:ncol(xyUK20_stat)] <- paste0(rep(152:243,64),"_",rep(1960:2023,each=92)) 
+for (i in 1: length(list_of_files)) {
+  x <- list_of_files[[i]] %>% mutate(year=floor(time)) %>% dplyr::filter(class=="obs",doy>=152,doy<=243) %>% pull(x) 
+  x[is.na(x)] <- 0.01
+  xyUK20_stat[i,5:ncol(xyUK20_stat)] <- x
+}
+# setup for par_est
+data_obs_all <- xyUK20_stat %>% dplyr::select(-all_of(1:4)) %>% t() %>% as.data.frame()
 
 # create a dataframe for stationary model data --------------------------------------
 xyUK20 <- xyUK20_sf %>% dplyr::select(-temp) %>% st_drop_geometry() %>% cbind(as.data.frame(matrix(data=numeric(),ncol=90*100,nrow=nrow(xyUK20_sf))))
@@ -146,7 +157,7 @@ colnames(data_mod) <- paste0("Y",1:ncol(data_mod))
 data_mod_Lap <- data_mod %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 
 # save as R object for further analysis
-save(data_obs,data_obs_Lap,data_obs_stationary,data_obs_stationary_Lap,data_mod,data_mod_Lap,file = "data_processed/temperature_data.RData")
+save(data_obs,data_obs_all,data_obs_Lap,data_obs_stationary,data_obs_stationary_Lap,data_mod,data_mod_Lap,file = "data_processed/temperature_data.RData")
 
 # explore 94-quantile thresholds ----------------------------------------------
 files <- list.files("../luna/kristina/MSGpdParam_CPM5km_member1_20x20/scratch/hadsx/heatwave/HadUKGrid/dur-clim/CPM5km/v2kristina/UK/01/MakeStationary/MSGpdParam/")
