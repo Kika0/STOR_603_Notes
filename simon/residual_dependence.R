@@ -279,8 +279,6 @@ names(random900) <- names(Z)
 plot(apply(random900,c(2),sd))
 dev.off()
 
-# Close the pdf file
-dev.off() 
 #map these
 observed <- append(as.numeric(unlist(apply(Z,c(2),sd))),NA,after=cond_index-1)
 simulated <- append(as.numeric(unlist(apply(random900,c(2),sd))),NA,after=cond_index-1)
@@ -337,7 +335,7 @@ opt2 <- optim(par=c(range_best,1),fn=NLL_range_smooth,x=ZN,h=h)
 range_best <- opt2$par[1]
 smooth_best <- opt2$par[2]
 
-# produce 10 random samples using this range
+# produce 10 random fields
 Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
 for (i in 1:(ncol(Z)+1)) {
   for (j in 1:(ncol(Z)+1)) {
@@ -392,31 +390,21 @@ t3 <- tm_shape(tmp %>% dplyr::filter(residuals=="diff")) + tm_dots(fill="value",
 t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0("../Documents/","sd_distance_residual_map_original_margin",".png"),height=6,width=8)
 
-# repeat for London
+# repeat for London -----------------------------------------------------------
 cond_index <- London_index
 # calculate distance matrix
 h <- (st_distance(xyUK20_sf,xyUK20_sf) %>% drop_units() )/1000
-gaus_cor <- function(i,j,h,cond_index,sig=200,smooth_par=1) {
-  (mat_cor(h[i,j],sig=sig,smooth_par=smooth_par) - mat_cor(h[cond_index,i],sig=sig,smooth_par=smooth_par)* mat_cor(h[cond_index,j],sig=sig,smooth_par=smooth_par) )/ ((1-(mat_cor(h[cond_index,i],sig=sig,smooth_par=smooth_par)^2))^(1/2) * (1-mat_cor(h[cond_index,j],sig=sig,smooth_par=smooth_par)^2)^(1/2))
-}
-library(fields)
-mat_cor <- function(x,sig=200,smooth_par=1) {
-  fields::Matern(x,range=sig,smoothness=smooth_par)
-}
+# get parameter values
+load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose = TRUE)
+est_all <- as.data.frame(est_all_sf)
+aest <- discard(est_all_sf %>% filter(cond_site=="London") %>% pull(a),is.na)
+best <- discard(est_all_sf %>% filter(cond_site=="London") %>% pull(b),is.na)
+# calculate residuals
+Z <- observed_residuals(df=data_mod_Lap,given=London_index,v = q,a=aest,b=best)
+Zemp <- as.data.frame((Z %>% apply(c(2),FUN=row_number))/(nrow(Z)+1)) 
+ZN <- sapply(1:ncol(Z),FUN=function(k) {qnorm(Zemp[,k])})
 
-# optimise for both parameters ------------------------------------------------
-NLL_range_smooth <- function(x=ZN,theta,cond_index,h) {
-  if (theta[1]<1 | theta[2]<=0) {return(10e10)}
-  Zcov <- matrix(ncol=ncol(x)+1,nrow=ncol(x)+1)
-  for (i in 1:(ncol(x)+1)) {
-    for (j in 1:(ncol(x)+1)) {
-      Zcov[i,j] <- gaus_cov(i=i,j=j,h=h,sig=theta[1],smooth_par=theta[2],cond_index=cond_index)
-    }
-  }
-  Zcov <- Zcov[-c(cond_index),-c(cond_index)]
-  return(-sum(mvtnorm::dmvnorm(x=x,sigma=Zcov,log=TRUE)))
-}
-
+# optimise for both parameters 
 Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
 for (i in 1:(ncol(Z)+1)) {
   for (j in 1:(ncol(Z)+1)) {
@@ -430,9 +418,48 @@ x <- NLL_range_smooth(x=ZN,theta=c(200,0.5),h=h,cond_index=London_index)
 opt2 <- optim(par=c(range_best,1),fn=NLL_range_smooth,x=ZN,h=h,cond_index=London_index)
 range_best <- opt2$par[1]
 smooth_best <- opt2$par[2]
+load("data_processed/iterative_phi0l_phi0u_estimates_London.RData",verbose=TRUE)
+pe <- as.data.frame(result_new[[12]] %>% dplyr::select(mu_agg,sigl,sigu,deltal,deltau))
+names(pe) <- c("mu","sigl","sigu","deltal","deltau")
 
+# simulate from this correlation matrix and evaluate --------------------------
+Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
+for (i in 1:(ncol(Z)+1)) {
+  for (j in 1:(ncol(Z)+1)) {
+    Zcov[i,j] <- gaus_cor(i=i,j=j,h=h,sig=range_best,smooth_par = smooth_best,cond_index=cond_index)
+  }
+}
+Zcov <- Zcov[-c(cond_index),-c(cond_index)]
+random10 <- as.data.frame(t(  spam::rmvnorm(n=10,Sigma = Zcov)  ))
+names(random10) <- paste0("random",1:10)
+# tranform 10 random fields to AGG scale
+random10N <- sapply(1:ncol(random10),FUN=function(k) {Normal_AGG_PIT(z = random10[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))}) %>% as.data.frame()
+names(random10) <- names(random10N) <- paste0("random",1:10)
+random10 <- random10 %>% add_row(.before=cond_index)
+random10N <- random10N %>% add_row(.before=cond_index)
 
-# get parameter values
-load(file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose = TRUE)
-aest <- discard(est_all_sf %>% filter(cond_site=="London") %>% pull(a),is.na)
-best <- discard(est_all_sf %>% filter(cond_site=="London") %>% pull(b),is.na)
+# plot on standard Normal scale
+tmpsf <- st_as_sf(cbind(random10,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_London_normal_range_smoothness_fitted_normal_standard.png"),width=10,height=8)
+
+# repeat plot for AGG scale
+tmpsf <- st_as_sf(cbind(random10N,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-4,4),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_residual_dependence_London_normal_range_smoothness_fitted_AGG.png"),width=10,height=8)
+
+#map these
+# simulate 900 fields
+random900 <- as.data.frame(  spam::rmvnorm(n=900,Sigma = Zcov)  )
+random900N <- sapply(1:ncol(random900),FUN=function(k) {Normal_AGG_PIT(z = random900[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))}) %>% as.data.frame()
+
+names(random900N) <- names(Z)
+observed <- append(as.numeric(unlist(apply(Z,c(2),sd))),NA,after=cond_index-1)
+simulated <- append(as.numeric(unlist(apply(random900N,c(2),sd))),NA,after=cond_index-1)
+lims <- c(-0.4,1.7)
+tmp <- xyUK20_sf %>% mutate(observed,simulated,diff=observed-simulated) %>% pivot_longer(cols=c(observed,simulated,diff),names_to = "residuals")
+t1 <- tm_shape(tmp %>% dplyr::filter(residuals=="observed")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Observed residuals") 
+t2 <- tm_shape(tmp %>% dplyr::filter(residuals=="simulated")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Simulated residuals") 
+t3 <- tm_shape(tmp %>% dplyr::filter(residuals=="diff")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Difference") 
+t <- tmap_arrange(t1,t2,t3,ncol=3)
+tmap_save(t,filename=paste0("../Documents/","sd_distance_London_residual_map_original_margin",".png"),height=6,width=8)
