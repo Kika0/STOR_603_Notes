@@ -196,3 +196,59 @@ t2 <- tm_shape(tmp) + tm_dots(fill="july19_2026t",size=0.5,fill.scale = tm_scale
 t3 <- tm_shape(tmp) + tm_dots(fill="date3t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 19, 2076 (projection)") 
 t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0(folder_name,"heatwave2022_future.png"),height=6,width=8)
+
+# simulate 10 fields overall --------------------------------------------------
+
+# get index for london
+x <- july3_obs[cond_index]
+# transform to Laplace
+xL <- unif_laplace_pit(x)
+
+
+# get parameter values
+load(file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose = TRUE)
+aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(a),is.na)
+best <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(b),is.na)
+pe <- as.data.frame(result_new[[1]][[12]] %>% dplyr::select(mu_agg,sigl,sigu,deltal,deltau))
+names(pe) <- c("mu","sigl","sigu","deltal","deltau")
+# get fields
+# reconstruct the fields
+y_sim <- apply(random10N,MARGIN=c(2),FUN=function(xk){xL*aest+xL^best*xk})
+# add row for the conditioning site
+y_sim <- as.data.frame(y_sim)
+y_sim <- y_sim %>% add_row(.before=cond_index)
+y_sim[cond_index,] <- xL
+names(y_sim) <- paste0("random",1:10)
+# plot on standard Normal scale
+tmpsf <- st_as_sf(cbind(y_sim,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-10,30),value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_y_sim.png"),width=10,height=8)
+
+# transform all 10 onto 2 different scales
+#unif_orig_P2q(u=july3_obs,P2q=P2q_sites2,gpdpar = gpdpar_sites2)
+x_sim1 <- apply(y_sim,MARGIN=c(2),FUN=function(xk){unif_orig_P2q(u=plaplace(xk),P2q=P2q_sites2,gpdpar = gpdpar_sites2)}) %>% as.data.frame()
+names(x_sim1) <- paste0("random",1:10)
+# plot on standard Normal scale
+tmpsf <- st_as_sf(cbind(x_sim1,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_intervals(values="-brewer.rd_bu",breaks=seq(10,50,5)),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_x_sim2026.png"),width=10,height=8)
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(10,50)),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_xcont_sim2026.png"),width=10,height=8)
+
+x_sim2 <- apply(y_sim,MARGIN=c(2),FUN=function(xk){unif_orig_P2q(u=plaplace(xk),P2q=P2q_sites3,gpdpar = gpdpar_sites3)}) %>% as.data.frame()
+names(x_sim2) <- paste0("random",1:10)
+# plot on standard Normal scale
+tmpsf <- st_as_sf(cbind(x_sim2,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_intervals(values="-brewer.rd_bu",breaks=seq(10,50,5)),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_x_sim2076.png"),width=10,height=8)
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(10,50)),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+tmap_save(tm=t, filename=paste0("../Documents/random10_xcont_sim2076.png"),width=10,height=8)
+
+# plot gpd
+xo <- as.numeric(unlist(data_obs_all[,London_index]))
+ux <- quantile(xo,0.94)
+isabove <- xo>ux
+p <- ggplot(data.frame(xo=xo,y=0,tf=isabove)) + geom_density(aes(x=xo)) + geom_point(aes(x=xo,y=y,col=tf),size=0.5) + scale_color_manual(values = c("black", "#009ADA")) + xlab("London summer temperature") + ylab("") + geom_vline(xintercept = ux,linetype="dashed",col="#009ADA") + theme(legend.position="none") +
+  annotate("text",x=31,y=0.1,label=">28.34 °C",col="#009ADA")
+ggsave(p,filename="../Documents/London_illust.png",width=6,height=4)
+
