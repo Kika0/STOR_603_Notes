@@ -391,3 +391,48 @@ t2 <- tm_shape(tmp %>% dplyr::filter(residuals=="simulated")) + tm_dots(fill="va
 t3 <- tm_shape(tmp %>% dplyr::filter(residuals=="diff")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Difference") 
 t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0("../Documents/","sd_distance_residual_map_original_margin",".png"),height=6,width=8)
+
+# repeat for London
+cond_index <- London_index
+# calculate distance matrix
+h <- (st_distance(xyUK20_sf,xyUK20_sf) %>% drop_units() )/1000
+gaus_cor <- function(i,j,h,cond_index,sig=200,smooth_par=1) {
+  (mat_cor(h[i,j],sig=sig,smooth_par=smooth_par) - mat_cor(h[cond_index,i],sig=sig,smooth_par=smooth_par)* mat_cor(h[cond_index,j],sig=sig,smooth_par=smooth_par) )/ ((1-(mat_cor(h[cond_index,i],sig=sig,smooth_par=smooth_par)^2))^(1/2) * (1-mat_cor(h[cond_index,j],sig=sig,smooth_par=smooth_par)^2)^(1/2))
+}
+library(fields)
+mat_cor <- function(x,sig=200,smooth_par=1) {
+  fields::Matern(x,range=sig,smoothness=smooth_par)
+}
+
+# optimise for both parameters ------------------------------------------------
+NLL_range_smooth <- function(x=ZN,theta,cond_index,h) {
+  if (theta[1]<1 | theta[2]<=0) {return(10e10)}
+  Zcov <- matrix(ncol=ncol(x)+1,nrow=ncol(x)+1)
+  for (i in 1:(ncol(x)+1)) {
+    for (j in 1:(ncol(x)+1)) {
+      Zcov[i,j] <- gaus_cov(i=i,j=j,h=h,sig=theta[1],smooth_par=theta[2],cond_index=cond_index)
+    }
+  }
+  Zcov <- Zcov[-c(cond_index),-c(cond_index)]
+  return(-sum(mvtnorm::dmvnorm(x=x,sigma=Zcov,log=TRUE)))
+}
+
+Zcov <- matrix(ncol=ncol(Z)+1,nrow=ncol(Z)+1)
+for (i in 1:(ncol(Z)+1)) {
+  for (j in 1:(ncol(Z)+1)) {
+    Zcov[i,j] <- gaus_cov(i=i,j=j,h=h,sig=200,smooth_par = 1.1)
+  }
+}
+Zcov[1:5,1:5]
+
+x <- NLL_range_smooth(x=ZN,theta=c(200,0.5),h=h,cond_index=London_index)
+
+opt2 <- optim(par=c(range_best,1),fn=NLL_range_smooth,x=ZN,h=h,cond_index=London_index)
+range_best <- opt2$par[1]
+smooth_best <- opt2$par[2]
+
+
+# get parameter values
+load(file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose = TRUE)
+aest <- discard(est_all_sf %>% filter(cond_site=="London") %>% pull(a),is.na)
+best <- discard(est_all_sf %>% filter(cond_site=="London") %>% pull(b),is.na)
