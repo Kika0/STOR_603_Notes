@@ -29,6 +29,15 @@ Birmingham <- c(-1.9032,52.4806)
 Cromer <- c(1.28486,53.05349)
 site_start <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
 site_end <- find_site_index(site=Cromer,grid_uk = xyUK20_sf)
+# also estimate for London
+London <- c(-0.127676,51.529972)
+London_index <- find_site_index(London,grid_uk = xyUK20_sf)
+
+# load result_new for deltal and deltau
+load("data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose=TRUE)
+# requires loading functions from iterative_sigmas_Jan_2026
+deltal <- result_new[[1]]$deltal[1]
+deltau <- result_new[[1]]$deltau[1]
 
 # change functions to allow extra parameters phi0u (and optional also phi0l)
 
@@ -420,6 +429,15 @@ folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu_phi0l_phiul"
 result_new <- sapply(1:12,FUN = function(site_order){AGG_par_est_ite(site=site_order,data_mod_Lap = data_mod_Lap,sites = sites_index_diagonal,phi0l=NULL,cond_site_names = site_name_diagonal,est_all_sf = est_all_sf,Nite=10,result=result_previous,deltal=deltal,deltau=deltau,folder_name = folder_name)},simplify = FALSE)
 # save data
 save(result_new, file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData")
+
+# repeat for phi0l also being estimated: London
+folder_name <- "Birmingham_Cromer_diagonal/new_iterative_sigmas_mu_phi0l_phiul/London"
+# load separate estimates
+load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose = TRUE)
+est_all <- as.data.frame(est_all_sf)
+result_new <- AGG_par_est_ite(site=1,data_mod_Lap = data_mod_Lap,sites = London_index,phi0l=NULL,cond_site_names = "London",est_all_sf = est_all_sf,Nite=10,deltal=deltal,deltau=deltau,folder_name = folder_name)
+# save data
+save(result_new, file="data_processed/iterative_phi0l_phi0u_estimates_London.RData")
 
 
 sapply(1:12,FUN=plot_AGG_diagnostics_method,method_name="Original_method",result=result_new,cond_site_names = site_name_diagonal)
