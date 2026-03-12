@@ -92,8 +92,8 @@ july3_2076t <- unif_orig_P2q(u=july3_obs,P2q=P2q_sites3,gpdpar = gpdpar_sites3)
 tmp <- xyUK20_sf %>% mutate(july3_P2q,july3_2026t,july3_2076t)
 lims <- c(16,42)
 t1 <- tm_shape(tmp) + tm_dots(fill="july3_P2q",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 1976") 
-t2 <- tm_shape(tmp) + tm_dots(fill="july3_2026t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 2026 (projection)") 
-t3 <- tm_shape(tmp) + tm_dots(fill="july3_2076t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 2076 (projection)") 
+t2 <- tm_shape(tmp) + tm_dots(fill="july3_2026t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.show=FALSE,frame=FALSE) + tm_title("July 3, 2026 (projection)") 
+t3 <- tm_shape(tmp) + tm_dots(fill="july3_2076t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.show=FALSE,legend.height = 10,frame=FALSE) + tm_title("July 3, 2076 (projection)") 
 t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0(folder_name,"heatwave1976_future.png"),height=6,width=8)
 
@@ -244,13 +244,21 @@ tmap_save(tm=t, filename=paste0(folder_name,"random10_xcont_sim2076_London.png")
 
 # plot selected 3,4,10
 x1sub <- x_sim1[,c(3,4,10)]
-tmpsf <- st_as_sf(cbind(x1sub,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
-t1 <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(10,50)),fill.legend = tm_legend(title = "Temperature")) + tm_facets(by="name",ncol=3) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) 
 x2sub <- x_sim2[,c(3,4,10)]
-tmpsf <- st_as_sf(cbind(x2sub,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
-t2 <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(10,50)),fill.legend = tm_legend(title = "Temperature")) + tm_facets(by="name",ncol=3) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) 
+tmpsf <- st_as_sf(cbind(x1sub,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+lims <-c(min(min(x1sub),min(x2sub)),max(x1sub,x2sub))
+leg_height <- 10
+t1 <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name))) %>% dplyr::filter(name=="random3")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims),fill.legend = tm_legend(title = "Temperature")) + tm_layout(legend.position=c(0.57,0.95),legend.height = leg_height,frame=FALSE) 
+t2 <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name))) %>% dplyr::filter(name=="random4")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims),fill.legend = tm_legend(title = "Temperature")) + tm_layout(legend.show=FALSE,legend.height = leg_height,frame=FALSE) 
+t3 <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name))) %>% dplyr::filter(name=="random10")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims),fill.legend = tm_legend(title = "Temperature")) + tm_layout(legend.show=FALSE,legend.height = leg_height,frame=FALSE) 
 
-t <- tmap_arrange(t1,t2,nrow=2)
+
+tmpsf <- st_as_sf(cbind(x2sub,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+t4 <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))%>% filter(name=="random3")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims),fill.legend = tm_legend(title = "Temperature")) + tm_layout(legend.show=FALSE,legend.height = leg_height,frame=FALSE) 
+t5 <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))%>% filter(name=="random4")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims),fill.legend = tm_legend(title = "Temperature")) + tm_layout(legend.show=FALSE,legend.height = leg_height,frame=FALSE) 
+t6 <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))%>% filter(name=="random10")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims),fill.legend = tm_legend(title = "Temperature")) + tm_layout(legend.show=FALSE,legend.height = leg_height,frame=FALSE) 
+
+t <- tmap_arrange(t1,t2,t3,t4,t5,t6,nrow=2)
 tmap_save(tm=t, filename=paste0(folder_name,"random3_xcont_sim_London.png"),width=10,height=8)
 
 # 4. AGG density illustration -------------------------------------------------
@@ -282,3 +290,60 @@ p <- ggplot(data.frame(xo=xo,y=0,tf=isabove)) + geom_density(aes(x=xo)) + geom_p
   annotate("text",x=31,y=0.1,label=">28.34 °C",col="#009ADA")
 ggsave(p,filename=paste0(folder_name,"London_illust.png"),width=6,height=4)
 
+# 6. conditional probabilities ------------------------------------------------
+# gpd parameters for July 3, 2026
+gpd2026 <- as.numeric(unlist(gpdpar_sites2[cond_index,]))
+gpd2076 <- as.numeric(unlist(gpdpar_sites3[cond_index,]))
+# simulate 900 fields
+n_sim <- 900
+set.seed(1)
+random900 <- as.data.frame(  spam::rmvnorm(n=n_sim,Sigma = Zcov)  )
+random900N <- sapply(1:ncol(random900),FUN=function(k) {Normal_AGG_PIT(z = random900[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))}) %>% t %>%  as.data.frame()
+
+# select threshold
+u <- 32
+p_repeat <- function(u) {
+# simulate x
+v <- 0.94 + 0.06*evd::pgpd(u,loc = gpd2026[3], scale = gpd2026[1], shape = gpd2026[2])
+xL <- qlaplace(v) +  rexp(n = n_sim, rate = 1)
+# reconstruct the fields
+y_sim <- sapply(1:n_sim,FUN=function(i){xL[i]*aest+xL[i]^best*random900N[,i]})
+# add row for the conditioning site
+y_sim <- as.data.frame(y_sim)
+#y_sim <- y_sim %>% add_row(.before=London_index)
+y_sim[London_index,] <- xL
+names(y_sim) <- paste0("randomY",1:n_sim)
+x_sim1 <- apply(y_sim,MARGIN=c(2),FUN=function(xk){unif_orig_P2q(u=plaplace(xk),P2q=P2q_sites2,gpdpar = gpdpar_sites2)}) %>% as.data.frame()
+names(x_sim1) <- paste0("Xstar",1:n_sim)
+
+# count 3 sites exceeding
+p1 <- sum(apply(x_sim1,MARGIN=c(2),FUN=function(xk){xk[Lanc_index]>u & xk[Birm_index]>u}))/n_sim
+p1i <- sum(apply(x_sim1,MARGIN=c(2),FUN=function(xk){xk[Lanc_index]>u & xk[Birm_index]>u & xk[Inverness_index]>u}))
+return(data.frame(u=u,p1=p1,p1i=p1i))
+}
+
+tmp <- data.frame(u=numeric(),p1=numeric(),p1i=numeric())
+ui <- seq(32,40,1)
+for (u in ui) {
+ tmp <- rbind(tmp,p_repeat(u))
+}
+p <- ggplot(tmp) + geom_point(aes(x=u,y=p1)) + labs(x="Temperature at London exceeding",y="Probability of joint exceedance at Birmingham and Lancaster")
+ggsave(p,filename=paste0(folder_name,"London_p_exceedance.png"),width=6,height=4)
+# repeat for 2076
+# simulate x
+v <- 0.94 + 0.06*evd::pgpd(u,loc = gpd2076[3], scale = gpd2076[1], shape = gpd2076[2])
+xL <- qlaplace(v) +  rexp(n = n_sim, rate = 1)
+# reconstruct the fields
+y_sim <- sapply(1:n_sim,FUN=function(i){xL[i]*aest+xL[i]^best*random900N[,i]})
+# add row for the conditioning site
+y_sim <- as.data.frame(y_sim)
+#y_sim <- y_sim %>% add_row(.before=London_index)
+y_sim[London_index,] <- xL
+names(y_sim) <- paste0("randomY",1:n_sim)
+x_sim1 <- apply(y_sim,MARGIN=c(2),FUN=function(xk){unif_orig_P2q(u=plaplace(xk),P2q=P2q_sites3,gpdpar = gpdpar_sites3)}) %>% as.data.frame()
+names(x_sim1) <- paste0("Xstar",1:n_sim)
+
+# count 3 sites exceeding
+p1 <- sum(apply(x_sim1,MARGIN=c(2),FUN=function(xk){xk[Lanc_index]>u & xk[Birm_index]>u}))/n_sim
+p1i <- sum(apply(x_sim1,MARGIN=c(2),FUN=function(xk){xk[Lanc_index]>u & xk[Birm_index]>u & xk[Inverness_index]>u}))
+    
