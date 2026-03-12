@@ -463,3 +463,9 @@ t2 <- tm_shape(tmp %>% dplyr::filter(residuals=="simulated")) + tm_dots(fill="va
 t3 <- tm_shape(tmp %>% dplyr::filter(residuals=="diff")) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),fill.legend = tm_legend(title = "Standard\n deviation",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("Difference") 
 t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0("../Documents/","sd_distance_London_residual_map_original_margin",".png"),height=6,width=8)
+
+# plot rho(h) against h for london ------------------------------------
+tmp <- data.frame(x=h[cond_index,],y=mat_cor(x=h[cond_index,],sig=range_best,smooth_par=smooth_best))
+
+p <- ggplot(tmp) + geom_point(aes(x=x,y=y)) + xlab("Distance from London [km]") + ylab("Measure of spatial correlation")
+ggsave(p,filename="../Documents/TakeAIM2026/matern_distance_illustration.png",height=4,width=6)
