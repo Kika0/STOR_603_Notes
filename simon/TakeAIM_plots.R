@@ -261,6 +261,18 @@ tmp <- Z1[,c(Lanc_index,Birm_index,Inverness_index)]
 names(tmp) <- c("Birmingham","Lancaster","Inverness")
 p <- ggplot(tmp%>% pivot_longer(cols=everything())) + geom_histogram(aes(x=value,fill=name)) + labs(fill="Residual site",x="Residual value",y="Count") + scale_fill_manual(values = c("#C11432","#66A64F", "#009ADA")) 
 ggsave(p,filename=paste0(folder_name,"London_residual_site_illustrate.png"),width=6,height=4)
+# change the plot to density
+# get the parameters
+pe3 <- (pe %>% add_row(.before=London_index))[c(Lanc_index,Birm_index,Inverness_index),]
+tr1 <- data.frame(y=as.numeric(),x=as.numeric(),Method=as.character())
+x <- seq(min(Z1),max(Z1),by=0.1)
+for (i in 1:3) {
+  sitepar <- as.numeric(pe3[i,])
+  tr1 <- rbind(tr1,data.frame(y=AGG_density(x=x,theta = sitepar),x=x,Method=names(tmp)[i]))
+}
+pl1 <- ggplot() + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)),aes(x=x,y=y,col=Method)) + labs(col="Residual site",x="Residual value",y="") + scale_fill_manual(values = c("#C11432","#66A64F", "#009ADA")) 
+ggsave(pl1,filename=paste0(folder_name,"London_residual_site__density_illustrate.png"),width=6,height=4)
+
 
 # 5. univariate plot gpd ------------------------------------------------------
 xo <- as.numeric(unlist(data_obs_all[,London_index]))
