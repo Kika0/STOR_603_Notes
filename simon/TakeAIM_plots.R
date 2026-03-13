@@ -22,6 +22,7 @@ source("simon/P2q_function_helpers.R")
 
 # load to determine index
 load("../luna/kristina/P2q/ukgd_cpm85_5k_x84y20_MSp2q.RData", verbose = TRUE)
+load("../luna/kristina/MSdata01/ukgd_cpm85_5k_x100y24_MSdata01.RData")
 # add column for date
 data01_obs <- data01 %>% rowid_to_column() %>% filter(class=="obs") %>% mutate("date_obs"=seq(ymd('1960-01-01'),ymd('2023-12-31'),by='days') )
 # filter date
