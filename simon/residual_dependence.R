@@ -313,7 +313,7 @@ NLL_range_smooth <- function(x=ZN,theta,cond_index=192,h) {
   Zcov <- matrix(ncol=ncol(x)+1,nrow=ncol(x)+1)
   for (i in 1:(ncol(x)+1)) {
     for (j in 1:(ncol(x)+1)) {
-      Zcov[i,j] <- gaus_cor(i=i,j=j,h=h,sig=theta[1],smooth_par=theta[2])
+      Zcov[i,j] <- gaus_cor(i=i,j=j,h=h,sig=theta[1],smooth_par=theta[2],cond_index=cond_index)
     }
   }
   Zcov <- Zcov[-c(cond_index),-c(cond_index)]
@@ -391,6 +391,7 @@ t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0("../Documents/","sd_distance_residual_map_original_margin",".png"),height=6,width=8)
 
 # repeat for London -----------------------------------------------------------
+London_index <- find_site_index(site=London,grid_uk = xyUK20_sf)
 cond_index <- London_index
 # calculate distance matrix
 h <- (st_distance(xyUK20_sf,xyUK20_sf) %>% drop_units() )/1000
@@ -414,7 +415,6 @@ for (i in 1:(ncol(Z)+1)) {
 Zcov[1:5,1:5]
 
 x <- NLL_range_smooth(x=ZN,theta=c(200,0.5),h=h,cond_index=London_index)
-
 opt2 <- optim(par=c(range_best,1),fn=NLL_range_smooth,x=ZN,h=h,cond_index=London_index)
 range_best <- opt2$par[1]
 smooth_best <- opt2$par[2]
