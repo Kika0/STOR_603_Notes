@@ -5,6 +5,8 @@ library(sf)
 library(lubridate)
 library(gridExtra)
 library(LaplacesDemon)
+library(latex2exp)
+library(evd)
 theme_set(theme_bw())
 theme_replace(
   panel.spacing = unit(2, "lines"),
@@ -19,6 +21,9 @@ folder_name <- "../Documents/TakeAIM2026/"
 load("data_processed/temperature_data.RData",verbose = TRUE)
 load("data_processed/spatial_helper.RData", verbose = TRUE)
 source("simon/P2q_function_helpers.R")
+
+# load dependence data
+load("data_processed/residual_dependence_pars.RData",verbose = TRUE)
 
 # load to determine index
 load("../luna/kristina/P2q/ukgd_cpm85_5k_x84y20_MSp2q.RData", verbose = TRUE)
@@ -62,7 +67,7 @@ for (i in 1:length(files_subset1)) {
 folder_gpd_above94 <- "../luna/kristina/MSGpdParam/"
 files <- list.files(folder_gpd_above94)
 gpdpar_sites1 <- gpdpar_sites2 <-gpdpar_sites3 <- as.data.frame(matrix(ncol=3,nrow=nrow(xyUK20_sf))) #create empty dataframe
-names(gpdpar_sites) <- c("scale","shape","threshold")
+names(gpdpar_sites1) <- c("scale","shape","threshold")
 # only subset for x in x20 and y in y20
 files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],".MSGpdParam.2025-02-26.RData")})
 #loop through the files
@@ -91,6 +96,7 @@ plot(july3_P2q,july3_obs1)
 july3_2026t <- unif_orig_P2q(u=july3_obs,P2q=P2q_sites2,gpdpar = gpdpar_sites2)
 july3_2076t <- unif_orig_P2q(u=july3_obs,P2q=P2q_sites3,gpdpar = gpdpar_sites3)
 tmp <- xyUK20_sf %>% mutate(july3_P2q,july3_2026t,july3_2076t)
+# 1. plot illustrating 1976 heatwave in the future ----------------------------
 lims <- c(16,42)
 t1 <- tm_shape(tmp) + tm_dots(fill="july3_P2q",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 1976") 
 t2 <- tm_shape(tmp) + tm_dots(fill="july3_2026t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.show=FALSE,frame=FALSE) + tm_title("July 3, 2026 (projection)") 
@@ -99,40 +105,40 @@ t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0(folder_name,"heatwave1976_future.png"),height=6,width=8)
 
 
-# 1. plot illustrating conditioning on a variable ------
-tmp <- data_obs_stationary_Lap[,c(Birm_index,London_index,Inverness_index)]
-names(tmp) <- names(df_sites)[c(1,3,4)]
+# 2. plot illustrating conditioning on a variable -----------------------------
+Birm_index <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
+London_index <- find_site_index(site=London,grid_uk = xyUK20_sf)
+Lancaster_index <- find_site_index(site=Lancaster,grid_uk = xyUK20_sf)
+tmp <- data_obs_stationary_Lap[,c(Birm_index,London_index,Lancaster_index)]
+names(tmp) <- names(df_sites)[c(1,3,5)]
 q <- 0.9
 vL <- quantile(tmp[,1],q)
 tf <- tmp$tf <- (tmp$London>vL)
 limx <-limy <-  c(-10,10)
 p1 <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham),size=0.5) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy) 
-p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness),size=0.5)  + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy)  
+p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Lancaster),size=0.5)  + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy)  
 p1n <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham,col=tf),size=0.5) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy)  + geom_vline(xintercept=vL,color="#009ADA",linetype="dashed")
-p2n <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness,col=tf),size=0.5)  + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy)  + geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") 
+p2n <- ggplot(tmp) + geom_point(aes(x=London,y=Lancaster,col=tf),size=0.5)  + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy)  + geom_vline(xintercept=vL,color="#009ADA",linetype="dashed") 
 p <- grid.arrange(p1,p2,ncol=2)
-ggsave(p,filename="../Documents/condmodel_illustration.png",width=8,height=4)
+ggsave(p,filename=paste0(folder_name,"condmodel_illustration.png"),width=8,height=4)
 pn <- grid.arrange(p1n,p2n,ncol=2)
-ggsave(pn,filename="../Documents/condmodel_illustrationvL.png",width=8,height = 4)
+ggsave(pn,filename=paste0(folder_name,"condmodel_illustrationvL.png"),width=8,height = 4)
 
-# 2. plot of London/Birmingham and London/Inverness on original margins -------
+# 2. plot of London/Birmingham and London/Lancaster on original margins -------
+tmp <- data_obs_all[,c(Birm_index,London_index,Lancaster_index)]
+names(tmp) <- names(df_sites)[c(1,3,5)]
 size_point <- 0.3
-Birm_index <- find_site_index(site=Birmingham,grid_uk = xyUK20_sf)
-London_index <- find_site_index(site=London,grid_uk = xyUK20_sf)
-Inverness_index <- find_site_index(site=Inverness,grid_uk = xyUK20_sf)
-tmp <- data_obs_all[,c(Birm_index,London_index,Inverness_index)]
-names(tmp) <- names(df_sites)[c(1,3,4)]
 tmp$tf <- tf
 limx <-limy <-  c(7,40)
 p1 <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham),size=size_point) + coord_fixed() + xlim(limx) + ylim(limy) 
-p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness),size=size_point) + coord_fixed() + xlim(limx) + ylim(limy) 
+p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Lancaster),size=size_point) + coord_fixed() + xlim(limx) + ylim(limy) 
 p <- grid.arrange(p1,p2,ncol=2)
-ggsave(p,filename= "../Documents/London_Birmingham_Inverness_original.png",width=8,height=4)
+ggsave(p,filename= paste0(folder_name,"London_Birmingham_Lancaster_original.png"),width=8,height=4)
 tmp <- tmp %>% mutate(tf=factor(tf,levels=c(TRUE,FALSE)))
-p1 <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham,col=tf),size=size_point) + scale_color_manual(values = c( "#009ADA","black")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy) 
-p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Inverness,col=tf),size=size_point) + scale_color_manual(values = c("#009ADA","black")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy) 
+p1 <- ggplot(tmp) + geom_point(aes(x=London,y=Birmingham,col=tf),size=size_point) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy) 
+p2 <- ggplot(tmp) + geom_point(aes(x=London,y=Lancaster,col=tf),size=size_point) + scale_color_manual(values = c("black", "#009ADA")) + theme(legend.position="none") + coord_fixed() + xlim(limx) + ylim(limy) 
 p <- grid.arrange(p1,p2,ncol=2)
-ggsave(p,filename= "../Documents/London_Birmingham_Inverness_original_above.png",width=8,height=4)
+ggsave(p,filename= paste0(folder_name,"London_Birmingham_Lancaster_original_above.png"),width=8,height=4)
 
 # load to determine index
 load("../luna/kristina/P2q/ukgd_cpm85_5k_x84y20_MSp2q.RData", verbose = TRUE)
@@ -168,7 +174,7 @@ for (i in 1:length(files_subset1)) {
 folder_gpd_above94 <- "../luna/kristina/MSGpdParam/"
 files <- list.files(folder_gpd_above94)
 gpdpar_sites1 <- gpdpar_sites2 <-gpdpar_sites3 <- as.data.frame(matrix(ncol=3,nrow=nrow(xyUK20_sf))) #create empty dataframe
-names(gpdpar_sites) <- c("scale","shape","threshold")
+names(gpdpar_sites1) <- c("scale","shape","threshold")
 # only subset for x in x20 and y in y20
 files_subset <- sapply(1:nrow(xyUK20_sf),function(i){paste0("ukgd_cpm85_5k_x",xyUK20_sf$x[i],"y",xyUK20_sf$y[i],".MSGpdParam.2025-02-26.RData")})
 #loop through the files
@@ -243,7 +249,7 @@ tmap_save(tm=t, filename=paste0(folder_name,"random10_x_sim2076.png"),width=10,h
 t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(10,50)),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
 tmap_save(tm=t, filename=paste0(folder_name,"random10_xcont_sim2076_London.png"),width=10,height=8)
 
-# plot selected 3,4,10
+# 3. plot selected 3,4,10 -----------------------------------------------------
 x1sub <- x_sim1[,c(3,4,10)]
 x2sub <- x_sim2[,c(3,4,10)]
 tmpsf <- st_as_sf(cbind(x1sub,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
@@ -264,6 +270,7 @@ tmap_save(tm=t, filename=paste0(folder_name,"random3_xcont_sim_London.png"),widt
 
 # 4. AGG density illustration -------------------------------------------------
 Lanc_index <- find_site_index(Lancaster,grid_uk = xyUK20_sf)
+Inverness_index <- find_site_index(Inverness,grid_uk = xyUK20_sf)
 Z1 <- Z %>% add_column(.before=London_index)
 # create a subset of residuals
 tmp <- Z1[,c(Lanc_index,Birm_index,Inverness_index)] 
@@ -292,17 +299,21 @@ p <- ggplot(data.frame(xo=xo,y=0,tf=isabove)) + geom_density(aes(x=xo)) + geom_p
 ggsave(p,filename=paste0(folder_name,"London_illust.png"),width=6,height=4)
 
 # 6. conditional probabilities ------------------------------------------------
+# transform onto the original scale
+Normal_AGG_PIT <- function(z,theta) {
+  return(qAGG(pnorm(z),theta=theta))
+}
+cond_index <- London_index
 # gpd parameters for July 3, 2026
 gpd2026 <- as.numeric(unlist(gpdpar_sites2[cond_index,]))
 gpd2076 <- as.numeric(unlist(gpdpar_sites3[cond_index,]))
 # simulate 900 fields
-n_sim <- 900
+n_sim <- 20000
 set.seed(1)
 random900 <- as.data.frame(  spam::rmvnorm(n=n_sim,Sigma = Zcov)  )
 random900N <- sapply(1:ncol(random900),FUN=function(k) {Normal_AGG_PIT(z = random900[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))}) %>% t %>%  as.data.frame()
 
-# select threshold
-u <- 32
+# function to calculate probabilities ----------------------------------------
 p_repeat <- function(u) {
 # simulate x
 v <- 0.94 + 0.06*evd::pgpd(u,loc = gpd2026[3], scale = gpd2026[1], shape = gpd2026[2])
@@ -317,34 +328,71 @@ names(y_sim) <- paste0("randomY",1:n_sim)
 x_sim1 <- apply(y_sim,MARGIN=c(2),FUN=function(xk){unif_orig_P2q(u=plaplace(xk),P2q=P2q_sites2,gpdpar = gpdpar_sites2)}) %>% as.data.frame()
 names(x_sim1) <- paste0("Xstar",1:n_sim)
 
-# count 3 sites exceeding
+v2 <- 0.94 + 0.06*evd::pgpd(u,loc = gpd2076[3], scale = gpd2076[1], shape = gpd2076[2])
+xL2 <- qlaplace(v2) +  rexp(n = n_sim, rate = 1)
+# reconstruct the fields
+y_sim2 <- sapply(1:n_sim,FUN=function(i){xL2[i]*aest+xL2[i]^best*random900N[,i]})
+# add row for the conditioning site
+y_sim2 <- as.data.frame(y_sim2)
+#y_sim <- y_sim %>% add_row(.before=London_index)
+y_sim2[London_index,] <- xL2
+names(y_sim2) <- paste0("randomY",1:n_sim)
+x_sim2 <- apply(y_sim2,MARGIN=c(2),FUN=function(xk){unif_orig_P2q(u=plaplace(xk),P2q=P2q_sites3,gpdpar = gpdpar_sites3)}) %>% as.data.frame()
+names(x_sim2) <- paste0("Xstar",1:n_sim)
+# count joint exceedances
 p1 <- sum(apply(x_sim1,MARGIN=c(2),FUN=function(xk){xk[Lanc_index]>u & xk[Birm_index]>u}))/n_sim
 p1i <- sum(apply(x_sim1,MARGIN=c(2),FUN=function(xk){xk[Lanc_index]>u & xk[Birm_index]>u & xk[Inverness_index]>u}))
-return(data.frame(u=u,p1=p1,p1i=p1i))
+p2 <- sum(apply(x_sim2,MARGIN=c(2),FUN=function(xk){xk[Lanc_index]>u & xk[Birm_index]>u}))/n_sim
+return(data.frame(u=u,p1=p1,p1i=p1i,p2=p2))
 }
 
-tmp <- data.frame(u=numeric(),p1=numeric(),p1i=numeric())
-ui <- seq(32,40,1)
+tmp <- data.frame(u=numeric(),p1=numeric(),p1i=numeric(),p2=numeric())
+ui <- seq(35,40,0.5)
 for (u in ui) {
  tmp <- rbind(tmp,p_repeat(u))
 }
-p <- ggplot(tmp) + geom_point(aes(x=u,y=p1)) + labs(x="Temperature at London exceeding",y="Probability of joint exceedance at Birmingham and Lancaster")
-ggsave(p,filename=paste0(folder_name,"London_p_exceedance.png"),width=6,height=4)
-# repeat for 2076
-# simulate x
-v <- 0.94 + 0.06*evd::pgpd(u,loc = gpd2076[3], scale = gpd2076[1], shape = gpd2076[2])
-xL <- qlaplace(v) +  rexp(n = n_sim, rate = 1)
-# reconstruct the fields
-y_sim <- sapply(1:n_sim,FUN=function(i){xL[i]*aest+xL[i]^best*random900N[,i]})
-# add row for the conditioning site
-y_sim <- as.data.frame(y_sim)
-#y_sim <- y_sim %>% add_row(.before=London_index)
-y_sim[London_index,] <- xL
-names(y_sim) <- paste0("randomY",1:n_sim)
-x_sim1 <- apply(y_sim,MARGIN=c(2),FUN=function(xk){unif_orig_P2q(u=plaplace(xk),P2q=P2q_sites3,gpdpar = gpdpar_sites3)}) %>% as.data.frame()
-names(x_sim1) <- paste0("Xstar",1:n_sim)
+p <- ggplot(tmp) + geom_point(aes(x=u,y=p1),col="#66A64F") + geom_line(aes(x=u,y=p1),col="#66A64F") + geom_point(aes(x=u,y=p2),col="#009ADA") + geom_line(aes(x=u,y=p2),col="#009ADA") + labs(x="Temperature at London exceeding",y="Probability of joint exceedance at Birmingham and Lancaster") +
+  annotate(geom="text", x=36,y=0.045,label="2026",col="#66A64F",size=6) + annotate(geom="text", x=36,y=0.095,size=6,label="2076",col="#009ADA")
+ggsave(p,filename=paste0(folder_name,"London_p_exceedance.png"),width=6,height=5.5)
 
-# count 3 sites exceeding
-p1 <- sum(apply(x_sim1,MARGIN=c(2),FUN=function(xk){xk[Lanc_index]>u & xk[Birm_index]>u}))/n_sim
-p1i <- sum(apply(x_sim1,MARGIN=c(2),FUN=function(xk){xk[Lanc_index]>u & xk[Birm_index]>u & xk[Inverness_index]>u}))
-    
+
+# 8. plot of alpha for different sites ----------------------------------------
+# load estimates
+q <- 0.9
+load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"))
+#est_all <- as.data.frame(est_all_sf)
+# plot alpha values for Glasgow, Birmingham, London
+cond_site_names <- c("London","Birmingham","Lancaster")
+est_sites <- est_all_sf %>% filter(cond_site %in% cond_site_names) %>% mutate(cond_site=factor(cond_site,levels = cond_site_names))
+title_map <- ""
+misscol <- "aquamarine"
+legend_text_size <- 0.7
+point_size <- 0.6
+legend_title_size <- 1.2
+lims <- c(0,1)
+nrow_facet <- 1
+p1 <- tm_shape(est_sites %>% dplyr::filter(cond_site==cond_site_names[1])) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="London") 
+p2 <- tm_shape(est_sites %>% dplyr::filter(cond_site==cond_site_names[2])) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="Birmingham") 
+p3 <- tm_shape(est_sites %>% dplyr::filter(cond_site==cond_site_names[3])) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="Lancaster") 
+tmap_save(tmap_arrange(p1,p2,p3,ncol=3),filename=paste0(folder_name,"alpha_selected_sites.png"),height=6,width=8)
+tmap_save(tmap_arrange(p1,p2,p3,ncol=3),filename=paste0(folder_name,"alpha_selected_sites.pdf"),height=6,width=8)
+
+# 9. plot of alpha spatial for different sites --------------------------------
+# load estimates
+load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_London90.RData")
+title_map <- ""
+misscol <- "aquamarine"
+legend_text_size <- 0.7
+point_size <- 0.5
+legend_title_size <- 0.9
+lims <- c(0,1)
+nrow_facet <- 1
+est_sites <- est_all_sf %>% filter(cond_site %in% "London",tau %in% c(-2,-1,0,1,2) )
+p1 <- tm_shape(est_sites %>%  dplyr::filter(tau==(-2) )) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="-2 days") 
+p2 <- tm_shape(est_sites %>%  dplyr::filter(tau==(-1) )) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="-1 day") 
+p3 <- tm_shape(est_sites %>%  dplyr::filter(tau==(0) )) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="No time lag") 
+p4 <- tm_shape(est_sites %>%  dplyr::filter(tau==(+1) )) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="+1 day") 
+p5 <- tm_shape(est_sites %>%  dplyr::filter(tau==(+2) )) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="+2 days") 
+  
+tmap_save(tmap_arrange(p1,p2,p3,p4,p5,ncol=5),filename=paste0(folder_name,"alpha_London_temporal.png"),height=6,width=13)
+  
