@@ -469,3 +469,5 @@ tmp <- data.frame(x=h[cond_index,],y=mat_cor(x=h[cond_index,],sig=range_best,smo
 
 p <- ggplot(tmp) + geom_point(aes(x=x,y=y)) + xlab("Distance from London [km]") + ylab("Measure of spatial correlation")
 ggsave(p,filename="../Documents/TakeAIM2026/matern_distance_illustration.png",height=4,width=6)
+
+save(range_best,smooth_best,Z,ZN,London_index,random900,random900N,random10,random10N,Zcov,file="data_processed/residual_dependence_pars.RData")
