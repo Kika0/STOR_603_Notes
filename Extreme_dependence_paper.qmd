@@ -15,6 +15,8 @@ library(gridExtra)
 library(ismev)
 library(VGAM)
 library(latex2exp)
+library(extRemes) # for precise chi bar measure at high quantiles
+library(mvtnorm)
 # set theme defaults to be black rectangle
 theme_set(theme_bw())
 theme_replace(
@@ -55,13 +57,9 @@ Now plot the values on the $U(0,1)$ scale to replicate (c) of Figure $5$.
 ggplot(df)+ geom_point(aes(x=u,y=v)) + theme(aspect.ratio = 1) + xlab("Wave height") + ylab("Surge level")
 ```
 
-Now, try to replicate Figure $10$ to plot the dependence measures $\chi(u)$ and $\Bar{\chi(u)}$.We need to calculate the empirical estimate of $C(u,u)$. Each marginal distribution is estimated by its empirical distribution function. The confidence intervals are constructed using the delta method.
-
-```{r}
-
-```
-
 ### Dependence measures
+
+Now, try to replicate Figure $10$ to plot the dependence measures $\chi(u)$ and $\Bar{\chi(u)}$.We need to calculate the empirical estimate of $C(u,u)$. Each marginal distribution is estimated by its empirical distribution function. The confidence intervals are constructed using the delta method.
 
 To illustrate the problem of dependence measure $\chi(u)$, we can plot the function for different values of correlation coefficient $\rho$ in the Gaussian dependence model.
 
@@ -132,43 +130,7 @@ df <- df[Chi>=-1,]
 p1 <- ggplot(df) + geom_line(aes(x=U,y=Chi,fill=Rho))+ xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$")) +  guides(colour = guide_legend(reverse=T)) + labs(fill=TeX("$\rho$")) + geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), linetype="dashed")
 p1
 ```
-What happens if we do not restrict lower limit of $y$-axis to be $-1$?
-
-
-Furthermore, plotting extra points close to $1$ makes the convergence more obvious.
-
-```{r}
-#| echo: false
-# for loop for diff values of rho
-U <- c()
-Chi <- c()
-Rho <- c()
-edge <- 10^(-4)
-u <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,0.001))
-rho_vec <- seq(-0.9,0.9,0.1)
-for (i in 1:length(rho_vec)) {
-rho <- rho_vec[i]
-# calculate the copula using VGAM package
-c_uu <- pbinormcop(q1=u,q2=u,rho=rho)
-# calculate chi(u)
-chi <- 2- (log(c_uu))/(log(u))
-u <- u[chi>-10^6]
-chi <- chi[chi>-10^6]
-# subset by Frechet bounds (lower bound is sufficient)
-lower_bound1 <- chi>(2-(log(2*u-1))/(log(u)))
-lower_bound <- lower_bound1 %>% replace(is.na(.), TRUE)
-# add items to a list
-U <- append(U,u[lower_bound])
-Chi <- append(Chi,chi[lower_bound])
-Rho <- append(Rho,rep(rho_vec[i],sum(lower_bound)))
-}
-#p <- p + geom_line(data=df,mapping = aes(x=u,y=chi))
-df <- data.frame(U,Chi,Rho=as.factor(Rho))
-# subset to remove \chi(u)<-1 to match Coles' paper
-#df <- df[Chi>=-1,]
-# ggplot requires prepared data before plotting
-ggplot(df) + geom_point(aes(x=U,y=Chi,color=Rho)) + xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$"))
-```
+What happens if we do not restrict lower limit of $y$-axis to be $-1$? As there is no lower bound as $u \rightarrow 0$ in the case of negative dependence, the illustration becomes harder to read.
 
 ### Dependence measure $\Bar{\chi}(u)$
 
@@ -179,52 +141,24 @@ Theoretical part of the paper involves plotting the dependence measures $\chi(u)
 U <- c()
 Chi <- c()
 Rho <- c()
-edge <- 10^(-4)
+edge <- 10^(-5)
 
 rho_vec <- seq(0.9,-0.9,-0.1)
 for (i in 1:length(rho_vec)) {
 rho <- rho_vec[i]
 u <- c(seq(0+edge,0.95,0.01),seq(0.95,(1-edge),length.out=50))
-u[length(u)] <- (1-edge)
 # calculate the copula using VGAM package
-c_uu <- c()
-# create x and y quantile variables
-# df <- rbinorm(n=1000000,cov12=-0.7)
-# colnames(df) <- c("X","Y")
-# df <- as.data.frame(df)
-# U <- df %>% select(X) %>% arrange(X) %>% mutate(u=row_number()/(nrow(df)+1))
-# V <- df %>% select(Y) %>% arrange(Y) %>% mutate(v=row_number()/(nrow(df)+1)) 
-# # examine top and bottom
-# U %>% head()
-# U %>% tail()
-# V %>% head()
-# V %>% tail()
-# df <- df %>% left_join(U,by="X") %>% left_join(V,by="Y")
-# df %>% head()
-# #c_uu <- 1-2*u+pbinormcop(q1=u,q2=u,rho=-0.8)
-# # create empirical chi(u) function
-# chi_bar <- function(df,threshold) {
-#  x <-( 2*log(1-threshold)/ (log( 1-2*threshold+mean(df$u < threshold & df$v < threshold)) )-1)
-#  return(x)
-# }
-# chi_bar(df,threshold=0.99)
-# 
-# threshold <- c(seq(0+edge,0.95,0.01),seq(0.95,1-edge,length.out=10))
-# chi_bar_u <- c()
-# for (i in 1:length(threshold)) {
-#  chi_bar_u[i] <-  chi_bar(df=df,threshold=threshold[i])
-# }
-# plot(threshold,chi_bar_u)
-# rm(df)
  c_uu <- c()
- for (i in 1:length(u)) {
-  c_uu[i] <- 1-2*u[i]+pbinormcop(q1=u[i],q2=u[i],rho=rho)
-}
+  #c_uu <- 1-2*u+  rvinecopulib::pbicop(u=matrix(c(u,u),ncol=2),family="gaussian",parameters=rho)
+  for (i in 1:length(u)) {
+  c_uu[i] <- mvtnorm::pmvnorm(lower=c(qnorm(u[i]),qnorm(u[i])),sigma=matrix(c(1,rho,rho,1),ncol=2))
+      if (i>2) {if (c_uu[i]<=0) {c_uu[i] <- c_uu[i-1]} }
+  }
 # calculate chi(u)
  # chi <- -1+ (2*log(1-u))/(7.9999^(-1)*log(c_uu^(7.9999)))
-chi <- -1+ (2*log(1-u))/(1^(-1)*log(c_uu^(1)))
-u <- u[chi>-10^6]
-chi <- chi[chi>-10^6]
+chi <- -1+ (2*log(1-u))/(log(c_uu))
+#u <- u[chi>-10^6]
+#chi <- chi[chi>-10^6]
 # subset by Frechet bounds (lower bound is sufficient)
 #lower_bound1 <- chi>(2-(log(2*u-1))/(log(u)))
 #lower_bound <- lower_bound1 %>% replace(is.na(.), TRUE)
@@ -251,7 +185,7 @@ Rho <- append(Rho,rep(rho,length(u)))
 #p <- p + geom_line(data=df,mapping = aes(x=u,y=chi))
 df <- data.frame(U,Chi,Rho=as.factor(Rho))
 # subset to remove \chi(u)<-1 to match Coles' paper
-df <- df[Chi>=-1,]
+df <- df[Chi>-1,] 
 #df$U[(df$U==1) &(df$Rho<0.6)] <- NA
 # ggplot requires prepared data before plotting
 p2 <- ggplot(df %>% drop_na()) + geom_line(aes(x=U,y=Chi,fill=Rho)) + xlab(TeX("$u$")) + ylab(TeX("$\\bar{\\chi}(u)$")) + ylim(c(-1,1)) + xlim(c(0,1)) + geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), linetype="dashed") + geom_segment(aes(x = 0, y = -1, xend = 1, yend = -1),linetype="dashed")
