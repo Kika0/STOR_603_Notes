@@ -42,14 +42,14 @@ df <- data.frame(U,Chi,Rho=as.factor(Rho))
 df <- df[Chi>=-1,]
 # ggplot requires prepared data before plotting
 # ,col= guide_legend(title= TeX("$\rho$"))
-p1 <- ggplot(df) + geom_line(aes(x=U,y=Chi,fill=Rho))+ xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$")) +  guides(colour = guide_legend(reverse=T)) + labs(fill=TeX("$\rho$")) + geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), linetype="dashed")
+p1 <- ggplot(df) + geom_line(aes(x=U,y=Chi,fill=Rho))+ xlab(TeX("$u$"))  + ylab(TeX(paste0("$\\chi$"," ","$(u)$"))) +  guides(colour = guide_legend(reverse=T)) + labs(fill=TeX("$\rho$")) + geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), linetype="dashed")
 p1
 
 # repeat with a logistic copula
 # check which is the copula
 library(evd)
 library(LaplacesDemon)
-tmp <- generate_Y(N=10000) %>% link_log(dep=1/2) 
+tmp <- generate_Y(N=1000) %>% link_log(dep=1/2) 
 tmp <- apply(tmp,MARGIN=c(2),FUN= function(i) { evd::pfrechet(i)})
 rvinecopulib::bicop(data=tmp,family_set="parametric") # gumbel copula with 1/alpha parameter
 
@@ -79,7 +79,7 @@ df <- data.frame(U,Chi,Rho=as.factor(Rho))
 df <- df[Chi>=-1,]
 # ggplot requires prepared data before plotting
 # ,col= guide_legend(title= TeX("$\rho$"))
-p2 <- ggplot(df) + geom_line(aes(x=U,y=Chi,fill=Rho))+ xlab(TeX("$u$")) + ylab(TeX("$\\chi(u)$")) +  guides(colour = guide_legend(reverse=T)) + labs(fill=TeX("$\rho$")) + geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), linetype="dashed")
+p2 <- ggplot(df) + geom_line(aes(x=U,y=Chi,fill=Rho))+ xlab(TeX("$u$")) + ylab(TeX(paste0("$\\chi$"," ","$(u)$"))) +  guides(colour = guide_legend(reverse=T)) + labs(fill=TeX("$\rho$")) + geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), linetype="dashed") + ylim(c(-1,1))
 p2
 
 p <- grid.arrange(p1,p2,ncol=2)
