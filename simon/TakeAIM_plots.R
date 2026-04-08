@@ -289,6 +289,8 @@ for (i in 1:3) {
 pl1 <- ggplot() + geom_line(data=tr1 %>% mutate(Method_optim=factor(Method)),aes(x=x,y=y,col=Method)) + labs(col="Residual site",x="Residual value",y="") + scale_fill_manual(values = c("#C11432","#66A64F", "#009ADA")) 
 ggsave(pl1,filename=paste0(folder_name,"London_residual_site__density_illustrate.png"),width=6,height=4)
 
+# save helpers for simulated field transformation
+save(London_index,Lancaster_index,Inverness_index,july3_obs,gpdpar_sites1,gpdpar_sites2,gpdpar_sites3,P2q_sites1,P2q_sites2,P2q_sites3,file="data_processed/P2qselected_helpers.RData")
 
 # 5. univariate plot gpd ------------------------------------------------------
 xo <- as.numeric(unlist(data_obs_all[,London_index]))
