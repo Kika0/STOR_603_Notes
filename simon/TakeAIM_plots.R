@@ -301,10 +301,6 @@ p <- ggplot(data.frame(xo=xo,y=0,tf=isabove)) + geom_density(aes(x=xo)) + geom_p
 ggsave(p,filename=paste0(folder_name,"London_illust.png"),width=6,height=4)
 
 # 6. conditional probabilities ------------------------------------------------
-# transform onto the original scale
-Normal_AGG_PIT <- function(z,theta) {
-  return(qAGG(pnorm(z),theta=theta))
-}
 cond_index <- London_index
 # gpd parameters for July 3, 2026
 gpd2026 <- as.numeric(unlist(gpdpar_sites2[cond_index,]))
