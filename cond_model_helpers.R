@@ -8,6 +8,11 @@ F_smooth_Z <- function(Z) {
  return(Z_smooth) 
 }
 
+# transform onto the original scale
+Normal_AGG_PIT <- function(z,theta) {
+  return(qAGG(pnorm(z),theta=theta))
+}
+
 # transform from normal back to kernel smoothed by minimising the square difference
 norm_to_orig <- function(ZN,emp_res) {
   Z <- data.frame(matrix(ncol=ncol(ZN),nrow=nrow(ZN)))
