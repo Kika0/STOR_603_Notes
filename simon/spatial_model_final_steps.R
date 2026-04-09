@@ -24,10 +24,11 @@ source("simon/P2q_function_helpers.R")
 load("data_processed/P2qselected_helpers.RData", verbose = TRUE)
 load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose = TRUE) # original parameter estimates
 load("data_processed/iterative_phi0l_phi0u_estimates_London.RData",verbose=TRUE) # residual margin parameters
+load("data_processed/residual_dependence_pars.RData", verbose = TRUE) # residual dependence parameters
 
 # 1. recreate simulated fields -----------------------------------------------
 # simulate 10 fields overall --------------------------------------------------
-# get index for london
+# get index for London
 x <- july3_obs[London_index]
 # transform to Laplace
 xL <- unif_laplace_pit(x)
@@ -39,7 +40,7 @@ pe <- as.data.frame(result_new[[12]] %>% dplyr::select(mu_agg,sigl,sigu,deltal,d
 names(pe) <- c("mu","sigl","sigu","deltal","deltau")
 # get fields
 # reconstruct the fields
-y_sim <- apply(random10N,MARGIN=c(2),FUN=function(xk){xL*aest+xL^best*xk})
+y_sim <- apply(random10N,MARGIN=c(1),FUN=function(xk){xL*aest+xL^best*xk})
 # add row for the conditioning site
 y_sim <- as.data.frame(y_sim)
 #y_sim <- y_sim %>% add_row(.before=London_index)
@@ -47,7 +48,7 @@ y_sim[London_index,] <- xL
 names(y_sim) <- paste0("random",1:10)
 # plot on standard Normal scale
 tmpsf <- st_as_sf(cbind(y_sim,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
-t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-10,30)),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
+t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(-10,15)),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
 tmap_save(tm=t, filename=paste0(folder_name,"random10_y_sim_London.png"),width=10,height=8)
 
 # transform all 10 onto 2 different scales
@@ -69,3 +70,36 @@ t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) 
 tmap_save(tm=t, filename=paste0(folder_name,"random10_x_sim2076.png"),width=10,height=8)
 t <- tm_shape(tmpsf %>% mutate("name"=factor(name, levels=unique(tmpsf$name)))) + tm_dots(fill="value",size=0.5,fill.scale = tm_scale_continuous(values="-brewer.rd_bu",limits=c(10,50)),fill.legend = tm_legend(title = "")) + tm_facets(by="name",ncol=5)
 tmap_save(tm=t, filename=paste0(folder_name,"random10_xcont_sim2076_London.png"),width=10,height=8)
+
+# check the mean value at each site across many fields
+random10000 <- as.data.frame(  spam::rmvnorm(n=10000,Sigma = Zcov)  )
+random10000N <- sapply(1:ncol(random10000),FUN=function(k) {Normal_AGG_PIT(z = random10000[,k],theta=c(pe$mu[k],pe$sigl[k],pe$sigu[k],pe$deltal[1],pe$deltau[1]))}) %>% as.data.frame()
+names(random10000N) <- names(Z)
+# calculate mean at each site
+# reconstruct the fields
+y_sim <- apply(random10000N,MARGIN=c(1),FUN=function(xk){xL*aest+xL^best*xk})
+# add row for the conditioning site
+y_sim <- as.data.frame(y_sim)
+tmp <- apply(y_sim)
+tmpsf <- st_as_sf(cbind(y_sim,xyUK20_sf)) %>% pivot_longer(cols=contains("random"))
+
+# reestimate alpha and beta
+to_opt <- function(x1,x2,theta,i,cond_index=London_index,pe_i) {
+  a <- theta[1]
+  b <- theta[2]
+  if (a<0 | a>1 | b<0 | b>1) {return(10^6)}
+ y <-  NLL_AGG(x=(x2-a*x1)/(x1^b),theta = pe_i)
+ return(y)
+}
+NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res=pe %>% add_row(.before = London_index),cond_index,v=0.9) {
+ pe_i <- as.numeric(unlist(pe_res[i,]))
+ data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],v))
+ x1 <- as.numeric(unlist(data_Lapv[,London_index]))
+ x2 <- as.numeric(unlist(data_Lapv[,i]))
+ if (is.na(pe_i[1])) {return(NA)}
+ y <- optim(par=c(0.8,0.3),fn= to_opt,x1=x1,x2=x2,i=i,cond_index=cond_index,pe_i=pe_i)
+ return(y) 
+}
+x <- sapply(1:ncol(data_mod_Lap),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=London_index)
+
+#to_opt(x1=x1,x2=x2,i=1,theta=c(0.8,0.3),pe_i=pe_i)
