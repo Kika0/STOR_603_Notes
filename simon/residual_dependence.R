@@ -15,6 +15,7 @@ theme_replace(
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
 source("spatial_parameter_estimation.R") # for spatial_par_est function
+source("cond_model_helpers.R") # PIT functions
 load("data_processed/temperature_data.RData")
 load("data_processed/spatial_helper.RData")
 Birmingham <- c(-1.9032,52.4806)
@@ -346,10 +347,6 @@ Zcov <- Zcov[-c(cond_index),-c(cond_index)]
 random10 <- as.data.frame(t(  spam::rmvnorm(n=10,Sigma = Zcov)  ))
 names(random10) <- paste0("random",1:10)
 
-# transform onto the original scale
-Normal_AGG_PIT <- function(z,theta) {
-  return(qAGG(pnorm(z),theta=theta))
-}
 # transform
 load(file="data_processed/iterative_phi0l_phi0u_estimates_Birmingham_Cromer_diagonal.RData",verbose = TRUE)
 aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(a),is.na)
