@@ -85,10 +85,10 @@ tmpsf <- st_as_sf(cbind(y_sim,xyUK20_sf)) %>% pivot_longer(cols=contains("random
 
 # reestimate alpha and beta
 to_opt <- function(x1,x2,theta,i,cond_index=London_index,pe_i) {
-  a <- theta[1]
-  b <- theta[2]
-  if (a<0 | a>1 | b<0 | b>1) {return(10^6)}
- y <-  NLL_AGG(x=(x2-a*x1)/(x1^b),theta = pe_i)
+  # a <- theta[1]
+  # b <- theta[2]
+  # if (a<0 | a>1 | b<0 | b>1) {return(10^6)}
+ y <-  NLL_AGG_onestep(x=data.frame(x1,x2),theta=theta,mu_hat=pe_i[1],sigl_hat = pe_i[2], sigu_hat = pe_i[3], deltal_hat = pe_i[4], deltau_hat = pe_i[5])
  return(y)
 }
 NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res=pe %>% add_row(.before = London_index),cond_index,v=0.9) {
@@ -98,8 +98,16 @@ NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res=pe %>% add_row(.befor
  x2 <- as.numeric(unlist(data_Lapv[,i]))
  if (is.na(pe_i[1])) {return(NA)}
  y <- optim(par=c(0.8,0.3),fn= to_opt,x1=x1,x2=x2,i=i,cond_index=cond_index,pe_i=pe_i)
- return(y) 
+ return(y$par) 
 }
 x <- sapply(1:ncol(data_mod_Lap),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=London_index)
-
+tmp <- as.data.frame(do.call(rbind,x))
+names(tmp) <- c("a","b")
+summary(tmp$a)
+summary(tmp$b)
+summary(aest)
+summary(best)
 #to_opt(x1=x1,x2=x2,i=1,theta=c(0.8,0.3),pe_i=pe_i)
+
+# map alpha and beta original and new estimates
+
