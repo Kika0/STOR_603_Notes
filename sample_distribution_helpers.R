@@ -214,3 +214,22 @@ AGG_density <- function(x,theta) {
   }
   return(y)
 }
+
+#' AGG expected value function
+#'
+#' @param theta A vector of parameters of length 5
+#'
+#' @return A numeric expected value
+#' @export
+#'
+#' @examples
+AGG_mean <- function(theta) {
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  deltal <- theta[4]
+  deltau <- theta[5]
+  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  y <- mu - C_AGG * ( sigl^2/deltal*gamma(2/deltal) - sigu^2/deltau*gamma(2/deltau) )
+  return(y)
+}
