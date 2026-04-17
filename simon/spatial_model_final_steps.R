@@ -84,11 +84,12 @@ y_sim <- apply(random10000N,MARGIN=c(1),FUN=function(xk){xL*aest+xL^best*xk})
 y_sim <- as.data.frame(y_sim)
 tmp <- apply(y_sim %>% add_row(.before = London_index),MARGIN = c(1),FUN=mean)
 tmpsf <- st_as_sf(cbind(tmp,xyUK20_sf))
-p1 <- tm_shape(tmpsf) + tm_dots(fill="tmp",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="mean(y_sim)")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Mean value at each site") 
+lims <- c(1.5,6.1)
+p1 <- tm_shape(tmpsf) + tm_dots(fill="tmp",fill.scale = tm_scale_continuous(values="viridis",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="mean(y_sim)")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Mean value at each site") 
 # is greater than xL
 tmpsf <- tmpsf %>% mutate("is_big"=(tmp>xL))
 p2 <- tm_shape(tmpsf) + tm_dots(fill="is_big",fill.scale = tm_scale_categorical(values=c("black","#C11432"),value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="mean(y_sim)")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Is bigger than cond. site") 
-tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"y_sim_mean.png"),height=6,width=4)
+tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"y_sim_mean.png"),height=6,width=6)
 
 # reestimate alpha and beta
 to_opt <- function(x1,x2,theta,i,cond_index=London_index,pe_i) {
@@ -132,17 +133,62 @@ ggsave(p,filename=paste0(folder_name,"plot_ab_new_original.png"),width=9,height=
 # map alpha and beta
 title_map <- ""
 misscol <- "aquamarine"
-  legend_text_size <- 0.7
-  point_size <- 0.5
-  legend_title_size <- 0.9
-  limsa <- c(0,1)
-  limsb <- c(0,0.65)
-  nrow_facet <- 1
-  estsf <- cbind(est_all_sf %>% filter(cond_site %in% "London"), data.frame("a_new"=a_new,"b_new" = b_new))
-  p1 <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\alpha}$")) 
-  p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\beta}$")) 
-  p3 <- tm_shape(estsf) + tm_dots(fill="a_new",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\alpha}$")) 
-  p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\beta}$")) 
+legend_text_size <- 0.7
+point_size <- 0.5
+legend_title_size <- 0.9
+limsa <- c(0,1)
+limsb <- c(0,0.65)
+nrow_facet <- 1
+estsf <- cbind(est_all_sf %>% filter(cond_site %in% "London"), data.frame("a_new"=a_new,"b_new" = b_new))
+p1 <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\alpha}$")) 
+p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\beta}$")) 
+p3 <- tm_shape(estsf) + tm_dots(fill="a_new",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\alpha}$")) 
+p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\beta}$")) 
 
-  tmap_save(tmap_arrange(p1,p2,p3,p4,ncol=4),filename=paste0(folder_name,"alpha_beta_fixed_res.png"),height=6,width=11)
-  
+tmap_save(tmap_arrange(p1,p2,p3,p4,ncol=4),filename=paste0(folder_name,"alpha_beta_fixed_res.png"),height=6,width=11)
+
+# plot Y2,Y1 on Laplace margins
+tmp <- y_sim %>% add_row(.before=London_index)
+ 
+p <- data.frame("x"=as.numeric(unlist(y_sim[find_site_index(Hull,grid_uk = xyUK20_sf),]))) %>%  ggplot() + geom_density(aes(x=x))
+ggsave(p, filename = paste0(folder_name,"Hull_simulated.png"))
+p <- data.frame("x"=as.numeric(unlist(y_sim[find_site_index(Hull,grid_uk = xyUK20_sf),]))) %>%  ggplot() + geom_histogram(aes(x=x))
+ggsave(p, filename = paste0(folder_name,"Hull_simulated_hist.png"))
+
+# try plotting both simulated and observed values
+tmpo <- data_mod_Lap %>% dplyr::select(all_of(c(find_site_index(Hull,grid=xyUK20_sf),London_index)))
+tmpo_ex <- tmpo %>% dplyr::filter(Y100>quantile(Y100,0.9,na.rm=TRUE))
+tmps <- data.frame("y"=as.numeric(unlist(y_sim[find_site_index(Hull,grid_uk = xyUK20_sf),])),"x"=xL)
+names(tmps) <- names(tmpo)
+tmpa <- rbind(tmpo %>% mutate("sim_obs"=c("observed")),tmps %>% mutate("sim_obs"=c("simulated")))
+
+ggplot(tmpa) + geom_point(aes(x=Y100,y=Y321,col=sim_obs),size=0.2) + 
+  scale_color_manual(values = c("observed" = "black", "simulated" = "#C11432"))
+                                                                                                 
+# 3. repeat with expected value of the residuals
+Ez <- apply(pe,MARGIN = c(1),FUN=AGG_mean)
+# map mean on a map compared with observed residuals mean
+Ez_df <- data.frame(Ez) %>% add_row(.before=London_index)
+tmp <- data.frame(Zmean=apply(Z,MARGIN = c(2),FUN=mean)) %>% add_row(.before = London_index)
+tmpsf <- st_as_sf(cbind(Ez_df,tmp,xyUK20_sf))
+lims <- c(min(Ez, apply(Z,MARGIN = c(2),FUN=mean)),max(Ez,apply(Z,MARGIN = c(2),FUN=mean)))
+p1 <- tm_shape(tmpsf) + tm_dots(fill="Zmean",fill.scale = tm_scale_continuous(values="viridis",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="Value")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Observed residual mean") 
+p2 <- tm_shape(tmpsf) + tm_dots(fill="Ez",fill.scale = tm_scale_continuous(values="viridis",limits=lims,value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="Value")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Expected value of fitted AGG") 
+tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"Z_mean_obs_fitted.png"),height=6,width=6)
+
+# reconstruct the fields
+aest <- discard(est_all_sf %>% filter(cond_site=="London") %>% pull(a),is.na)
+best <- discard(est_all_sf %>% filter(cond_site=="London") %>% pull(b),is.na)
+y_sim <- sapply(Ez,FUN=function(xk){xL*aest+xL^best*xk})
+# add row for the conditioning site
+y_sim <- as.data.frame(y_sim)
+tmp <- apply(y_sim %>% add_row(.before = London_index),MARGIN = c(1),FUN=mean)
+tmpsf <- st_as_sf(cbind(tmp,xyUK20_sf))
+lims <- c(1.5,6.1) # set common limits for comparison
+p1 <- tm_shape(tmpsf) + tm_dots(fill="tmp",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="mean(y_sim)")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Mean value at each site") 
+# is greater than xL
+tmpsf <- tmpsf %>% mutate("is_big"=(tmp>xL))
+p2 <- tm_shape(tmpsf) + tm_dots(fill="is_big",fill.scale = tm_scale_categorical(values=c("black","#C11432"),value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="mean(y_sim)")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Is bigger than cond. site") 
+tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"y_sim_mean_exact.png"),height=6,width=6)
+
+
