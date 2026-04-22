@@ -127,10 +127,20 @@ NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,cond_index,v=0.9,a=aest,b=be
   x1 <- as.numeric(unlist(data_Lapv[,London_index]))
   ires <- c(1:length(data_Lap))[-London_index][i]
   x2 <- as.numeric(unlist(data_Lapv[,ires]))
-  y <- NLL_AGG_onestep(x=data.frame(x1,x2),theta=c(),a_hat=a[i],b_hat=b[i],mu_hat=pe_i[1],sigl_hat = sig[i], sigu_hat = sig[i], deltal_hat = 2, deltau_hat = 2)
+  y <- NLL_AGG_onestep(x=data.frame(x1,x2),theta=c(),a_hat=a[i],b_hat=b[i],mu_hat=pe_i[1],sigl_hat = sqrt(2)* sig[i], sigu_hat = sqrt(2)* sig[i], deltal_hat = 2, deltau_hat = 2)
   return(y) 
 }
 nll1 <- sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=London_index)
+
+NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,cond_index,v=0.9,a=aest,b=best,mu=muest,sig=sigest) {
+  data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],v))
+  x1 <- as.numeric(unlist(data_Lapv[,London_index]))
+  ires <- c(1:length(data_Lap))[-London_index][i]
+  x2 <- as.numeric(unlist(data_Lapv[,ires]))
+y <- Y_likelihood(theta = c(a[i],b[i],mu[i],sig[i]),df = data_Lapv, given = cond_index,sim=ires)
+    return(y) 
+}
+nll1 <- -sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=London_index)
 
 NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res=pe,cond_index,v=0.9,a=na.omit(a_new),b=na.omit(b_new)) {
   pe_i <- as.numeric(unlist(pe_res[i,]))
@@ -295,16 +305,6 @@ p <- plot_ab(tmp=tmp1)
 ggsave(p,filename=paste0(folder_name,"plot_ab_new_original_model2b_mu.png"),width=9,height=5)
 
 # calculate log-likelihood
-NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res=pe,cond_index,v=0.9,a=aest,b=best,mu=muest,sig=sigest) {
-  pe_i <- as.numeric(unlist(pe_res[i,]))
-  data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],v))
-  x1 <- as.numeric(unlist(data_Lapv[,London_index]))
-  ires <- c(1:length(data_Lap))[-London_index][i]
-  x2 <- as.numeric(unlist(data_Lapv[,ires]))
-  y <- NLL_AGG_onestep(x=data.frame(x1,x2),theta=c(),a_hat=a[i],b_hat=b[i],mu_hat=mu[i],sigl_hat = sig[i], sigu_hat = sig[i], deltal_hat = 2, deltau_hat = 2)
-  return(y) 
-}
-nll1 <- sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=London_index)
 
 NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res=pe,cond_index,v=0.9,a=na.omit(a_new),b=na.omit(b_new),mu=na.omit(mu_new)) {
   pe_i <- as.numeric(unlist(pe_res[i,]))
