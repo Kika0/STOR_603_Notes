@@ -55,6 +55,12 @@ aest <- est_all_sf %>% filter(cond_site=="London") %>% pull(a) %>% na.omit()
 best <- est_all_sf %>% filter(cond_site=="London") %>% pull(b) %>% na.omit()
 muest <- est_all_sf %>% filter(cond_site=="London") %>% pull(mu) %>% na.omit()
 sigest <- est_all_sf %>% filter(cond_site=="London") %>% pull(sig) %>% na.omit()
+muaggest <- est_all_sf %>% filter(cond_site=="London") %>% pull(mu_agg) %>% na.omit()
+siglest <- est_all_sf %>% filter(cond_site=="London") %>% pull(sigl) %>% na.omit()
+siguest <- est_all_sf %>% filter(cond_site=="London") %>% pull(sigu) %>% na.omit()
+deltalest <- est_all_sf %>% filter(cond_site=="London") %>% pull(deltal) %>% na.omit()
+deltauest <- est_all_sf %>% filter(cond_site=="London") %>% pull(deltau) %>% na.omit()
+
 
 summary(aest)
 summary(best)
@@ -127,7 +133,7 @@ NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,cond_index,v=0.9,a=aest,b=be
   x1 <- as.numeric(unlist(data_Lapv[,London_index]))
   ires <- c(1:length(data_Lap))[-London_index][i]
   x2 <- as.numeric(unlist(data_Lapv[,ires]))
-  y <- NLL_AGG_onestep(x=data.frame(x1,x2),theta=c(),a_hat=a[i],b_hat=b[i],mu_hat=pe_i[1],sigl_hat = sqrt(2)* sig[i], sigu_hat = sqrt(2)* sig[i], deltal_hat = 2, deltau_hat = 2)
+  y <- NLL_AGG_onestep(x=data.frame(x1,x2),theta=c(),a_hat=a[i],b_hat=b[i],mu_hat=mu[i],sigl_hat = sqrt(2)* sig[i], sigu_hat = sqrt(2)* sig[i], deltal_hat = 2, deltau_hat = 2)
   return(y) 
 }
 nll1 <- sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=London_index)
@@ -140,7 +146,20 @@ NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,cond_index,v=0.9,a=aest,b=be
 y <- Y_likelihood(theta = c(a[i],b[i],mu[i],sig[i]),df = data_Lapv, given = cond_index,sim=ires)
     return(y) 
 }
-nll1 <- -sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=London_index)
+nll1n <- -sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=London_index)
+
+plot(nll1,nll1n)
+
+NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,cond_index,v=0.9,a=aest,b=best,muagg=muaggest,sigl=siglest,sigu=siguest,deltal=deltalest,deltau=deltauest) {
+  data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],v))
+  x1 <- as.numeric(unlist(data_Lapv[,London_index]))
+  ires <- c(1:length(data_Lap))[-London_index][i]
+  x2 <- as.numeric(unlist(data_Lapv[,ires]))
+  y <- NLL_AGG_onestep(x=data.frame(x1,x2),theta=numeric(),a_hat=a[i],b_hat=b[i],mu_hat=muagg[i],sigl_hat = sigl[i], sigu_hat = sigu[i], deltal_hat = deltal[i], deltau_hat = deltau[i])
+  return(y) 
+}
+nll3 <- sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=London_index)
+
 
 NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res=pe,cond_index,v=0.9,a=na.omit(a_new),b=na.omit(b_new)) {
   pe_i <- as.numeric(unlist(pe_res[i,]))
@@ -332,8 +351,9 @@ nll2b <- sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_L
 a1 <- 2*nll1+2*4
 a2 <- 2*nll2+2*3
 a2b <- 2*nll2b+2*2
+a3 <- 2*nll3+2*7
 
-tmp <- data.frame(nll1,nll2,nll2b,a1,a2,a2b)
+tmp <- data.frame(nll1,nll2,nll2b,a1,a2,a2b,a3)
 
 # boxplots of negative log-likelihood
 tmp1 <- tmp %>% dplyr::select(contains("nll")) %>% pivot_longer(cols=everything())
@@ -365,10 +385,11 @@ p3 <- tm_shape(estsf) + tm_dots(fill="a2b",fill.scale = tm_scale_continuous(limi
 tmap_save(tmap_arrange(p1,p2,p3,ncol=3),filename=paste0(folder_name,"AIC_compare_map_mu.png"),height=6,width=9)
 
 # plot also AIC difference
-diff12=a1-a2
-diff2b2=a2b-a2
-diff12b=a1-a2b
-tmp2 <- tmp %>% mutate(diff12=a1-a2,diff2b2=a2b-a2,diff12b=a1-a2b)
+diff12 <- a1-a2
+diff2b2 <- a2b-a2
+diff12b <- a1-a2b
+diff13 <- a1-a3
+tmp2 <- tmp %>% mutate(diff12,diff2b2,diff12b,diff13)
 limsad <- c(min(diff12,diff2b2,diff12b),max(diff12,diff2b2,diff12b))
 estsf <- cbind(est_all_sf %>% filter(cond_site %in% "London") %>% dplyr::select(c()), tmp2 %>% add_row(.before=London_index))
 p1 <- tm_shape(estsf) + tm_dots(fill="diff12",fill.scale = tm_scale_continuous(limits=limsad,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 1 - Model 2") 
@@ -390,9 +411,13 @@ p2 <- tm_shape(estsf) + tm_dots(fill="is_big",fill.scale = tm_scale_categorical(
 tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"AIC_difference_2b_2_1.png"),height=6,width=6)
 
 # plot also as boxplots
-tmp3 <- tmp2 %>% dplyr::select(contains("diff")) %>% pivot_longer(cols=everything())
+tmp3 <- tmp2 %>% dplyr::select(contains("diff"),contains("2")) %>% pivot_longer(cols=everything())
 p <- ggplot(tmp3 %>% mutate(name=factor(name,levels=c("diff12","diff2b2","diff12b")))) + geom_boxplot(aes(y=value,x=name)) + labs(y="AIC difference",x="") + scale_x_discrete(labels=c("Model 1 - Model 2", "Model 2b - Model 2", "Model 1 - Model 2b"))
 ggsave(p,filename=paste0(folder_name,"AIC_compare_diff_boxplot_mu.png"),width=9,height=5)
+
+tmp3 <- tmp2 %>% dplyr::select(contains("diff")) %>% pivot_longer(cols=everything())
+p <- ggplot(tmp3 %>% mutate(name=factor(name,levels=c("diff12","diff2b2","diff12b","diff13")))) + geom_boxplot(aes(y=value,x=name)) + labs(y="AIC difference",x="") + scale_x_discrete(labels=c("Model 1 - Model 2", "Model 2b - Model 2", "Model 1 - Model 2b","Model 1 - Model 3"))
+ggsave(p,filename=paste0(folder_name,"AIC_compare_diff_boxplot_mu_3.png"),width=9,height=5)
 
 # 2. recreate simulated fields -----------------------------------------------
 # get index for London
