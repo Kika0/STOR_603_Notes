@@ -61,21 +61,20 @@ siguest <- est_all_sf %>% filter(cond_site=="London") %>% pull(sigu) %>% na.omit
 deltalest <- est_all_sf %>% filter(cond_site=="London") %>% pull(deltal) %>% na.omit()
 deltauest <- est_all_sf %>% filter(cond_site=="London") %>% pull(deltau) %>% na.omit()
 
-
 summary(aest)
 summary(best)
 #to_opt(x1=x1,x2=x2,i=1,theta=c(0.8,0.3),pe_i=pe_i)
-tmp1 <- rbind(data.frame(a=aest,b=best,"method"="original"),data.frame(a=na.omit(tmp$a),b=na.omit(tmp$b),"method"="new")) %>% mutate("iteration"=rep(1:length(aest),2))
+tmp1 <- rbind(data.frame(a=aest,b=best,"method"="aoriginal"),data.frame(a=na.omit(tmp$a),b=na.omit(tmp$b),"method"="new")) %>% mutate("iteration"=rep(1:length(aest),2))
 # map alpha and beta original and new estimates
 plot_ab <- function(tmp) { ggplot(tmp) + 
     geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
     geom_point(aes(x=a,y=b,col=method),alpha=0.7,size=1) +
     xlab(TeX("${\\alpha}$")) +
     ylab(TeX("${\\beta}$")) + 
-    scale_color_manual(values = c("original" = "#009ADA", "new" = "#C11432")) + coord_fixed() + theme(axis.text.y = element_text(angle = 90, vjust = 0.5))
+    scale_color_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Model 1","Model 2")) + coord_fixed() + theme(axis.text.y = element_text(angle = 90, vjust = 0.5)) + labs(col="")
 }
 p <- plot_ab(tmp=tmp1)
-ggsave(p,filename=paste0(folder_name,"plot_ab_new_original.png"),width=9,height=5)
+ggsave(p,filename=paste0(folder_name,"plot_ab_new_original.png"),width=7,height=4)
 
 # map alpha and beta
 title_map <- ""
