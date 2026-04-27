@@ -27,6 +27,10 @@ load("data_processed/iterative_phi0l_phi0u_estimates_London.RData",verbose=TRUE)
 load("data_processed/residual_dependence_pars.RData", verbose = TRUE) # residual dependence parameters
 
 # 1. reestimate alpha and beta ------------------------------------------------
+# get residual margin parameters
+pe <- as.data.frame(result_new[[12]] %>% dplyr::select(mu_agg,sigl,sigu,deltal,deltau))
+names(pe) <- c("mu","sigl","sigu","deltal","deltau")
+
 to_opt <- function(x1,x2,theta,i,cond_index=London_index,pe_i) {
   # a <- theta[1]
   # b <- theta[2]
@@ -310,7 +314,7 @@ a_new2 <- na.omit(tmp$a)
 b_new2 <- 0
 mu_new2 <- na.omit(tmp$mu)
 #to_opt(x1=x1,x2=x2,i=1,theta=c(0.8,0.3),pe_i=pe_i)
-tmp1 <- rbind(data.frame(a=a_new2,b=b_new2,"method"="model_2b"),data.frame(a=na.omit(tmp$a),b=na.omit(tmp$b),"method"="model_2")) %>% mutate("iteration"=rep(1:length(aest),2))
+tmp1 <- rbind(data.frame(a=a_new2,b=b_new2,"method"="model_2b"),data.frame(a=na.omit(a_new),b=na.omit(b_new),"method"="model_2")) %>% mutate("iteration"=rep(1:length(aest),2))
 # map alpha and beta original and new estimates
 plot_ab <- function(tmp) { ggplot(tmp) + 
     geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
@@ -321,6 +325,13 @@ plot_ab <- function(tmp) { ggplot(tmp) +
 }
 p <- plot_ab(tmp=tmp1)
 ggsave(p,filename=paste0(folder_name,"plot_ab_new_original_model2b_mu.png"),width=9,height=5)
+
+# plot also alpha and mu spatially
+estsf <- cbind(est_all_sf %>% filter(cond_site %in% "London"), data.frame("a"=a_new2,"mu" = mu_new2) %>% add_row(.before=London_index))
+p1 <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Model 2b $\\alpha$")) 
+p2 <- tm_shape(estsf) + tm_dots(fill="mu",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Model 2b $\\mu$")) 
+tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"alpha_mu_fixed_res_mu.png"),height=6,width=6)
+
 
 # calculate log-likelihood
 
@@ -423,9 +434,6 @@ ggsave(p,filename=paste0(folder_name,"AIC_compare_diff_boxplot_mu_3.png"),width=
 x <- july3_obs[London_index]
 # transform to Laplace
 xL <- unif_laplace_pit(x)
-# get residual margin parameters
-pe <- as.data.frame(result_new[[12]] %>% dplyr::select(mu_agg,sigl,sigu,deltal,deltau))
-names(pe) <- c("mu","sigl","sigu","deltal","deltau")
 # get fields
 # reconstruct the fields
 y_sim <- apply(random10N,MARGIN=c(2),FUN=function(xk){xL*aest+xL^best*xk})
