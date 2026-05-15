@@ -14,7 +14,7 @@ theme_replace(
 
 load("data_processed/spatial_helper.RData") # xyUK20_sf 20km grid
 file.sources = list.files(pattern="*helpers.R")
-sapply(file.sources,source,.GlobalEnv)
+sapply(file.sources,source)
 
 # set folder name to save plots to
 folder_name <- "../Documents/GLEN_workshop_plots/"
@@ -44,12 +44,12 @@ tmap_save(p,filename=paste0(folder_name,"beta_selected_sites.pdf"))
 # remove objects
 rm(est_sites,p)
 
-# 2. spatial and temporal estimates from Birmingham to London
+# 2. spatial and temporal estimates from Birmingham to London -----------------
 # calculate estimates from Birmingham to London
 # identify diagonal sites
 # find indeces of start and end sites
-source("spatial_parameter_estimation.R") # for spatial_par_est function
-load("data_processed/temperature_data.RData") # for data_mod and data_mod_Lap
+source("spatial_parameter_estimation.R", echo = TRUE) # for spatial_par_est function
+load("data_processed/temperature_data.RData",verbose = TRUE) # for data_mod and data_mod_Lap
 q <- 0.9
 Birmingham <- c(-1.9032,52.4806)
 London <- c(-0.127676,51.529972)
@@ -58,8 +58,8 @@ site_end <- find_site_index(site=London,grid_uk = xyUK20_sf)
 sites_index_diagonal <- c(192,193,175,157,137,117,99,100) # first is Birmingham and last is London
 site_name_diagonal <- c("Birmingham", paste0("diag",1:(length(sites_index_diagonal)-2)),"London")
 #spatial_par_est(data_Lap = data_mod_Lap,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("diagonal_sites_Birmingham_London",q*100))
-# load estimates
-load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_London90.RData")
+# load parameter estimates
+load("data_processed/N9000_sequential2_AGG_diagonal_sites_Birmingham_London90.RData",verbose = TRUE)
 title_map <- ""
 misscol <- "aquamarine"
 legend_text_size <- 0.4
@@ -75,7 +75,7 @@ est_sites <- est_all_sf %>% filter(cond_site %in% "Birmingham") %>% mutate(cond_
 p <- tm_shape(est_sites) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) + tm_facets(by="tau",nrow = nrow_facet) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
 tmap_save(p,filename=paste0(folder_name,"alpha_Brimingham_temporal.png"))
 
-# 4. estimates of iterative approach compared with original ------------
+# 3. estimates of iterative approach compared with original -------------------
 # show these for Birmingham and Cromer
 load("data_processed/iterative_abmu_fixed_delta.RData")
 # identify diagonal sites
@@ -230,7 +230,7 @@ tmap_save(tallpar,filename=paste0(folder_name,"/allpars_",cond_site_name,"_itera
 map_ab_iterative_difference(site=1)
 map_ab_iterative_difference(site=12)
 
-# 5. plot of sigma values comparison -----------------------------------
+# 4. plot of sigma values comparison ------------------------------------------
 c12 <- c(
   "#009ADA", "#C11432", # red
   "green4",
@@ -267,16 +267,14 @@ ggsave(p,filename=paste0(folder_name,"sigmas_distance.pdf"),width=12,height=3.5)
 # remove
 rm(tmp_sigl,tmp_sigu,tmp_sigmas,lims,point_size,p1,p2,p3,p)
 
-# 7. plot of phis against distance
+# 5. plot of phis against distance
 load("data_processed/iterative_abmu_fixed_delta.RData")
 tmpdf <- data.frame("value"=numeric(),"cond_site"=character(),"par"=character())
 tmp2 <- data.frame("value"=numeric(),"cond_site"=character(),"par"=character())
 Nite <- 10
 for (subscript in 0:3) {
-  
   tmp1 <- sapply(1:length(sites_index_diagonal),FUN=function(i) {
     rbind(tmpdf,data.frame("value"=tmp_fixed_deltas[[i]][[subscript+6]]) %>% mutate("cond_site"=site_name_diagonal[i],"par"=paste0("phi",subscript),"iteration"=1:(Nite+1)))
-    
   },simplify=FALSE)
   tmp <- do.call("rbind",tmp1)
   tmp2 <- rbind(tmp2,tmp)
@@ -289,7 +287,7 @@ p <- grid.arrange(p1,p2,ncol=1)
 ggsave(p,filename=paste0(folder_name,"allphis_iterativeabmu.png"),width=10,height=5)
 ggsave(p,filename=paste0(folder_name,"allphis_iterativeabmu.pdf"),width=10,height=5)
 
-# try do a PP plot
+# 6. PP plot for AGG parameters ------------------------------------------------
 # calculate observed residuals
 v <- 0.9
 aest <- discard(est_all_sf %>% filter(cond_site==site_name_diagonal[1]) %>% pull(a),is.na)
@@ -305,7 +303,7 @@ sites <- c(1:ncol(data_mod_Lap))[-sites_index_diagonal[1]]
 est_new <- tmp_fixed_deltas[[1]][[12]] %>% add_row(.before=sites_index_diagonal[1])
 # set up dataframe
 tmp <- data.frame(x=numeric(),y=numeric(),"method"=character(),"res_site"=numeric())
-for (i in 1:(ncol(Z))) {
+for (i in 1:(ncol(Zold))) {
   site <- sites[i]
 AGGPars <- as.numeric(unlist(est_new[site,c(3,4,5,10,11)]))
 # get estimates old
@@ -320,14 +318,10 @@ tmp_append_new <- data.frame(x=U,y=Um,method="New_iterative_approach","res_site"
 tmp <- rbind(tmp,tmp_append_old,tmp_append_new) 
 }
 
-for (i in 1:5) {
-  print(tmp_fixed_deltas[[1]][[i]][res_site_over,])
-}
-
 p <- ggplot(tmp) + geom_line(aes(x=x,y=y,group=res_site),linewidth=0.01,alpha=0.9)+ geom_abline(slope=1,linetype="dashed") + facet_wrap("method") + xlab("Empirical") + ylab("Model")
 ggsave(p,filename=paste0(folder_name,"PP_Birmingham.pdf"),width=10,height=5)
 
-# examine outliers
+# examine outliers of AGG bad fit ---------------------------------------------
 plot_AGG_diagnostics_method <- function(method_name = "Original_method") {
 tmp <- tmp %>% dplyr::filter(method==method_name) %>% mutate(diag_diff=y-x)
 res_site_over <- tmp[tmp$diag_diff==max(tmp$diag_diff),]$res_site
@@ -347,7 +341,7 @@ misscol <- "aquamarine"
 t <- tm_shape(tmpsf) + tm_dots(fill="diag_diff",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size) + tm_facets(by="under_over") + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE) + tm_title(text=title_map) 
 tmap_save(t,filename=paste0(folder_name,"PP_all_map_examine_",method_name,".png"))
 
-# examine on a map only the worst case
+# examine on a map only the worst case of AGG fit
 over_under <- rep(NA,nrow(xyUK20_sf))
 over_under[sites_index_diagonal[1]] <- "Conditioning_site"
 over_under[res_site_over] <- "Residual_site_underestimate"
@@ -390,16 +384,13 @@ p1 <- ggplot(data.frame(AGG_underestimate,dist_cond_site)) + geom_point(aes(x=di
 p2 <- ggplot(data.frame(AGG_overestimate,dist_cond_site)) + geom_point(aes(x=dist_cond_site,y=AGG_overestimate))
 p <- grid.arrange(p1,p2,ncol=1)
 ggsave(p,filename=paste0(folder_name,"AGG_Birmingham_distance_",method_name,".pdf"),width=10,height=10)
-
-#
 }
 
 # run for both methods
 plot_AGG_diagnostics_method(method_name="Original_method")
 plot_AGG_diagnostics_method(method_name="New_iterative_approach")
 
-
-# plot conditional quantiles
+# 7. plot conditional quantiles -----------------------------------------------
 Lap_max <- max(apply(X=data_mod_Lap,MARGIN = c(2),FUN = max))
 conditional_quantiles <- function(x,model_pars,q_res=0.75,Y=data_mod_Lap, cond_site) {
   a <- model_pars$a
@@ -430,6 +421,7 @@ Q25 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0
 Q75 <- cond_quantiles_wrapper(Lap_max=Lap_max,par_est_site = par_est_new,q_res=0.75,site_index = sites_index_diagonal[i],cond_site_name = site_name_diagonal[i])
 tmp <- rbind(xyUK20_sf %>% mutate(Q=Q25$Ycond,"Quantile"="q=0.25"),xyUK20_sf %>% mutate(Q=Q75$Ycond,"Quantile"="q=0.75"))
 lims <- c(0,15)
+point_size <- 0.5
 tnew <- tm_shape(tmp)  + tm_dots(fill="Q",fill.scale = tm_scale_continuous(midpoint=Lap_max,limits=lims,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning site"),size=point_size, fill.legend = tm_legend(title="Temperature \n (Laplace scale)")) + tm_layout(legend.outside.size=0.3,asp=0.5,legend.text.size = 1,legend.title.size=1.5,legend.reverse = TRUE,legend.position = tm_pos_out("right","center",pos.h="left",pos.v="top")) + tm_title(site_name_diagonal[i]) + tm_facets(by="Quantile")
 tmap_save(tnew,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".png"),width=9,height=7)
 tmap_save(tnew,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal[i],".pdf"),width=9,height=7)
@@ -446,6 +438,5 @@ tmap_save(tnew,filename=paste0(folder_name,"Qnew_q",q*100,"_",site_name_diagonal
   tboth <- tmap_arrange(told,tnew,ncol=2)
   tmap_save(tboth,filename=paste0(folder_name,"Q_q",q*100,"_",site_name_diagonal[i],".png"),width=15,height=7)
   tmap_save(tboth,filename=paste0(folder_name,"Q_q",q*100,"_",site_name_diagonal[i],".pdf"),width=15,height=7)
-  
 }
 
