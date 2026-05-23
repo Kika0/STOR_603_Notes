@@ -30,7 +30,7 @@ deltau <- result_new[[1]]$deltau[1]
 
 source("simon/final_model_helpers.R")
 # Model 3: parameter estimation ------------------------------------------------
-par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK20_sf,deltal=deltal_est,deltau=deltau_est) {
+par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK20_sf,deltal,deltau) {
   # calculate distance from the conditioning site
   dist_tmp <- as.numeric(unlist(st_distance(grid20km[cond_index,],grid20km[-cond_index,])))
   distnorm <- dist_tmp/1000000  # normalise distance using a common constant
@@ -48,7 +48,7 @@ par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK
   pe_res <- x1 %>% dplyr::select(sigl,sigu) %>% na.omit()
   try7 <- par_est_ite(z=Z,given=cond_index,cond_site_dist = distnorm, parest_site = pe_res,Nite = Nite_phi,show_ite=TRUE,deltal = deltal,deltau = deltau) 
   # 3. reestimate a,b,mu
-#  pe <- x1 %>% dplyr::select(sigl,sigu)
+  pe <- try7[[12]] %>% dplyr::select(sigl,sigu)
   # x <- sapply(1:ncol(data_Lap),FUN=NLL_AGG_wrapper,data_Lap=data_Lap,cond_index=cond_index,pe_res = pe)
   # tmp <- as.data.frame(do.call(rbind,x))
   # names(tmp) <- c("a","b","mu")
@@ -60,5 +60,5 @@ par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK
 }
 q <- 0.9 # set quantile threshold
 s <- Sys.time()
-y <- par_est_model_3(cond_index=London_index,v=q,data_Lap = data_mod_Lap)
+y <- par_est_model_3(cond_index=London_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau)
 Sys.time()-s
