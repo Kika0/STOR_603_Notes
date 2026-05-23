@@ -28,31 +28,12 @@ load("data_processed/residual_dependence_pars.RData", verbose = TRUE) # residual
 deltal <- result_new[[1]]$deltal[1]
 deltau <- result_new[[1]]$deltau[1]
 
-# Step 2. helper functions
-to_opt <- function(data_Lapv,theta,i,cond_index=London_index,pe_i) {
-  # a <- theta[1]
-  # b <- theta[2]
-  # if (a<0 | a>1 | b<0 | b>1) {return(10^6)}
-  y <-  NLL_AGG_onestep(x=data_Lapv,theta=theta,sigl_hat = pe_i[2], sigu_hat = pe_i[3], deltal_hat = pe_i[4], deltau_hat = pe_i[5])
-  return(y)
-}
-NLL_AGG_wrapper <- function(data_Lapv,i,pe_res=pe %>% add_row(.before = cond_index),cond_index) {
-  pe_i <- as.numeric(unlist(pe_res[i,]))
-  if (is.na(pe_i[1])) {return(NA)}
-  y <- optim(par=c(0.8,0.3,pe_i[1]),fn= to_opt,data_Lapv=data_Lapv,i=i,cond_index=cond_index,pe_i=pe_i)
-  return(y$par) 
-}
-
+source("simon/final_model_helpers.R")
 # Model 3: parameter estimation ------------------------------------------------
 par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK20_sf,deltal=deltal_est,deltau=deltau_est) {
   # calculate distance from the conditioning site
   dist_tmp <- as.numeric(unlist(st_distance(grid20km[cond_index,],grid20km[-cond_index,])))
-  # remove zero distance (conditioning site)
-  dist_tmp <- dist_tmp[dist_tmp>1]
-  # normalise distance using a common constant
-  distnorm <- dist_tmp/1000000
-  #names(parest_site) <- c("sigl","sigu","deltal","deltau")
-  
+  distnorm <- dist_tmp/1000000  # normalise distance using a common constant
   # subset conditioning dataset
   data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],v))
   x1 <- x2 <- x3 <- list()
@@ -60,20 +41,22 @@ par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK
   x1 <- par_est(df=data_Lapv,v = v,given = cond_index,margin = "Normal",method = "sequential2",keef_constraints = c(1,2))
   a <- discard(x1$a,is.na())
   b <- discard(x1$b,is.na())
-  Z <- observed_residuals(df=data_mod_Lap,given=cond_site,v = v,a=a,b=b)
+  Z <- observed_residuals(df=data_mod_Lap,given=cond_index,v = v,a=a,b=b)
   # iterate between steps 2. and 3.
   # 2. estimate phis
   Nite_phi <- 10
-  try7 <- par_est_ite(z=Z,given=cond_site,cond_site_dist=distnorm, parest_site = ,Nite=Nite_phi,show_ite=TRUE,deltal=deltal,deltau= deltau) 
+  pe_res <- x1 %>% dplyr::select(sigl,sigu) %>% na.omit()
+  try7 <- par_est_ite(z=Z,given=cond_index,cond_site_dist = distnorm, parest_site = pe_res,Nite = Nite_phi,show_ite=TRUE,deltal = deltal,deltau = deltau) 
   # 3. reestimate a,b,mu
-  pe <- 
-  x <- sapply(1:ncol(data_Lap),FUN=NLL_AGG_wrapper,data_Lap=data_Lap,cond_index=cond_index,pe_res = pe)
-  tmp <- as.data.frame(do.call(rbind,x))
-  names(tmp) <- c("a","b","mu")
-  a <- tmp$a
-  b <- tmp$b
-  mu <- tmp$mu
-  return(list(x1,x2,x3))
+#  pe <- x1 %>% dplyr::select(sigl,sigu)
+  # x <- sapply(1:ncol(data_Lap),FUN=NLL_AGG_wrapper,data_Lap=data_Lap,cond_index=cond_index,pe_res = pe)
+  # tmp <- as.data.frame(do.call(rbind,x))
+  # names(tmp) <- c("a","b","mu")
+  # a <- tmp$a
+  # b <- tmp$b
+  # mu <- tmp$mu
+#  return(list(x1,x2,x3))
+  return(list(x1,try7))
 }
 q <- 0.9 # set quantile threshold
 s <- Sys.time()
