@@ -102,7 +102,7 @@ par_est_mu <- function(z,v,given,res_margin_est) {
 #' @export
 #'
 #' @examples
-par_est_ite <- function(z,v,given,cond_site_dist, parest_site, Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=0)  {
+par_est_ite <- function(z,v,given,cond_site_dist, parest_site, Nite=10, show_ite=FALSE,deltal=NULL,deltau=NULL,phi0u=NULL,phi0l=NULL)  {
   d <- ncol(z)
   N <- nrow(z)
   res <- 1:d[-given]
@@ -173,23 +173,25 @@ par_est_ite <- function(z,v,given,cond_site_dist, parest_site, Nite=10, show_ite
     sigu[,k] <- phi0u + phi1u*(1-exp(-phi2u*cond_site_dist))
     sigl[,k] <- phi0l + phi1l*(1-exp(-phi2l*cond_site_dist))
   }
-  par_sum <- data.frame("mu_agg" = as.numeric(mu_agg[,Nite]),"sigl" = as.numeric(sigl[,Nite]),"sigu" = as.numeric(sigu[,Nite]),"phi1u" = phi1u.[Nite], "phi2u" = phi2u.[Nite],"phi1l" = phi1l.[Nite], "phi2l" = phi2l.[Nite], "deltal" = deltal.[Nite], "deltau" = deltau.[Nite])
+  par_sum <- data.frame("mu_agg" = as.numeric(mu_agg[,Nite]),"sigl" = as.numeric(sigl[,Nite]),"sigu" = as.numeric(sigu[,Nite]),"phi0u" = phi0u.[Nite],"phi1u" = phi1u.[Nite], "phi2u" = phi2u.[Nite],"phi0l" = phi0l.[Nite],"phi1l" = phi1l.[Nite], "phi2l" = phi2l.[Nite], "deltal" = deltal.[Nite], "deltau" = deltau.[Nite])
   if (show_ite == TRUE) {
     return(list( "mu_agg" = mu_agg, "sigl" = sigl, "sigu" = sigu, "phi0u" = phi0u., "phi1u" = phi1u., "phi2u" = phi2u., "phi0l" = phi0l., "phi1l" = phi1l., "phi2l" = phi2l., "deltal" = deltal., "deltau" = deltau.,"par_sum" = par_sum))
   } else {return(par_sum)}
 }
 
 # Step 2. helper functions
-to_opt <- function(data_Lapv,theta,i,cond_index=London_index,pe_i) {
+to_opt <- function(x1,x2,theta,i,cond_index=London_index,pe_i) {
   # a <- theta[1]
   # b <- theta[2]
   # if (a<0 | a>1 | b<0 | b>1) {return(10^6)}
-  y <-  NLL_AGG_onestep(x=data_Lapv,theta=theta,sigl_hat = pe_i[2], sigu_hat = pe_i[3], deltal_hat = pe_i[4], deltau_hat = pe_i[5])
+  y <-  NLL_AGG_onestep(x=data.frame(x1,x2),theta=theta,sigl_hat = pe_i[2], sigu_hat = pe_i[3], deltal_hat = pe_i[4], deltau_hat = pe_i[5])
   return(y)
 }
 NLL_AGG_wrapper <- function(data_Lapv,i,pe_res,cond_index) {
   pe_i <- as.numeric(unlist(pe_res[i,]))
+  x1 <- as.numeric(unlist(data_Lapv[,cond_index]))
+  x2 <- as.numeric(unlist(data_Lapv[,i]))
   if (is.na(pe_i[1])) {return(NA)}
-  y <- optim(par=c(0.8,0.3,pe_i[1]),fn= to_opt,data_Lapv=data_Lapv,i=i,cond_index=cond_index,pe_i=pe_i)
+  y <- optim(par=c(0.8,0.3,pe_i[1]),fn= to_opt,x1=x1,x2=x2,i=i,cond_index=cond_index,pe_i=pe_i)
   return(y$par) 
 }
