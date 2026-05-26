@@ -25,40 +25,57 @@ load("data_processed/P2qselected_helpers.RData", verbose = TRUE)
 load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose = TRUE) # original parameter estimates
 load("data_processed/iterative_phi0l_phi0u_estimates_London.RData",verbose=TRUE) # residual margin parameters
 load("data_processed/residual_dependence_pars.RData", verbose = TRUE) # residual dependence parameters
-deltal <- result_new[[1]]$deltal[1]
-deltau <- result_new[[1]]$deltau[1]
-
+deltal <- result_new[[12]]$deltal[1]
+deltau <- result_new[[12]]$deltau[1]
 source("simon/final_model_helpers.R")
 # Model 3: parameter estimation ------------------------------------------------
-par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK20_sf,deltal,deltau) {
+par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK20_sf,deltal,deltau,Nite_2_3=10,Nite_phi=10) {
   # calculate distance from the conditioning site
   dist_tmp <- as.numeric(unlist(st_distance(grid20km[cond_index,],grid20km[-cond_index,])))
   distnorm <- dist_tmp/1000000  # normalise distance using a common constant
   # subset conditioning dataset
   data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],v))
-  x1 <- x2 <- x3 <- list()
+  # initiate objects
+  x2 <- x3 <- list() # a list of output at steps 2 and 3
+  x2_df <- data.frame("mu_agg"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"phi0u"=numeric(),"phi1u"=numeric(),"phi2u"=numeric(),"phi0l"=numeric(),"phi1l"=numeric(),"phi2l"=numeric(),"iteration"=numeric())
+  x3_df <- data.frame("a"=numeric(),"b"=numeric(),"mu"=numeric(),"iteration"=numeric())
+  x_time <- data.frame("step2"=numeric(),"step3"=numeric(),"iteration"=numeric())
   # 1. estimate alpha and beta
   x1 <- par_est(df=data_Lapv,v = v,given = cond_index,margin = "Normal",method = "sequential2",keef_constraints = c(1,2))
-  a <- discard(x1$a,is.na())
-  b <- discard(x1$b,is.na())
-  Z <- observed_residuals(df=data_mod_Lap,given=cond_index,v = v,a=a,b=b)
   # iterate between steps 2. and 3.
+  for (Nite_i in 1:Nite_2_3) {
+  if (Nite_i>1) {
+    a <- tmp$a[!is.na(tmp$a)]
+    b <- tmp$b[!is.na(tmp$b)]
+    pe_res <- pe_phi_ite %>% dplyr::select(sigl,sigu) %>% na.omit() 
+  } else {
+    pe_res <- data.frame("sigl" = rep(1,length(a)),"sigu" = rep(1,length(a)))
+    a <- x1$a[!is.na(x1$a)]
+    b <- x1$b[!is.na(x1$b)]
+  }
+  # update residuals
+  Z <- observed_residuals(df=data_Lap,given=cond_index,v = v,a=a,b=b)
   # 2. estimate phis
-  Nite_phi <- 10
-  pe_res <- x1 %>% dplyr::select(sigl,sigu) %>% na.omit()
-  try7 <- par_est_ite(z=Z,given=cond_index,cond_site_dist = distnorm, parest_site = pe_res,Nite = Nite_phi,show_ite=TRUE,deltal = deltal,deltau = deltau) 
+  x_time_dummy <- Sys.time()
+  x2 <- par_est_ite(z=Z,given=cond_index,cond_site_dist = distnorm, parest_site = pe_res,Nite = Nite_phi,show_ite=TRUE,deltal = deltal,deltau = deltau) 
+  x_time2 <- Sys.time()-x_time_dummy
+  x2_df <- rbind(x2_df,x2[[12]] %>% mutate("iteration"=Nite_i))
   # 3. reestimate a,b,mu
-  pe <- try7[[12]] %>% dplyr::select(sigl,sigu)
-  # x <- sapply(1:ncol(data_Lap),FUN=NLL_AGG_wrapper,data_Lap=data_Lap,cond_index=cond_index,pe_res = pe)
-  # tmp <- as.data.frame(do.call(rbind,x))
-  # names(tmp) <- c("a","b","mu")
-  # a <- tmp$a
-  # b <- tmp$b
-  # mu <- tmp$mu
-#  return(list(x1,x2,x3))
-  return(list(x1,try7))
+  pe_phi_ite <- x2[[12]] %>% dplyr::select(mu_agg,sigl,sigu,deltal,deltau)
+  x_time_dummy <- Sys.time()
+  x3 <- sapply(1:ncol(data_Lap),FUN=NLL_AGG_wrapper,data_Lapv=data_Lapv,cond_index=cond_index,pe_res = pe_phi_ite%>% add_row(.before = cond_index))
+  x_time3 <- Sys.time()-x_time_dummy
+  tmp <- as.data.frame(do.call(rbind,x3)) %>% mutate("iteration"=Nite_i)
+  names(tmp)[1:3] <- c("a","b","mu")
+  x3_df <- rbind(x3_df,tmp)
+  x_time <- rbind(x_time,data.frame("step2"=x_time2,"step3"=x_time3,"iteration"=Nite_i))
+  }
+  return(list(x1,x2_df,x3_df,x_time))
 }
 q <- 0.9 # set quantile threshold
 s <- Sys.time()
 y <- par_est_model_3(cond_index=London_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau)
 Sys.time()-s
+
+# plot diagnostics
+
