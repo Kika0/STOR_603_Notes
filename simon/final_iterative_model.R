@@ -16,6 +16,7 @@ theme_replace(
   panel.border = element_rect(colour = "black", fill = NA) )
 folder_name <- "../Documents/spatial_model_final_steps/"
 
+cond_site_name <- "London"
 # load observed data
 #source("spatial_parameter_estimation.R") # for spatial_par_est function
 load("data_processed/temperature_data.RData",verbose = TRUE)
@@ -78,4 +79,37 @@ y <- par_est_model_3(cond_index=London_index,v=q,data_Lap = data_mod_Lap,deltal 
 Sys.time()-s
 
 # plot diagnostics
+folder_name <- "../Documents/final_model_3/"
+ggplot(y[[3]]) + geom_point(aes(x=a,y=b)) + facet_wrap(~iteration)
+ggplot(y[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=a)) 
+ggplot(y[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=b)) 
 
+# 1. map alpha and beta new and original estimates ----------------------------
+a_new <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(a) %>% pull(a)
+b_new <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(b)  %>% pull(b)
+title_map <- ""
+misscol <- "aquamarine"
+legend_text_size <- 0.7
+point_size <- 0.5
+legend_title_size <- 0.9
+limsa <- c(0,1)
+limsb <- c(0,0.65)
+nrow_facet <- 1
+estsf <- cbind(est_all_sf %>% filter(cond_site %in% cond_site_name), data.frame("a_new"=a_new,"b_new" = b_new))
+p1 <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\alpha}$")) 
+p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\beta}$")) 
+p3 <- tm_shape(estsf) + tm_dots(fill="a_new",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\alpha}$")) 
+p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\beta}$")) 
+tmap_save(tmap_arrange(p1,p2,p3,p4,ncol=4),filename=paste0(folder_name,"alpha_beta_fixed_res",cond_site_name,".png"),height=6,width=11)
+
+tmp1 <- rbind(data.frame(a=aest,b=best,"method"="aoriginal"),data.frame(a=na.omit(tmp$a),b=na.omit(tmp$b),"method"="new")) %>% mutate("iteration"=rep(1:length(aest),2))
+# map alpha and beta original and new estimates
+plot_ab <- function(tmp) { ggplot(tmp) + 
+    geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
+    geom_point(aes(x=a,y=b,col=method),alpha=0.7,size=1) +
+    xlab(TeX("${\\alpha}$")) +
+    ylab(TeX("${\\beta}$")) + 
+    scale_color_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Model 1","Model 2")) + coord_fixed() + theme(axis.text.y = element_text(angle = 90, vjust = 0.5)) + labs(col="")
+}
+p <- plot_ab(tmp=tmp1)
+ggsave(p,filename=paste0(folder_name,"plot_ab_new_original.png"),width=7,height=4) 
