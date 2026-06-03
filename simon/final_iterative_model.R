@@ -85,6 +85,8 @@ ggplot(y[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iter
 ggplot(y[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=b)) 
 
 # 1. map alpha and beta new and original estimates ----------------------------
+a_orig <- y[[1]]$a
+b_orig <- y[[1]]$b
 a_new <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(a) %>% pull(a)
 b_new <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(b)  %>% pull(b)
 title_map <- ""
@@ -102,14 +104,86 @@ p3 <- tm_shape(estsf) + tm_dots(fill="a_new",fill.scale = tm_scale_continuous(li
 p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\beta}$")) 
 tmap_save(tmap_arrange(p1,p2,p3,p4,ncol=4),filename=paste0(folder_name,"alpha_beta_fixed_res",cond_site_name,".png"),height=6,width=11)
 
-tmp1 <- rbind(data.frame(a=aest,b=best,"method"="aoriginal"),data.frame(a=na.omit(tmp$a),b=na.omit(tmp$b),"method"="new")) %>% mutate("iteration"=rep(1:length(aest),2))
-# map alpha and beta original and new estimates
+# 2. scatterplot comparing alpha and beta original and new estimates ----------
+tmp1 <- rbind(data.frame(a=na.omit(a_orig),b=na.omit(b_orig),"method"="aoriginal"),data.frame(a=na.omit(tmp$a),b=na.omit(tmp$b),"method"="new")) %>% mutate("iteration"=rep(1:length(aest),2))
 plot_ab <- function(tmp) { ggplot(tmp) + 
     geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
     geom_point(aes(x=a,y=b,col=method),alpha=0.7,size=1) +
     xlab(TeX("${\\alpha}$")) +
     ylab(TeX("${\\beta}$")) + 
-    scale_color_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Model 1","Model 2")) + coord_fixed() + theme(axis.text.y = element_text(angle = 90, vjust = 0.5)) + labs(col="")
+    scale_color_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Model 1","Model 3")) + coord_fixed() + theme(axis.text.y = element_text(angle = 90, vjust = 0.5)) + labs(col="")
 }
 p <- plot_ab(tmp=tmp1)
-ggsave(p,filename=paste0(folder_name,"plot_ab_new_original.png"),width=7,height=4) 
+ggsave(p,filename=paste0(folder_name,"plot_ab_new_original",cond_site_name,".png"),width=7,height=4) 
+
+# 3. NLL comparing original and new estimates
+pe <- y[[2]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(sigl,sigu,deltal,deltau)
+abmu <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(a,b,mu) %>% na.omit()
+# calculate log-likelihood
+NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res,abmu,cond_index,v=0.9,a=na.omit(a_new),b=na.omit(b_new),mu=na.omit(mu_new)) {
+  pe_i <- as.numeric(unlist(pe_res[i,]))
+  abmu_i <- as.numeric(unlist(abmu[i,]))
+  data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],v))
+  x1 <- as.numeric(unlist(data_Lapv[,cond_index]))
+  ires <- c(1:length(data_Lap))[-cond_index][i]
+  x2 <- as.numeric(unlist(data_Lapv[,ires]))
+  y <- NLL_AGG_onestep(x=data.frame(x1,x2),theta=c(),a_hat=abmu_i[1],b_hat=abmu_i[2],mu_hat=abmu_i[3],sigl_hat = pe_i[1], sigu_hat = pe_i[2], deltal_hat = pe_i[3], deltau_hat = pe_i[4])
+  return(y) 
+}
+nll3 <- sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=cond_index,pe_res=pe,abmu=abmu)
+
+# calculate also Model 1 for comparison
+pe_orig <- y[[1]] %>% dplyr::select(a,b,mu,sig) %>% na.omit()
+NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,cond_index,v=0.9,pe_orig) {
+  data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],v))
+  pe_i <- as.numeric(unlist(pe_orig[i,]))
+  x1 <- as.numeric(unlist(data_Lapv[,cond_index]))
+  ires <- c(1:length(data_Lap))[-cond_index][i]
+  x2 <- as.numeric(unlist(data_Lapv[,ires]))
+  y <- NLL_AGG_onestep(x=data.frame(x1,x2),theta=c(),a_hat=pe_i[1],b_hat=pe_i[2],mu_hat=pe_i[3],sigl_hat = sqrt(2)* pe_i[4], sigu_hat = sqrt(2)* pe_i[4], deltal_hat = 2, deltau_hat = 2)
+  return(y) 
+}
+nll1 <- sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=cond_index,pe_orig=pe_orig)
+
+# calculate AIC
+a1 <- 2*nll1+2*4
+#a2 <- 2*nll2+2*3
+a3 <- 2*nll3+2*3
+tmp <- data.frame(nll1,nll3,a1,a3)
+
+# 3. boxplots of NLL and AIC --------------------------------------------------
+tmp1 <- tmp %>% dplyr::select(contains("nll")) %>% pivot_longer(cols=everything())
+p <- ggplot(tmp1) + geom_boxplot(aes(y=value,x=name)) + labs(y="Negative log-likelihood",x="")
+ggsave(p,filename=paste0(folder_name,"nll_compare_",cond_site_name,".png"),width=9,height=5)
+# boxplots of AIC
+tmp1 <- tmp %>% dplyr::select(contains("a")) %>% pivot_longer(cols=everything())
+p <- ggplot(tmp1) + geom_boxplot(aes(y=value,x=name)) + labs(y="AIC",x="")
+ggsave(p,filename=paste0(folder_name,"AIC_compare_",cond_site_name,".png"),width=9,height=5)
+
+# 4. plot NLL and AIC on a map ------------------------------------------------
+title_map <- ""
+misscol <- "aquamarine"
+legend_text_size <- 0.7
+point_size <- 0.5
+legend_title_size <- 0.9
+limsnll <- c(min(nll1,nll3),max(nll1,nll3))
+limsa <- c(min(a1,a3),max(a1,a3))
+nrow_facet <- 1
+estsf <- cbind(est_all_sf %>% filter(cond_site %in% "London") %>% dplyr::select(c()), tmp %>% add_row(.before=cond_index))
+p1 <- tm_shape(estsf) + tm_dots(fill="nll1",fill.scale = tm_scale_continuous(limits=limsnll,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="NLL")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 1") 
+#p2 <- tm_shape(estsf) + tm_dots(fill="nll2",fill.scale = tm_scale_continuous(limits=limsnll,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="NLL")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 2") 
+p3 <- tm_shape(estsf) + tm_dots(fill="nll3",fill.scale = tm_scale_continuous(limits=limsnll,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="NLL")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 3") 
+tmap_save(tmap_arrange(p1,p3,ncol=3),filename=paste0(folder_name,"nll_compare_map_",cond_site_name,".png"),height=6,width=9)
+
+p1 <- tm_shape(estsf) + tm_dots(fill="a1",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 1") 
+#p2 <- tm_shape(estsf) + tm_dots(fill="a2",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 2") 
+p3 <- tm_shape(estsf) + tm_dots(fill="a3",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 3") 
+tmap_save(tmap_arrange(p1,p3,ncol=3),filename=paste0(folder_name,"AIC_compare_map_",cond_site_name,".png"),height=6,width=9)
+
+# 5. plot AIC difference ------------------------------------------------------
+diff13=a1-a3
+tmp2 <- tmp %>% mutate(diff13)
+limsad <- c(min(diff13,max(diff13)))
+estsf <- cbind(est_all_sf %>% filter(cond_site %in% cond_site_name) %>% dplyr::select(c()), tmp2 %>% add_row(.before=cond_index))
+p1 <- tm_shape(estsf) + tm_dots(fill="diff13",fill.scale = tm_scale_continuous(limits=limsad,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC difference")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 1 - Model 3") 
+tmap_save(tmap_arrange(p1,ncol=1),filename=paste0(folder_name,"AIC_difference_map_",cond_site_name,".png"),height=6,width=3)
