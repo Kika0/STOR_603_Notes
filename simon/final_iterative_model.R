@@ -180,10 +180,42 @@ p1 <- tm_shape(estsf) + tm_dots(fill="a1",fill.scale = tm_scale_continuous(limit
 p3 <- tm_shape(estsf) + tm_dots(fill="a3",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 3") 
 tmap_save(tmap_arrange(p1,p3,ncol=3),filename=paste0(folder_name,"AIC_compare_map_",cond_site_name,".png"),height=6,width=9)
 
-# 5. plot AIC difference ------------------------------------------------------
+# 5. map and boxplot of AIC difference ----------------------------------------
 diff13=a1-a3
 tmp2 <- tmp %>% mutate(diff13)
 limsad <- c(min(diff13,max(diff13)))
 estsf <- cbind(est_all_sf %>% filter(cond_site %in% cond_site_name) %>% dplyr::select(c()), tmp2 %>% add_row(.before=cond_index))
 p1 <- tm_shape(estsf) + tm_dots(fill="diff13",fill.scale = tm_scale_continuous(limits=limsad,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC difference")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 1 - Model 3") 
 tmap_save(tmap_arrange(p1,ncol=1),filename=paste0(folder_name,"AIC_difference_map_",cond_site_name,".png"),height=6,width=3)
+# boxplot of AIC difference
+tmp3 <- tmp2 %>% dplyr::select(contains("diff")) %>% pivot_longer(cols=everything())
+p <- ggplot(tmp3 %>% mutate(name=factor(name,levels=c("diff13")))) + geom_boxplot(aes(y=value,x=name)) + labs(y="AIC difference",x="") + scale_x_discrete(labels=c("Model 1 - Model 3"))
+ggsave(p,filename=paste0(folder_name,"AIC_compare_diff_boxplot_",cond_site_name,".png"),width=9,height=5)
+
+# 6. AIC difference positive and negative -------------------------------------
+tmp4 <- tmp2 %>% mutate("is_big"=(diff13>0))
+lims13 <- c(0,max(tmp4$diff13))
+estsf <- cbind(est_all_sf %>% filter(cond_site %in% cond_site_name) %>% dplyr::select(c()), tmp4 %>% add_row(.before=cond_index))
+p1 <- tm_shape(estsf) + tm_dots(fill="black",size=0.1) +  tm_shape(estsf %>% dplyr::filter(is_big %in% c(TRUE,NA))) + tm_dots(fill="diff13",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,limits = lims13,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 1 - Model 3") 
+p2 <- tm_shape(estsf) + tm_dots(fill="is_big",fill.scale = tm_scale_categorical(values=c("black","#C11432"),value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Is Model 3 better?") 
+tmap_save(tmap_arrange(p2,p1,ncol=2),filename=paste0(folder_name,"AIC_difference_1_3_",cond_site_name,".png"),height=6,width=6)
+
+tmp4 <- tmp2 %>% mutate("is_big"=(diff13<0))
+lims31 <- c(-max(tmp4$diff13),0)
+estsf <- cbind(est_all_sf %>% filter(cond_site %in% cond_site_name) %>% dplyr::select(c()), tmp4 %>% add_row(.before=cond_index))
+p1 <- tm_shape(estsf) + tm_dots(fill="black",size=0.1) +  tm_shape(estsf %>% dplyr::filter(is_big %in% c(TRUE,NA))) + tm_dots(fill="diff13",fill.scale = tm_scale_continuous(values="-viridis",value.na=misscol,limits=lims31,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC",reverse=TRUE)) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 1 - Model 3") 
+p2 <- tm_shape(estsf) + tm_dots(fill="is_big",fill.scale = tm_scale_categorical(values=c("black","#C11432"),value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Is Model 1 better?") 
+tmap_save(tmap_arrange(p2,p1,ncol=2),filename=paste0(folder_name,"AIC_difference_1_3_neg_",cond_site_name,".png"),height=6,width=6)
+
+# 7. map AIC difference above certain values ----------------------------------
+tmp4 <- tmp2 %>% mutate("is_big"=(diff2b2>20))
+estsf <- cbind(est_all_sf %>% filter(cond_site %in% "London") %>% dplyr::select(c()), tmp4 %>% add_row(.before=cond_index))
+p1 <- tm_shape(estsf) + tm_dots(fill="black",size=0.1) +  tm_shape(estsf %>% dplyr::filter(is_big %in% c(TRUE,NA))) + tm_dots(fill="diff2b2",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 2b - Model 2") 
+p2 <- tm_shape(estsf) + tm_dots(fill="is_big",fill.scale = tm_scale_categorical(values=c("black","#C11432"),value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Is bigger than 20") 
+tmap_save(tmap_arrange(p2,p1,ncol=2),filename=paste0(folder_name,"AIC_difference_2b_2.png"),height=6,width=6)
+
+tmp4 <- tmp2 %>% mutate("is_big"=(diff2b2>1))
+estsf <- cbind(est_all_sf %>% filter(cond_site %in% "London") %>% dplyr::select(c()), tmp4 %>% add_row(.before=cond_index))
+p1 <- tm_shape(estsf) + tm_dots(fill="black",size=0.1) +  tm_shape(estsf %>% dplyr::filter(is_big %in% c(TRUE,NA))) + tm_dots(fill="diff2b2",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Model 2b - Model 2") 
+p2 <- tm_shape(estsf) + tm_dots(fill="is_big",fill.scale = tm_scale_categorical(values=c("black","#C11432"),value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="Is bigger than 1") 
+tmap_save(tmap_arrange(p2,p1,ncol=2),filename=paste0(folder_name,"AIC_difference_2b_2_1.png"),height=6,width=6)
