@@ -96,8 +96,27 @@ for (i in 1:length(files_subset1)) {
   list_of_files[[i]] <- data01 #add files to list position
 }
 xyUK20_sf <- xyUK20_sf[files_subset %in% files_subset1,]
+
+# save also conditioning sites here
+Birmingham <- c(-1.9032,52.4806)
+Glasgow <- c(-4.258109,55.859112)
+London <- c(-0.127676,51.529972)
+Inverness <- c(-4.22498,57.48065) # Inverness bus station
+Lancaster <- c(-2.78440,54.00871) # PSC building Lancaster University
+Newcastle <- c(-1.61682,54.96902) # Newcastle railway station
+Cromer <- c(1.28486,53.05349)
+Hull <- c(-0.335827,53.767750)
+Lowestoft <- c(1.72431,52.48435)
+Truro <- c(-5.05125342465549,50.263075821232704)
+Dolgellau <- c(-3.8844362867080897,52.74213275545185)
+Bournemouth <- c(-1.8650607066137428,50.72173094587856)
+Leeds <- c(-1.5410242288355958,53.80098118214994)
+df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,Cromer,Hull,Lowestoft,Truro,Dolgellau,Bournemouth,Leeds)
+# save also site index nearest to these sites
+cond_site_indeces <- sapply(1:ncol(df_sites),FUN = function(i) {find_site_index(site=as.numeric(unlist(df_sites[,i])),grid=xyUK20_sf)})
+df_sites[nrow(df_sites)+1,] <- cond_site_indeces
 # save sf objects used for spatial analysis
-save(uk,uk_notsimplified,xyUK20_sf,files_subset1,file="data_processed/spatial_helper.RData")
+save(uk,uk_notsimplified,xyUK20_sf,files_subset1,df_sites,file="data_processed/spatial_helper.RData")
 
 # create dataframe 1960-1999 for non-stationary data --------------------------
 # June 1 is 152 doy, August 31 is 243 doy (92 days per year) -leap years are May 31 to August 30
