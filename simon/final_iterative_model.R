@@ -15,8 +15,6 @@ theme_replace(
   strip.background = element_blank(),
   panel.border = element_rect(colour = "black", fill = NA) )
 folder_name <- "../Documents/spatial_model_final_steps/"
-
-cond_site_name <- "London"
 # load observed data
 #source("spatial_parameter_estimation.R") # for spatial_par_est function
 load("data_processed/temperature_data.RData",verbose = TRUE)
@@ -24,11 +22,15 @@ load("data_processed/spatial_helper.RData", verbose = TRUE)
 source("simon/P2q_function_helpers.R")
 load("data_processed/P2qselected_helpers.RData", verbose = TRUE)
 load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose = TRUE) # original parameter estimates
-load("data_processed/iterative_phi0l_phi0u_estimates_London.RData",verbose=TRUE) # residual margin parameters
+load("data_processed/iterative_phi0l_phi0u_estimates_London.RData",verbose=TRUE) # residual margin parameters for delta constants
 load("data_processed/residual_dependence_pars.RData", verbose = TRUE) # residual dependence parameters
 deltal <- result_new[[12]]$deltal[1]
 deltau <- result_new[[12]]$deltau[1]
 source("simon/final_model_helpers.R")
+site_i <- 1
+cond_index <- df_sites[3,site_i]
+cond_site_name <- names(df_sites)[site_i]
+
 # Model 3: parameter estimation ------------------------------------------------
 par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK20_sf,deltal,deltau,Nite_2_3=10,Nite_phi=10) {
   # calculate distance from the conditioning site
@@ -50,12 +52,13 @@ par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK
     b <- tmp$b[!is.na(tmp$b)]
     pe_res <- pe_phi_ite %>% dplyr::select(sigl,sigu) %>% na.omit() 
   } else {
-    pe_res <- data.frame("sigl" = rep(1,length(a)),"sigu" = rep(1,length(a)))
     a <- x1$a[!is.na(x1$a)]
     b <- x1$b[!is.na(x1$b)]
+    pe_res <- data.frame("sigl" = rep(1,length(a)),"sigu" = rep(1,length(a)))
   }
   # update residuals
   Z <- observed_residuals(df=data_Lap,given=cond_index,v = v,a=a,b=b)
+  print(v) # check value of quantile threshold
   # 2. estimate phis
   x_time_dummy <- Sys.time()
   x2 <- par_est_ite(z=Z,given=cond_index,cond_site_dist = distnorm, parest_site = pe_res,Nite = Nite_phi,show_ite=TRUE,deltal = deltal,deltau = deltau) 
@@ -75,7 +78,7 @@ par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK
 }
 q <- 0.9 # set quantile threshold
 s <- Sys.time()
-y <- par_est_model_3(cond_index=London_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau)
+y <- par_est_model_3(cond_index=cond_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau)
 Sys.time()-s
 
 # plot diagnostics
