@@ -109,7 +109,7 @@ p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(li
 tmap_save(tmap_arrange(p1,p2,p3,p4,ncol=4),filename=paste0(folder_name,"alpha_beta_fixed_res_",cond_site_name,".png"),height=6,width=11)
 
 # 2. scatterplot comparing alpha and beta original and new estimates ----------
-tmp1 <- rbind(data.frame(a=na.omit(a_orig),b=na.omit(b_orig),"method"="aoriginal"),data.frame(a=na.omit(a_new),b=na.omit(b_new),"method"="new")) %>% mutate("iteration"=rep(1:length(a_orig),2))
+tmp1 <- rbind(data.frame(a=na.omit(a_orig),b=na.omit(b_orig),"method"="aoriginal"),data.frame(a=na.omit(a_new),b=na.omit(b_new),"method"="new")) %>% mutate("iteration"=rep(1:length(na.omit(a_orig)),2))
 plot_ab <- function(tmp) { ggplot(tmp) + 
     geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1) +
     geom_point(aes(x=a,y=b,col=method),alpha=0.7,size=1) +
