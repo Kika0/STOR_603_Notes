@@ -46,7 +46,7 @@ par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK
   x3_df <- data.frame("a"=numeric(),"b"=numeric(),"mu"=numeric(),"iteration"=numeric())
   x_time <- data.frame("step2"=numeric(),"step3"=numeric(),"iteration"=numeric())
   # 1. estimate alpha and beta
-  x1 <- par_est(df=data_Lapv,v = v,given = cond_index,margin = "Normal",method = "sequential2",keef_constraints = c(1,2))
+  x1 <- par_est(df=data_Lap,v = v,given = cond_index,margin = "Normal",method = "sequential2",keef_constraints = c(1,2))
   # iterate between steps 2. and 3.
   for (Nite_i in 1:Nite_2_3) {
   if (Nite_i>1) {
@@ -89,8 +89,8 @@ ggplot(y[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iter
 ggplot(y[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=b)) 
 
 # 1. map alpha and beta new and original estimates ----------------------------
-a_orig <- y[[1]]$a
-b_orig <- y[[1]]$b
+a_orig <- append(y[[1]]$a,NA,after=cond_index-1)
+b_orig <- append(y[[1]]$b,NA,after=cond_index-1)
 a_new <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(a) %>% pull(a)
 b_new <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(b)  %>% pull(b)
 title_map <- ""
@@ -101,7 +101,7 @@ legend_title_size <- 0.9
 limsa <- c(0,1)
 limsb <- c(0,0.65)
 nrow_facet <- 1
-estsf <- cbind(xyUK20_sf, data.frame("a"=a,"b"=b,"a_new"=a_new,"b_new" = b_new))
+estsf <- cbind(xyUK20_sf, data.frame("a"=a_orig,"b"=b_orig,"a_new"=a_new,"b_new" = b_new))
 p1 <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\alpha}$")) 
 p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\beta}$")) 
 p3 <- tm_shape(estsf) + tm_dots(fill="a_new",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\alpha}$")) 
@@ -220,3 +220,14 @@ tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"AIC_difference
 }
 
 sapply(1:ncol(df_sites),FUN=model3_wrapper)
+
+# checks with other function
+# time1t <- Sys.time()
+# try1 <- par_est(df=data_Lap,v = v,given = cond_index,margin = "Normal",method = "sequential2",keef_constraints = c(1,2))
+# time2t <- Sys.time()
+# spatial_par_est(data_Lap=data_Lap,cond_sites=df_sites %>% dplyr::select(Cromer),dayshift = 0,v=q,Ndays_season = 90,title="test_function_cromer")
+# time3t <- Sys.time()
+# time3t-time2t
+# time2t-time1t
+# load(paste0("data_processed/N9000_sequential2_AGG_test_function_cromer.RData"),verbose = TRUE) # original parameter estimates
+
