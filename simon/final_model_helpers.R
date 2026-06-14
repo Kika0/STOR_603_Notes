@@ -180,7 +180,7 @@ par_est_ite <- function(z,v,given,cond_site_dist, parest_site, Nite=10, show_ite
 }
 
 # Step 2. helper functions
-to_opt <- function(x1,x2,theta,i,cond_index=London_index,pe_i) {
+to_opt <- function(x1,x2,theta,i,pe_i) {
   # a <- theta[1]
   # b <- theta[2]
   # if (a<0 | a>1 | b<0 | b>1) {return(10^6)}
@@ -192,6 +192,6 @@ NLL_AGG_wrapper <- function(data_Lapv,i,pe_res,cond_index) {
   x1 <- as.numeric(unlist(data_Lapv[,cond_index]))
   x2 <- as.numeric(unlist(data_Lapv[,i]))
   if (is.na(pe_i[1])) {return(NA)}
-  y <- optim(par=c(0.8,0.3,pe_i[1]),fn= to_opt,x1=x1,x2=x2,i=i,cond_index=cond_index,pe_i=pe_i)
+  y <- optim(par=c(0.8,0.3,pe_i[1]),fn= to_opt,x1=x1,x2=x2,i=i,pe_i=pe_i)
   return(y$par) 
 }
