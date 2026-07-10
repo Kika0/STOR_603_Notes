@@ -32,9 +32,10 @@ site_i <- 7
 model3_wrapper <- function(site_i) {
 cond_index <- df_sites[3,site_i]
 cond_site_name <- names(df_sites)[site_i]
-
+Nite_2_3 <- 10
+Nite_phi <- 10
 # Model 3: parameter estimation ------------------------------------------------
-par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK20_sf,deltal,deltau,Nite_2_3=10,Nite_phi=10) {
+par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK20_sf,deltal,deltau,Nite_2_3,Nite_phi) {
   # calculate distance from the conditioning site
   dist_tmp <- as.numeric(unlist(st_distance(grid20km[cond_index,],grid20km[-cond_index,])))
   distnorm <- dist_tmp/1000000  # normalise distance using a common constant
@@ -80,7 +81,7 @@ par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK
 }
 q <- 0.9 # set quantile threshold
 s <- Sys.time()
-y <- par_est_model_3(cond_index=cond_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau)
+y <- par_est_model_3(cond_index=cond_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau,Nite_2_3 = Nite_2_3,Nite_phi = Nite_phi)
 Sys.time()-s
 
 # plot diagnostics
@@ -216,11 +217,11 @@ estsf <- cbind(xyUK20_sf %>% dplyr::select(c()), tmp4 %>% add_row(.before=cond_i
 p1 <- tm_shape(estsf) + tm_dots(fill="black",size=0.1) +  tm_shape(estsf %>% dplyr::filter(is_big1 %in% c(TRUE,NA))) + tm_dots(fill="diff13",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC difference")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="AIC difference > 20") 
 p2 <- tm_shape(estsf) + tm_dots(fill="black",size=0.1) +  tm_shape(estsf %>% dplyr::filter(is_big2 %in% c(TRUE,NA))) + tm_dots(fill="diff13",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC difference")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="AIC difference > 100") 
 tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"AIC_difference_1_3_",howbetter1,"_",howbetter2,"_AICdiff_",cond_site_name,".png"),height=6,width=6)
-
+return(y)
 }
 
-sapply(1:ncol(df_sites),FUN=model3_wrapper)
-
+results <- sapply(1:ncol(df_sites),FUN=model3_wrapper)
+save(results,file="../data_processed/final_model_3_parameter_estimates.RData")
 # checks with other function
 # time1t <- Sys.time()
 # try1 <- par_est(df=data_Lap,v = v,given = cond_index,margin = "Normal",method = "sequential2",keef_constraints = c(1,2))
@@ -231,3 +232,34 @@ sapply(1:ncol(df_sites),FUN=model3_wrapper)
 # time2t-time1t
 # load(paste0("data_processed/N9000_sequential2_AGG_test_function_cromer.RData"),verbose = TRUE) # original parameter estimates
 
+# explore east coast definition
+point_size <- 0.3
+coastal_point <- function(grid) {
+  sapply(1:nrow(grid),FUN = function(i) {sum(as.vector(st_distance(grid[i,],grid))<20500)<5 & grid$lon[i]>-1})
+}
+
+cp <- coastal_point(grid = xyUK20_sf) 
+t1 <- tm_shape(cbind(xyUK20_sf,data.frame(cp))) + tm_dots(fill="cp",fill.scale = tm_scale_categorical(values=c("FALSE"="black","TRUE"="#C11432")),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show=FALSE,frame=FALSE) + tm_title(text="Longitude > -1")
+t1
+
+# try as a function of lon and lat
+coastal_point <- function(grid) {
+  sapply(1:nrow(grid),FUN = function(i) {sum(as.vector(st_distance(grid[i,],grid))<20500)<5 & grid$lon[i]>-2})
+}
+
+cp <- coastal_point(grid = xyUK20_sf) 
+t2 <- tm_shape(cbind(xyUK20_sf,data.frame(cp))) + tm_dots(fill="cp",fill.scale = tm_scale_categorical(values=c("FALSE"="black","TRUE"="#C11432")),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show=FALSE,frame=FALSE) + tm_title(text="Longitude > -2")
+t2
+
+# try as a function of longitude and latitude
+coastal_point <- function(grid) {
+  sapply(1:nrow(grid),FUN = function(i) {sum(as.vector(st_distance(grid[i,],grid))<20500)<5 & grid$lat[i]+2*grid$lon[i]>48.5})
+}
+
+cp <- coastal_point(grid = xyUK20_sf) 
+cp[df_sites[3,5]] <- FALSE
+t3<- tm_shape(cbind(xyUK20_sf,data.frame(cp))) + tm_dots(fill="cp",fill.scale = tm_scale_categorical(values=c("FALSE"="black","TRUE"="#C11432")),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show=FALSE,frame=FALSE) + tm_title(text="East Coast?")
+t3
+
+# save as one picture
+tmap_save(tmap_arrange(t1,t2,t3,ncol=3),filename="../Documents/east_coast.png",height=6,width=9)
