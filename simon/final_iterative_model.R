@@ -222,9 +222,9 @@ return(y)
 }
 
 #results <- sapply(1:ncol(df_sites),FUN=model3_wrapper)
-results <- mclapply(1:ncol(df_sites),FUN=model3_wrapper,mc.cores=ncol(df_sites))
+par_est_model_3 <- mclapply(1:ncol(df_sites),FUN=model3_wrapper,mc.cores=ncol(df_sites))
 
-save(results,file="../data_processed/final_model_3_parameter_estimates.RData")
+save(par_est_model_3,file="data_processed/final_model_3_parameter_estimates.RData")
 # checks with other function
 # time1t <- Sys.time()
 # try1 <- par_est(df=data_Lap,v = v,given = cond_index,margin = "Normal",method = "sequential2",keef_constraints = c(1,2))
