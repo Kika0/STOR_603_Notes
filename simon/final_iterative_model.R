@@ -18,7 +18,7 @@ theme_replace(
 folder_name <- "../Documents/final_model_3/"
 # load observed data
 #source("spatial_parameter_estimation.R") # for spatial_par_est function
-load("data_processed/temperature_data.RData",verbose = TRUE)
+load("data_processed/data_mod_Lap.RData",verbose = TRUE)
 load("data_processed/spatial_helper.RData", verbose = TRUE)
 source("simon/P2q_function_helpers.R")
 load("data_processed/P2qselected_helpers.RData", verbose = TRUE)
