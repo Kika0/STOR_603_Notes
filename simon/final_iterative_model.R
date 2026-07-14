@@ -18,6 +18,8 @@ theme_replace(
 folder_name <- "../Documents/final_model_3/"
 # load observed data
 #source("spatial_parameter_estimation.R") # for spatial_par_est function
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source)
 load("data_processed/data_mod_Lap.RData",verbose = TRUE)
 load("data_processed/spatial_helper.RData", verbose = TRUE)
 source("simon/P2q_function_helpers.R")
@@ -29,8 +31,6 @@ load("data_processed/residual_dependence_pars.RData", verbose = TRUE) # residual
 deltal <- result_new[[12]]$deltal[1]
 deltau <- result_new[[12]]$deltau[1]
 source("simon/final_model_helpers.R")
-file.sources = list.files(pattern="*helpers.R")
-sapply(file.sources,source)
 
 model3_wrapper <- function(site_i) {
 cond_index <- df_sites[3,site_i]
