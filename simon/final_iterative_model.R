@@ -22,6 +22,7 @@ load("data_processed/data_mod_Lap.RData",verbose = TRUE)
 load("data_processed/spatial_helper.RData", verbose = TRUE)
 source("simon/P2q_function_helpers.R")
 load("data_processed/P2qselected_helpers.RData", verbose = TRUE)
+q <- 0.9 # set quantile threshold
 load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose = TRUE) # original parameter estimates
 load("data_processed/iterative_phi0l_phi0u_estimates_London.RData",verbose=TRUE) # residual margin parameters for delta constants
 load("data_processed/residual_dependence_pars.RData", verbose = TRUE) # residual dependence parameters
@@ -80,7 +81,6 @@ par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK
   }
   return(list(x1,x2_df,x3_df,x_time))
 }
-q <- 0.9 # set quantile threshold
 s <- Sys.time()
 y <- par_est_model_3(cond_index=cond_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau,Nite_2_3 = Nite_2_3,Nite_phi = Nite_phi)
 Sys.time()-s
