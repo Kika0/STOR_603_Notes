@@ -83,19 +83,19 @@ par_est_model_3 <- function(cond_index,v=0.9,data_Lap=data_mod_Lap,grid20km=xyUK
   return(list(x1,x2_df,x3_df,x_time))
 }
 s <- Sys.time()
-y <- par_est_model_3(cond_index=cond_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau,Nite_2_3 = Nite_2_3,Nite_phi = Nite_phi)
+y_mod3 <- par_est_model_3(cond_index=cond_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau,Nite_2_3 = Nite_2_3,Nite_phi = Nite_phi)
 Sys.time()-s
 
 # plot diagnostics
-ggplot(y[[3]]) + geom_point(aes(x=a,y=b)) + facet_wrap(~iteration)
-ggplot(y[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=a)) 
-ggplot(y[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=b)) 
+ggplot(y_mod3[[3]]) + geom_point(aes(x=a,y=b)) + facet_wrap(~iteration)
+ggplot(y_mod3[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=a)) 
+ggplot(y_mod3[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=b)) 
 
 # 1. map alpha and beta new and original estimates ----------------------------
-a_orig <- append(y[[1]]$a,NA,after=cond_index-1)
-b_orig <- append(y[[1]]$b,NA,after=cond_index-1)
-a_new <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(a) %>% pull(a)
-b_new <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(b)  %>% pull(b)
+a_orig <- append(y_mod3[[1]]$a,NA,after=cond_index-1)
+b_orig <- append(y_mod3[[1]]$b,NA,after=cond_index-1)
+a_new <- y_mod3[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(a) %>% pull(a)
+b_new <- y_mod3[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(b)  %>% pull(b)
 title_map <- ""
 misscol <- "aquamarine"
 legend_text_size <- 0.7
@@ -124,8 +124,8 @@ p <- plot_ab(tmp=tmp1)
 ggsave(p,filename=paste0(folder_name,"plot_ab_new_original_",cond_site_name,".png"),width=7,height=4) 
 
 # 3. NLL comparing original and new estimates
-pe <- y[[2]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(sigl,sigu,deltal,deltau)
-abmu <- y[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(a,b,mu) %>% na.omit()
+pe <- y_mod3[[2]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(sigl,sigu,deltal,deltau)
+abmu <- y_mod3[[3]] %>% dplyr::filter(iteration==Nite_2_3) %>% dplyr::select(a,b,mu) %>% na.omit()
 # calculate log-likelihood
 NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res,abmu,cond_index,v=0.9,a=na.omit(a_new),b=na.omit(b_new),mu=na.omit(mu_new)) {
   pe_i <- as.numeric(unlist(pe_res[i,]))
@@ -140,7 +140,7 @@ NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,pe_res,abmu,cond_index,v=0.9
 nll3 <- sapply(1:(ncol(data_mod_Lap)-1),FUN=NLL_AGG_wrapper,data_Lap=data_mod_Lap,cond_index=cond_index,pe_res=pe,abmu=abmu)
 
 # calculate also Model 1 for comparison
-pe_orig <- y[[1]] %>% dplyr::select(a,b,mu,sig) %>% na.omit()
+pe_orig <- y_mod3[[1]] %>% dplyr::select(a,b,mu,sig) %>% na.omit()
 NLL_AGG_wrapper <- function(data_Lap=data_mod_Lap,i,cond_index,v=0.9,pe_orig) {
   data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],v))
   pe_i <- as.numeric(unlist(pe_orig[i,]))
@@ -219,7 +219,7 @@ estsf <- cbind(xyUK20_sf %>% dplyr::select(c()), tmp4 %>% add_row(.before=cond_i
 p1 <- tm_shape(estsf) + tm_dots(fill="black",size=0.1) +  tm_shape(estsf %>% dplyr::filter(is_big1 %in% c(TRUE,NA))) + tm_dots(fill="diff13",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC difference")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="AIC difference > 20") 
 p2 <- tm_shape(estsf) + tm_dots(fill="black",size=0.1) +  tm_shape(estsf %>% dplyr::filter(is_big2 %in% c(TRUE,NA))) + tm_dots(fill="diff13",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title="AIC difference")) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text="AIC difference > 100") 
 tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"AIC_difference_1_3_",howbetter1,"_",howbetter2,"_AICdiff_",cond_site_name,".png"),height=6,width=6)
-return(y)
+return(y_mod3)
 }
 
 #par_est_model_3 <- sapply(1:ncol(df_sites),FUN=model3_wrapper)
