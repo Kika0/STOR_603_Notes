@@ -222,8 +222,9 @@ tmap_save(tmap_arrange(p1,p2,ncol=2),filename=paste0(folder_name,"AIC_difference
 return(y)
 }
 
-#results <- sapply(1:ncol(df_sites),FUN=model3_wrapper)
-par_est_model_3 <- mclapply(1:ncol(df_sites),FUN=model3_wrapper,mc.cores=ncol(df_sites))
+#par_est_model_3 <- sapply(1:ncol(df_sites),FUN=model3_wrapper)
+#par_est_model_3 <- mclapply(1:ncol(df_sites),FUN=model3_wrapper,mc.cores=ncol(df_sites))
+par_est_model_3 <- model3_wrapper(site_i=1)
 
 save(par_est_model_3,file="data_processed/final_model_3_parameter_estimates.RData")
 # checks with other function
