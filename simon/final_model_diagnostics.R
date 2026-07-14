@@ -38,3 +38,9 @@ ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=8,height=5)
 }
 
 plot_beta_latitude(b=est_all_sf$b,given=est_all_sf$given,res=est_all_sf$res,cond_site = est_all_sf$cond_site,folder_name = folder_name)
+
+# try with new data
+load("data_processed/final_model_3_parameter_estimates.RData",verbose=TRUE)
+for (i in 1:13) {
+  print(par_est_model_3[[i]][[4]])
+}
