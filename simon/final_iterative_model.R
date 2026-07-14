@@ -236,7 +236,9 @@ save(par_est_model_3,file="data_processed/final_model_3_parameter_estimates.RDat
 # load(paste0("data_processed/N9000_sequential2_AGG_test_function_cromer.RData"),verbose = TRUE) # original parameter estimates
 
 # explore east coast definition
+legend_text_size <- 0.7
 point_size <- 0.3
+legend_title_size <- 0.9
 coastal_point <- function(grid) {
   sapply(1:nrow(grid),FUN = function(i) {sum(as.vector(st_distance(grid[i,],grid))<20500)<5 & grid$lon[i]>-1})
 }
