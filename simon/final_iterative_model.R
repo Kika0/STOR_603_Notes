@@ -29,7 +29,8 @@ load("data_processed/residual_dependence_pars.RData", verbose = TRUE) # residual
 deltal <- result_new[[12]]$deltal[1]
 deltau <- result_new[[12]]$deltau[1]
 source("simon/final_model_helpers.R")
-site_i <- 7
+file.sources = list.files(pattern="*helpers.R")
+sapply(file.sources,source)
 
 model3_wrapper <- function(site_i) {
 cond_index <- df_sites[3,site_i]
