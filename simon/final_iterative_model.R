@@ -86,11 +86,6 @@ s <- Sys.time()
 y_mod3 <- par_est_model_3(cond_index=cond_index,v=q,data_Lap = data_mod_Lap,deltal = deltal,deltau = deltau,Nite_2_3 = Nite_2_3,Nite_phi = Nite_phi)
 Sys.time()-s
 
-# plot diagnostics
-ggplot(y_mod3[[3]]) + geom_point(aes(x=a,y=b)) + facet_wrap(~iteration)
-ggplot(y_mod3[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=a)) 
-ggplot(y_mod3[[3]] %>% mutate(iteration=factor(iteration))) + geom_boxplot(aes(x=iteration,y=b)) 
-
 # 1. map alpha and beta new and original estimates ----------------------------
 a_orig <- append(y_mod3[[1]]$a,NA,after=cond_index-1)
 b_orig <- append(y_mod3[[1]]$b,NA,after=cond_index-1)
