@@ -15,13 +15,15 @@ folder_name <- "../Documents/final_model_diagnostics/"
 q <- 0.9 # set quantile threshold
 load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose = TRUE) # original parameter estimates
 
-# 1. plot of beta against latitude difference from the conditioning site ------
-plot_beta_latitude <- function(b,given,res,gridUK=xyUK20_sf,cond_site,folder_name,plot_name="beta_latitude_difference",comb_sites=FALSE,line_mean=FALSE) {
+#
+
+# 2. plot of beta against latitude difference from the conditioning site ------
+plot_beta_latitude <- function(b,given,res,gridUK=xyUK20_sf,cond_site,east_noeast=NULL,folder_name,plot_name="beta_latitude_difference",comb_sites=FALSE,line_mean=FALSE) {
   stopifnot(length(b)==length(given))
 lat_diff <-   sapply(1:length(b),FUN=function(i) {
     as.numeric(gridUK$lat)[res[i]] - as.numeric(gridUK$lat)[given[i]]
   })
-tmp <- data.frame("b"=b,"cond_site"=cond_site,"lat_diff"=lat_diff)
+tmp <- data.frame("b"=b,"cond_site"=cond_site,"lat_diff"=lat_diff,"east_noeast"=east_noeast)
 
 c13 <- c(
   "#009ADA", "#C11432", # red
@@ -42,6 +44,12 @@ if (comb_sites==TRUE) {
   p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b,col=cond_site),size=0.3) + scale_color_manual(values=c13) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + theme(axis.title.y = element_text(angle = 0,vjust=0.5)) 
   if (line_mean==TRUE) {
     p <- p + geom_smooth(aes(y=b,x=lat_diff,col=cond_site),method="loess")
+  }
+  if (line_mean=="all") {
+    p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
+      theme(axis.title.y = element_text(angle = 0,vjust=0.5)) + geom_smooth(aes(y=b,x=lat_diff,col=east_noeast),method="loess") +
+      geom_smooth(aes(y=b,x=lat_diff,col="black"),method="loess") +
+      scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not East coast","Combined"))
   }
   ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
 }
@@ -92,4 +100,7 @@ plot_beta_latitude(b=tmp_nec$b_new,given=tmp_nec$given,res=tmp_nec$res,cond_site
 plot_beta_latitude(b=tmp_ec$b_new,given=tmp_ec$given,res=tmp_ec$res,cond_site = tmp_ec$cond_site,folder_name = folder_name,plot_name = "beta_model_3_east_coast_mean_smooth",comb_sites=TRUE,line_mean = TRUE)
 plot_beta_latitude(b=tmp_nec$b_new,given=tmp_nec$given,res=tmp_nec$res,cond_site = tmp_nec$cond_site,folder_name = folder_name,plot_name = "beta_model_3_not_east_coast_mean_smooth",comb_sites=TRUE,line_mean=TRUE)
 
+# combine into one plot
+tmp <- tmp %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_sites,"east_coast","not_east_coast")))
+plot_beta_latitude(b=tmp$b_new,given=tmp$given,res=tmp$res,cond_site = tmp$cond_site,east_noeast=tmp$east_noeast,folder_name = folder_name,plot_name = "beta_model_3_all_mean_smooth",comb_sites=TRUE,line_mean="all")
 
