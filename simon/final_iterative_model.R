@@ -93,37 +93,3 @@ par_est_model_3 <- mclapply(1:ncol(df_sites),FUN=model3_wrapper,mc.cores=ncol(df
 #par_est_model_3 <- model3_wrapper(site_i=1)
 
 save(par_est_model_3,file="data_processed/final_model_3_parameter_estimates.RData")
-
-# explore east coast definition
-legend_text_size <- 0.7
-point_size <- 0.3
-legend_title_size <- 0.9
-coastal_point <- function(grid) {
-  sapply(1:nrow(grid),FUN = function(i) {sum(as.vector(st_distance(grid[i,],grid))<20500)<5 & grid$lon[i]>-1})
-}
-
-cp <- coastal_point(grid = xyUK20_sf) 
-t1 <- tm_shape(cbind(xyUK20_sf,data.frame(cp))) + tm_dots(fill="cp",fill.scale = tm_scale_categorical(values=c("FALSE"="black","TRUE"="#C11432")),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show=FALSE,frame=FALSE) + tm_title(text="Longitude > -1")
-t1
-
-# try as a function of lon and lat
-coastal_point <- function(grid) {
-  sapply(1:nrow(grid),FUN = function(i) {sum(as.vector(st_distance(grid[i,],grid))<20500)<5 & grid$lon[i]>-2})
-}
-
-cp <- coastal_point(grid = xyUK20_sf) 
-t2 <- tm_shape(cbind(xyUK20_sf,data.frame(cp))) + tm_dots(fill="cp",fill.scale = tm_scale_categorical(values=c("FALSE"="black","TRUE"="#C11432")),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show=FALSE,frame=FALSE) + tm_title(text="Longitude > -2")
-t2
-
-# try as a function of longitude and latitude
-coastal_point <- function(grid) {
-  sapply(1:nrow(grid),FUN = function(i) {sum(as.vector(st_distance(grid[i,],grid))<20500)<5 & grid$lat[i]+2*grid$lon[i]>48.5})
-}
-
-cp <- coastal_point(grid = xyUK20_sf) 
-cp[df_sites[3,5]] <- FALSE
-t3<- tm_shape(cbind(xyUK20_sf,data.frame(cp))) + tm_dots(fill="cp",fill.scale = tm_scale_categorical(values=c("FALSE"="black","TRUE"="#C11432")),size=point_size, fill.legend = tm_legend(title="")) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show=FALSE,frame=FALSE) + tm_title(text="East Coast?")
-t3
-
-# save as one picture
-tmap_save(tmap_arrange(t1,t2,t3,ncol=3),filename="../Documents/east_coast.png",height=6,width=9)
