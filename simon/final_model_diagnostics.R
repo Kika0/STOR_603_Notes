@@ -1,6 +1,8 @@
 library(tidyverse)
 library(latex2exp)
 library(gridExtra)
+library(sf)
+library(tmap)
 
 theme_set(theme_bw())
 theme_replace(
@@ -159,8 +161,11 @@ plot_beta_latitude <- function(b,given,res,gridUK=xyUK20_sf,cond_site,east_noeas
 lat_diff <-   sapply(1:length(b),FUN=function(i) {
     as.numeric(gridUK$lat)[res[i]] - as.numeric(gridUK$lat)[given[i]]
   })
+if (is.null(east_noeast)) {
+  tmp <- data.frame("b"=b,"cond_site"=cond_site,"lat_diff"=lat_diff)  
+} else {
 tmp <- data.frame("b"=b,"cond_site"=cond_site,"lat_diff"=lat_diff,"east_noeast"=east_noeast)
-
+}
 c13 <- c(
   "#009ADA", "#C11432", # red
            "green4",
