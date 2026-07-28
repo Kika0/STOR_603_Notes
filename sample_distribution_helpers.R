@@ -233,3 +233,22 @@ AGG_mean <- function(theta) {
   y <- mu - C_AGG * ( sigl^2/deltal*gamma(2/deltal) - sigu^2/deltau*gamma(2/deltau) )
   return(y)
 }
+
+#' AGG variance function
+#'
+#' @param theta A vector of parameters of length 5
+#'
+#' @return A numeric expected value
+#' @export
+#'
+#' @examples
+AGG_variance <- function(theta) {
+  mu <- theta[1]
+  sigl <- theta[2]
+  sigu <- theta[3]
+  deltal <- theta[4]
+  deltau <- theta[5] 
+  C_AGG <-  (sigl/deltal*gamma(1/deltal) + sigu/deltau*gamma(1/deltau)  )^(-1)
+  y <- C_AGG*(sigl^3/deltal*gamma(3/deltal) + sigu^3/deltau*gamma(3/deltau)  ) - C_AGG^2 * ( sigu^2/deltau*gamma(2/deltau) - sigl^2/deltal*gamma(2/deltal) )^2
+  return(y)
+  }
