@@ -35,13 +35,13 @@ misscol <- "aquamarine"
   point_size <- 0.5
   legend_title_size <- 0.9
   limsa <- c(0,1)
-  limsb <- c(0,0.65)
+  limsb <- c(0,0.75)
   nrow_facet <- 1
   estsf <- cbind(xyUK20_sf, data.frame("a"=a_orig,"b"=b_orig,"a_new"=a_new,"b_new" = b_new))
   p1 <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\alpha}$")) 
-  p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\beta}$")) 
+  p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\beta}$")) 
   p3 <- tm_shape(estsf) + tm_dots(fill="a_new",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\alpha}$")) 
-  p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\beta}$")) 
+  p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\beta}$")) 
   tmap_save(tmap_arrange(p1,p2,p3,p4,ncol=4),filename=paste0(folder_name,"alpha_beta_fixed_res_",cond_site_name,".png"),height=6,width=11)
   
   # 2. scatterplot comparing alpha and beta original and new estimates ----------
@@ -190,7 +190,7 @@ if (comb_sites==TRUE) {
     p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
       theme(axis.title.y = element_text(angle = 0,vjust=0.5)) + geom_smooth(aes(y=b,x=lat_diff,col=east_noeast),method="loess") +
       geom_smooth(aes(y=b,x=lat_diff,col="black"),method="loess") +
-      scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not East coast","Combined"))
+      scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"))
   }
   ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
 }
@@ -239,3 +239,57 @@ plot_beta_latitude(b=tmp_nec$b_new,given=tmp_nec$given,res=tmp_nec$res,cond_site
 tmp <- tmp %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_sites,"east_coast","not_east_coast")))
 plot_beta_latitude(b=tmp$b_new,given=tmp$given,res=tmp$res,cond_site = tmp$cond_site,east_noeast=tmp$east_noeast,folder_name = folder_name,plot_name = "beta_model_3_all_mean_smooth",comb_sites=TRUE,line_mean="all")
 
+# fit a beta distribution to beta values on the east coast for Birmingham
+NLL_beta_beta <- function(x,theta,d_latitude,mu,phis,deltal,deltau,dij,alpha) {
+c <- theta[1]
+a <- theta[2]
+b <- theta[3]
+gamma1 <- theta[4]
+gamma2 <- theta[5]
+if (gamma1<0 | gamma2<0 | c<0) {return(10e10)}
+else {
+beta <- c*stats::dbeta(x=(x-a)/(b-a),shape1=gamma1,shape2=gamma2)
+sigu <- phi[1] + phi[2]*(1-exp(-(phi[3]*dij.)))
+sigl <- phi[4] + phi[5]*(1-exp(-(phi[6]*dij.)))
+y <- NLL_AGG_onestep(x=x,a_hat=alpha,b_hat=beta,mu_hat = mu,sigl_hat = sigl,sigu_hat = sigu,deltal_hat = deltal,deltau_hat = deltau)
+return(y)
+}
+  }
+
+# get the data
+xtest <- as.numeric(tmp %>% filter(cond_site=="Birmingham",east_coast==TRUE) %>% pull(b_new))
+
+beta_model_prepare_dataset <- function(data,gridUK=xyUK20_sf,i,df_sites) {
+  tmp <- data.frame("alpha"=numeric(),"beta"=numeric(),"given"=numeric(),"res"=numeric(),"cond_site"=character(),
+                    "mu"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"deltal"=numeric(),"deltau"=numeric()
+                    )
+    tmp <- rbind(tmp,data.frame("alpha"=as.numeric(data[[i]][[3]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(a) %>% na.omit()),
+                                "beta"=as.numeric(data[[i]][[3]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(b) %>% na.omit()),
+                                "given"=data[[i]][[1]] %>% pull(given),
+                                "res"=data[[i]][[1]] %>% pull(res),
+                                "cond_site" = names(df_sites)[i],
+                                "mu"=data[[i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(mu_agg),   
+                                "sigl"=data[[i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(sigl),   
+                                "sigu"=data[[i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(sigu),   
+                                "deltal"=data[[i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(deltal),   
+                                "deltau"=data[[i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(deltau)  ))
+
+  # calculate additional variables
+  cond_index <- tmp$given[1]
+  # distance from the conditioning site
+  dist_tmp <- as.numeric(unlist(st_distance(gridUK[cond_index,],gridUK[-cond_index,])))
+  distnorm <- dist_tmp/1000000  # normalise distance using a common constant
+  # latitude difference from the conditioning site
+  lat_diff <-   sapply(1:nrow(tmp),FUN=function(k) {
+    as.numeric(gridUK$lat)[tmp$res[k]] - as.numeric(gridUK$lat)[tmp$given[k]]
+  })
+  tmp <- tmp %>% mutate("dij"=distnorm,"d_latitude"=lat_diff)
+  return(tmp)
+}
+
+# test new function
+y <- beta_model_prepare_dataset(data=par_est_model_3,i=1,df_sites=df_sites)
+
+p <- seq(0,1,length.out=10000)
+y_result <- dbeta(x=(p-tr[1])/(tr[2]-tr[1]),shape1=tr[3],shape2=tr[4])
+plot(x=p,y=y_result)
