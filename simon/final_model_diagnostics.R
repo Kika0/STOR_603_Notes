@@ -242,13 +242,13 @@ plot_beta_latitude(b=tmp$b_new,given=tmp$given,res=tmp$res,cond_site = tmp$cond_
 NLL_beta_beta <- function(theta,a=NULL,b=NULL,beta=NULL,data_Lap,d_latitude,mu,phi,deltal,deltau,dij,alpha,cond_index,east_coast,res) {
 print(theta)
 data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],0.9))
-#data_Lapv1<- data_Lapv[,c(east_coast,tmp$cond_index[1])]
-
 c <- theta[1]
 #a <- theta[2]
 #b <- theta[3]
 gamma1 <- theta[2]
+if (length(theta)==3) {
 gamma2 <- theta[3]
+} else {gamma2 <- gamma1}
 # if (gamma1<0 | gamma2<0 | c<0 | min((d_latitude-a)/(b-a))<0 | max((d_latitude-a)/(b-a))>1) {return(10e10)}
 if (gamma1<0 | gamma2<0 | c<0 ) {return(10e10)}
 else {
@@ -264,17 +264,31 @@ return(y_res)
 }
 }
 
-est_beta <- function(beta=NULL,data_Lap,d_latitude,mu,phi,deltal,deltau,dij,alpha,cond_index,east_coast,res) {
-
-  data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],0.9))
-  #data_Lapv1<- data_Lapv[,c(east_coast,tmp$cond_index[1])]
+#' Estimate beta separately at each site
+#'
+#' @param data_Lap dataframe of data on Laplace margins
+#' @param d_latitude vector of latitude difference from the conditioning site
+#' @param mu a vector of mu AGG parameters
+#' @param phi vector of sigl and sigu parameters
+#' @param deltal numeric AGG parameter
+#' @param deltau numeric AGG parameter
+#' @param dij vector of distance from the conditioning site
+#' @param alpha vector of alphas
+#' @param cond_index index of the conditioning site
+#' @param res vector of residual site indeces
+#'
+#' @return
+#' @export
+#'
+#' @examples
+est_beta <- function(data_Lap,d_latitude,mu,phi,deltal,deltau,dij,alpha,cond_index,res) {
+    data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],0.9))
     sigu <- phi[1] + phi[2]*(1-exp(-(phi[3]*dij)))
     sigl <- phi[4] + phi[5]*(1-exp(-(phi[6]*dij)))
     beta <- sapply(1:length(sigl),FUN=function(j){
-      x <- optim(par=c(0.2),fn=NLL_AGG_onestep,x=data.frame("Y1"=data_Lapv[,cond_index],"Y2"=data_Lapv[,res[j]]),a_hat=alpha[j],b_hat=beta[j],mu_hat = mu[j],sigl_hat = sigl[j],sigu_hat = sigu[j],deltal_hat = deltal[j],deltau_hat = deltau[j])
-      return(x)})
-    print(beta)
-    
+    x <- optim(par=c(0.2),fn=NLL_AGG_onestep,x=data.frame("Y1"=data_Lapv[,cond_index],"Y2"=data_Lapv[,res[j]]),a_hat=alpha[j],b_hat=beta[j],mu_hat = mu[j],sigl_hat = sigl[j],sigu_hat = sigu[j],deltal_hat = deltal[j],deltau_hat = deltau[j])
+    return(x)})
+    #print(beta)
     return(beta)
 }
 
