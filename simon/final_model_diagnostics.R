@@ -324,7 +324,7 @@ beta_model_prepare_dataset <- function(data,gridUK=xyUK20_sf,site_i,df_sites) {
 site_i <- 1
 y1 <- beta_model_prepare_dataset(data=par_est_model_3,site_i=site_i,df_sites=df_sites)
 # reestimate all betas
-xb_all <- est_beta(data_Lap=data_mod_Lap,phi = phis,east_coast=east_coast,res=y1$res,mu=y1$mu,deltal=y1$deltal,deltau=y1$deltau,alpha=y1$alpha,dij=y1$dij,d_latitude = y1$d_latitude,cond_index=y1$given[1])
+xb_all <- est_beta(data_Lap=data_mod_Lap,phi = phis,res=y1$res,mu=y1$mu,deltal=y1$deltal,deltau=y1$deltau,alpha=y1$alpha,dij=y1$dij,d_latitude = y1$d_latitude,cond_index=y1$given[1])
 bjall <- likball <- c()
 for (i in 1:nrow(y1)) {
   bjall <- append(bjall,xb_all[,i]$par)
