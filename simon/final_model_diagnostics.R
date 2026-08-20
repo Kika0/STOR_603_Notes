@@ -156,7 +156,7 @@ misscol <- "aquamarine"
 sapply(1:13,FUN=function(i){plot_diagnostics_final_model(y_mod3 = par_est_model_3[[i]],xyUK20_sf = xyUK20_sf,site_i=i)})
 
 # 2. plot of beta against latitude difference from the conditioning site ------
-plot_beta_latitude <- function(b,given,res,gridUK=xyUK20_sf,cond_site,east_noeast=NULL,folder_name,plot_name="beta_latitude_difference",comb_sites=FALSE,line_mean=FALSE) {
+plot_beta_latitude <- function(b,b_par=NULL,given,res,gridUK=xyUK20_sf,cond_site,east_noeast=NULL,folder_name,plot_name="beta_latitude_difference",comb_sites=FALSE,line_mean=FALSE) {
   stopifnot(length(b)==length(given))
 lat_diff <-   sapply(1:length(b),FUN=function(i) {
     as.numeric(gridUK$lat)[res[i]] - as.numeric(gridUK$lat)[given[i]]
@@ -190,6 +190,12 @@ if (comb_sites==TRUE) {
     p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
       theme(axis.title.y = element_text(angle = 0,vjust=0.5)) + geom_smooth(aes(y=b,x=lat_diff,col=east_noeast),method="loess") +
       geom_smooth(aes(y=b,x=lat_diff,col="black"),method="loess") +
+      scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"))
+  }
+  if (line_mean="beta_parametric") {
+    p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
+      theme(axis.title.y = element_text(angle = 0,vjust=0.5)) +
+      geom_line(aes(x=lat_diff,y=b_par,col=east_noeast))
       scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"))
   }
   ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
@@ -285,18 +291,23 @@ est_beta <- function(data_Lap,d_latitude,mu,phi,deltal,deltau,dij,alpha,cond_ind
     data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],0.9))
     sigu <- phi[1] + phi[2]*(1-exp(-(phi[3]*dij)))
     sigl <- phi[4] + phi[5]*(1-exp(-(phi[6]*dij)))
-    beta <- sapply(1:length(sigl),FUN=function(j){
-    x <- optim(par=c(0.2),fn=NLL_AGG_onestep,x=data.frame("Y1"=data_Lapv[,cond_index],"Y2"=data_Lapv[,res[j]]),a_hat=alpha[j],b_hat=beta[j],mu_hat = mu[j],sigl_hat = sigl[j],sigu_hat = sigu[j],deltal_hat = deltal[j],deltau_hat = deltau[j])
+    b <- sapply(1:length(sigl),FUN=function(j){
+    x <- optim(par=c(0.2),fn=NLL_AGG_onestep,x=data.frame("Y1"=data_Lapv[,cond_index],"Y2"=data_Lapv[,res[j]]),a_hat=alpha[j],mu_hat = mu[j],sigl_hat = sigl[j],sigu_hat = sigu[j],deltal_hat = deltal[j],deltau_hat = deltau[j])
     return(x)})
     #print(beta)
-    return(beta)
+    return(b)
 }
 
-beta_model_prepare_dataset <- function(data,gridUK=xyUK20_sf,site_i,df_sites) {
-  tmp <- data.frame("alpha"=numeric(),"beta"=numeric(),"given"=numeric(),"res"=numeric(),"cond_site"=character(),
-                    "mu"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"deltal"=numeric(),"deltau"=numeric()
+beta_model_prepare_dataset <- function(data,gridUK=xyUK20_sf,sites_i,df_sites) {
+  tmp_site <- data.frame("alpha"=numeric(),"beta"=numeric(),"given"=numeric(),"res"=numeric(),"cond_site"=character(),
+                    "mu"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"deltal"=numeric(),"deltau"=numeric(),
+                    "dij"=numeric(),"d_latitude"=numeric()
                     )
-    tmp <- rbind(tmp,data.frame("alpha"=as.numeric(data[[site_i]][[3]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(a) %>% na.omit()),
+  tmp <- data.frame("alpha"=numeric(),"beta"=numeric(),"given"=numeric(),"res"=numeric(),"cond_site"=character(),
+                         "mu"=numeric(),"sigl"=numeric(),"sigu"=numeric(),"deltal"=numeric(),"deltau"=numeric()
+  )
+  for (site_i in sites_i) {
+    tmp_site <- data.frame("alpha"=as.numeric(data[[site_i]][[3]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(a) %>% na.omit()),
                                 "beta"=as.numeric(data[[site_i]][[3]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(b) %>% na.omit()),
                                 "given"=data[[site_i]][[1]] %>% pull(given),
                                 "res"=data[[site_i]][[1]] %>% pull(res),
@@ -305,24 +316,26 @@ beta_model_prepare_dataset <- function(data,gridUK=xyUK20_sf,site_i,df_sites) {
                                 "sigl"=data[[site_i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(sigl),   
                                 "sigu"=data[[site_i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(sigu),   
                                 "deltal"=data[[site_i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(deltal),   
-                                "deltau"=data[[site_i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(deltau)  ))
+                                "deltau"=data[[site_i]][[2]] %>% dplyr::filter(iteration==max(iteration)) %>% pull(deltau)  )
 
   # calculate additional variables
-  cond_index <- tmp$given[1]
+  cond_index <- tmp_site$given[1]
   # distance from the conditioning site
   dist_tmp <- as.numeric(unlist(st_distance(gridUK[cond_index,],gridUK[-cond_index,])))
   distnorm <- dist_tmp/1000000  # normalise distance using a common constant
   # latitude difference from the conditioning site
-  lat_diff <-   sapply(1:nrow(tmp),FUN=function(k) {
-    as.numeric(gridUK$lat)[tmp$res[k]] - as.numeric(gridUK$lat)[tmp$given[k]]
+  lat_diff <-   sapply(1:nrow(tmp_site),FUN=function(k) {
+    as.numeric(gridUK$lat)[tmp_site$res[k]] - as.numeric(gridUK$lat)[tmp_site$given[k]]
   })
-  tmp <- tmp %>% mutate("dij"=distnorm,"d_latitude"=lat_diff)
+  tmp_site <- tmp_site %>% mutate("dij"=distnorm,"d_latitude"=lat_diff)
+  tmp <- rbind(tmp,tmp_site)
+  }
   return(tmp)
 }
 
 # test new function
 site_i <- 1
-y1 <- beta_model_prepare_dataset(data=par_est_model_3,site_i=site_i,df_sites=df_sites)
+y1 <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=site_i,df_sites=df_sites)
 # reestimate all betas
 xb_all <- est_beta(data_Lap=data_mod_Lap,phi = phis,res=y1$res,mu=y1$mu,deltal=y1$deltal,deltau=y1$deltau,alpha=y1$alpha,dij=y1$dij,d_latitude = y1$d_latitude,cond_index=y1$given[1])
 bjall <- likball <- c()
@@ -332,18 +345,18 @@ for (i in 1:nrow(y1)) {
 }
 title_map <- ""
 misscol <- "aquamarine"
-  legend_text_size <- 0.7
-  point_size <- 0.5
-  legend_title_size <- 0.9
-  limsa <- c(0,1)
-  limsb <- c(0,0.75)
-  nrow_facet <- 1
+legend_text_size <- 0.7
+point_size <- 0.5
+legend_title_size <- 0.9
+limsa <- c(0,1)
+limsb <- c(0,0.75)
+nrow_facet <- 1
   
 estsf <- cbind(xyUK20_sf, data.frame("a"=y1$alpha,"b"=y1$beta,"b_new" = bjall) %>% add_row(.before = y1$given[1]))
-p1 <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\alpha}$")) 
-p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\tilde{\\beta}$")) 
-p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\beta}$")) 
-tmap_save(tmap_arrange(p1,p2,p4,ncol=4),filename=paste0(folder_name,"new_alpha_beta_fixed_res_","Birmingham",".png"),height=6,width=11)
+p1 <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\alpha}$")) 
+p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("$\\hat{\\beta}$")) 
+p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("New $\\hat{\\beta}$ separate")) 
+tmap_save(tmap_arrange(p1,p2,p1,p4,ncol=4),filename=paste0(folder_name,"new_alpha_beta_fixed_res_","Birmingham",".png"),height=6,width=11)
 
 
 phis <- as.numeric(((par_est_model_3[[site_i]][[2]] %>% dplyr::select(phi0u,phi1u,phi2u,phi0l,phi1l,phi2l))[1,]))
@@ -482,4 +495,33 @@ t3 <- tm_shape(t1) + tm_dots("b_parametric")
 tmap_arrange(t2,t3,ncol=2)
 
 # combine estimation for sites not on the east coast ---------------------------------
+# prepare a dataset containing all sites
+y1 <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=1:13,df_sites=df_sites)
+not_east_coast_sites <- names(df_sites)[!names(df_sites) %in% east_coast_sites]
+a <- min(y$d_latitude)
+b <- max(y$d_latitude)
+NLL_beta_beta_wrapper <- function(theta,cond_names_set,data_Lap,a,b,phi,y) {
+  x <- sapply(cond_names_set,FUN=function(i) { 
+    NLL_beta_beta(theta=theta,data_Lap=data_Lap,a=a,b=b,phi=phi,res=y$res[y$cond_site==i],mu=y$mu[y$cond_site==i],
+                deltal=deltal,deltau=deltau,alpha=y$a[y$cond_site==i],
+                dij=y$dij[y$cond_site==i],d_latitude=y$d_latitude[y$cond_site==i],cond_index=y$given[y$cond_site==i][1])  }
+  )
+  return(sum(x))}
+x <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=not_east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
+xe <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
+xall <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
+
+
+# plot together as before ----------------------------------------------------
+# calculate parametric beta values
+
+plot_beta_latitude(b=y1$b,b_par=b_par,given=tmp$given,res=y1$res,cond_site = y1$cond_site,folder_name = folder_name,plot_name = "beta_model_combined_sites")
+
+
+# repeat for fixed gamma1=gamma2
+x12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=not_east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
+xe12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
+xall12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
+
+
 
