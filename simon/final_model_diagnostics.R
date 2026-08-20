@@ -156,7 +156,7 @@ misscol <- "aquamarine"
 sapply(1:13,FUN=function(i){plot_diagnostics_final_model(y_mod3 = par_est_model_3[[i]],xyUK20_sf = xyUK20_sf,site_i=i)})
 
 # 2. plot of beta against latitude difference from the conditioning site ------
-plot_beta_latitude <- function(b,b_par=NULL,given,res,gridUK=xyUK20_sf,cond_site,east_noeast=NULL,folder_name,plot_name="beta_latitude_difference",comb_sites=FALSE,line_mean=FALSE) {
+plot_beta_latitude <- function(b,b_par=NULL,b_par_join=NULL,given,res,gridUK=xyUK20_sf,cond_site,east_noeast=NULL,folder_name,plot_name="beta_latitude_difference",comb_sites=FALSE,line_mean=FALSE) {
   stopifnot(length(b)==length(given))
 lat_diff <-   sapply(1:length(b),FUN=function(i) {
     as.numeric(gridUK$lat)[res[i]] - as.numeric(gridUK$lat)[given[i]]
@@ -190,12 +190,6 @@ if (comb_sites==TRUE) {
     p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
       theme(axis.title.y = element_text(angle = 0,vjust=0.5)) + geom_smooth(aes(y=b,x=lat_diff,col=east_noeast),method="loess") +
       geom_smooth(aes(y=b,x=lat_diff,col="black"),method="loess") +
-      scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"))
-  }
-  if (line_mean="beta_parametric") {
-    p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
-      theme(axis.title.y = element_text(angle = 0,vjust=0.5)) +
-      geom_line(aes(x=lat_diff,y=b_par,col=east_noeast))
       scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"))
   }
   ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
@@ -498,8 +492,8 @@ tmap_arrange(t2,t3,ncol=2)
 # prepare a dataset containing all sites
 y1 <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=1:13,df_sites=df_sites)
 not_east_coast_sites <- names(df_sites)[!names(df_sites) %in% east_coast_sites]
-a <- min(y$d_latitude)
-b <- max(y$d_latitude)
+a <- min(y1$d_latitude)
+b <- max(y1$d_latitude)
 NLL_beta_beta_wrapper <- function(theta,cond_names_set,data_Lap,a,b,phi,y) {
   x <- sapply(cond_names_set,FUN=function(i) { 
     NLL_beta_beta(theta=theta,data_Lap=data_Lap,a=a,b=b,phi=phi,res=y$res[y$cond_site==i],mu=y$mu[y$cond_site==i],
@@ -514,8 +508,27 @@ xall <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_
 
 # plot together as before ----------------------------------------------------
 # calculate parametric beta values
-
-plot_beta_latitude(b=y1$b,b_par=b_par,given=tmp$given,res=y1$res,cond_site = y1$cond_site,folder_name = folder_name,plot_name = "beta_model_combined_sites")
+y1 <- y1 %>% mutate("b_par"=-1,"b_par_join"=-1)
+c <- x$par[1]
+gamma1 <- x$par[2]
+gamma2 <- x$par[3]
+y1$b_par[y$cond_site %in% not_east_coast_sites] <- c*stats::dbeta(x=(y1$d_latitude[y1$cond_site %in% not_east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+c <- xe$par[1]
+gamma1 <- xe$par[2]
+gamma2 <- xe$par[3]
+y1$b_par[y1$cond_site %in% east_coast_sites] <- c*stats::dbeta(x=(y1$d_latitude[y1$cond_site %in% east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+c <- xall$par[1]
+gamma1 <- xall$par[2]
+gamma2 <- xall$par[3]
+y1$b_par_join <- c*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+y1 <- y1 %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_sites,"east_coast","not_east_coast")))
+p <- ggplot(y1) + geom_point(aes(x=d_latitude,y=beta),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
+  theme(axis.title.y = element_text(angle = 0,vjust=0.5)) +
+  geom_line(aes(x=d_latitude,y=b_par,col=east_noeast)) +
+  geom_line(aes(x=d_latitude,y=b_par_join)) +
+  scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"))
+plot_name <- "beta_param_site_subsets_diff_gamma"
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
 
 
 # repeat for fixed gamma1=gamma2
@@ -523,5 +536,27 @@ x12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=not_east_coa
 xe12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
 xall12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
 
+y2 <- y1 %>% mutate("b_par"=-1,"b_par_join"=-1)
+c <- x12$par[1]
+gamma1 <- x12$par[2]
+gamma2 <- x12$par[2]
+y2$b_par[y2$cond_site %in% not_east_coast_sites] <- c*stats::dbeta(x=(y2$d_latitude[y2$cond_site %in% not_east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+c <- xe12$par[1]
+gamma1 <- xe12$par[2]
+gamma2 <- xe12$par[2]
+y2$b_par[y2$cond_site %in% east_coast_sites] <- c*stats::dbeta(x=(y2$d_latitude[y2$cond_site %in% east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+c <- xall$par[1]
+gamma1 <- xall12$par[2]
+gamma2 <- xall12$par[2]
+y2$b_par_join <- c*stats::dbeta(x=(y2$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+y2 <- y2 %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_sites,"east_coast","not_east_coast")))
+p <- ggplot(y2) + geom_point(aes(x=d_latitude,y=beta),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
+  theme(axis.title.y = element_text(angle = 0,vjust=0.5)) +
+  geom_line(aes(x=d_latitude,y=b_par,col=east_noeast)) +
+  geom_line(aes(x=d_latitude,y=b_par_join)) +
+  scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"),drop=FALSE)
+plot_name <- "beta_param_site_subsets_same_gamma"
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
 
+# likelihood ratio test values
 
