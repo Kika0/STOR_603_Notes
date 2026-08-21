@@ -550,6 +550,7 @@ gamma1 <- xall12$par[2]
 gamma2 <- xall12$par[2]
 y2$b_par_join <- c*stats::dbeta(x=(y2$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
 y2 <- y2 %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_sites,"east_coast","not_east_coast")))
+y2 <- y2 %>% mutate(east_coast=factor(east_coast,levels=c("east_coast","not_east_coast","combined")))
 p <- ggplot(y2) + geom_point(aes(x=d_latitude,y=beta),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
   theme(axis.title.y = element_text(angle = 0,vjust=0.5)) +
   geom_line(aes(x=d_latitude,y=b_par,col=east_noeast)) +
@@ -559,4 +560,7 @@ plot_name <- "beta_param_site_subsets_same_gamma"
 ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
 
 # likelihood ratio test values
+2*(x12$value-x$value)
+2*(xe12$value-xe$value)
+2*(xall12$value-xall$value)
 
