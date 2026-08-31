@@ -195,8 +195,6 @@ if (comb_sites==TRUE) {
   ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
 }
 }
-# first draft apply to the original estimates
-#plot_beta_latitude(b=est_all_sf$b,given=est_all_sf$given,res=est_all_sf$res,cond_site = est_all_sf$cond_site,folder_name = folder_name)
 
 tmp <- data.frame("b_new"=numeric(),"b_old"=numeric(),"given"=numeric(),"res"=numeric(),"cond_site"=character())
 for (i in 1:length(par_est_model_3)) {
@@ -287,8 +285,10 @@ est_beta <- function(data_Lap,d_latitude,mu,phi,deltal,deltau,dij,alpha,cond_ind
     sigl <- phi[4] + phi[5]*(1-exp(-(phi[6]*dij)))
     b <- sapply(1:length(sigl),FUN=function(j){
     x <- optim(par=c(0.2),fn=NLL_AGG_onestep,x=data.frame("Y1"=data_Lapv[,cond_index],"Y2"=data_Lapv[,res[j]]),a_hat=alpha[j],mu_hat = mu[j],sigl_hat = sigl[j],sigu_hat = sigu[j],deltal_hat = deltal[j],deltau_hat = deltau[j])
-    return(x)})
-    #print(beta)
+    return(c(x$par,x$value))})
+    b <- as.data.frame(t(b))
+    names(b) <- c("b_re_est","lik_b_re_est")
+    b <- b %>% mutate("given"=cond_index)
     return(b)
 }
 
@@ -330,13 +330,12 @@ beta_model_prepare_dataset <- function(data,gridUK=xyUK20_sf,sites_i,df_sites) {
 # test new function
 site_i <- 1
 y1 <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=site_i,df_sites=df_sites)
+phis <- as.numeric(((par_est_model_3[[site_i]][[2]] %>% dplyr::select(phi0u,phi1u,phi2u,phi0l,phi1l,phi2l))[1,]))
 # reestimate all betas
 xb_all <- est_beta(data_Lap=data_mod_Lap,phi = phis,res=y1$res,mu=y1$mu,deltal=y1$deltal,deltau=y1$deltau,alpha=y1$alpha,dij=y1$dij,d_latitude = y1$d_latitude,cond_index=y1$given[1])
-bjall <- likball <- c()
-for (i in 1:nrow(y1)) {
-  bjall <- append(bjall,xb_all[,i]$par)
-  likball <- append(likball,xb_all[,i]$value)
-}
+bjall <- xb_all$b_re_est
+likball <- xb_all$lik_b_re_est
+
 title_map <- ""
 misscol <- "aquamarine"
 legend_text_size <- 0.7
@@ -352,8 +351,6 @@ p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits
 p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("New $\\hat{\\beta}$ separate")) 
 tmap_save(tmap_arrange(p1,p2,p1,p4,ncol=4),filename=paste0(folder_name,"new_alpha_beta_fixed_res_","Birmingham",".png"),height=6,width=11)
 
-
-phis <- as.numeric(((par_est_model_3[[site_i]][[2]] %>% dplyr::select(phi0u,phi1u,phi2u,phi0l,phi1l,phi2l))[1,]))
 # subset for only east coast
 east_coast <-   sapply(1:nrow(y),FUN=function(j_ec) {
   cp[y$res[j_ec]]
@@ -564,3 +561,6 @@ ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
 2*(xe12$value-xe$value)
 2*(xall12$value-xall$value)
 
+# sum up likelihoods of subsets
+xe$value+x$value
+xall$value
