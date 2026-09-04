@@ -351,6 +351,16 @@ p2 <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits
 p4 <- tm_shape(estsf) + tm_dots(fill="b_new",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("New $\\hat{\\beta}$ separate")) 
 tmap_save(tmap_arrange(p1,p2,p1,p4,ncol=4),filename=paste0(folder_name,"new_alpha_beta_fixed_res_","Birmingham",".png"),height=6,width=11)
 
+# repeat for all conditioning sites -------------------------------------------
+y1_all <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=1:ncol(df_sites),df_sites=df_sites)
+xb_all_sites <- sapply(1:ncol(df_sites),FUN = function(site_i,y1_all) {
+  y1 <- y1_all %>% dplyr::filter(given==df_sites[3,site_i])
+  return(est_beta(data_Lap=data_mod_Lap,phi = phis,res=y1$res,mu=y1$mu,deltal=y1$deltal,deltau=y1$deltau,alpha=y1$alpha,dij=y1$dij,d_latitude = y1$d_latitude,cond_index=df_sites[3,site_i]))},y1_all=y1_all,simplify=FALSE)
+b_all <- do.call("rbind",xb_all_sites)
+
+# combine with the other parameters -------------------
+my_df <- cbind(y1_all,b_all %>% select(b_re_est))
+
 # subset for only east coast
 east_coast <-   sapply(1:nrow(y),FUN=function(j_ec) {
   cp[y$res[j_ec]]
