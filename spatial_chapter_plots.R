@@ -27,7 +27,7 @@ Birm_chi <- sapply(1:ncol(data_mod),FUN=chi_sites,i=df_sites[3,1],u=u)
 Gla_chi <- sapply(1:ncol(data_mod),FUN=chi_sites,i=df_sites[3,2],u=u)
 Lon_chi <- sapply(1:ncol(data_mod),FUN=chi_sites,i=df_sites[3,3],u=u)
 
-# plot of chi as a map -------------------------------------------------------
+# 1. plot of chi as a map -----------------------------------------------------
 tmp <- xyUK20_sf %>% mutate(Birm_chi,Gla_chi,Lon_chi)
 cond_site_names <- names(df_sites)[1:3]
 title_map <- ""
@@ -37,13 +37,28 @@ point_size <- 0.6
 legend_title_size <- 1.2
 lims <- c(0,1)
 nrow_facet <- 1
-p1 <- tm_shape(tmp) + tm_dots(fill="Birm_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show=FALSE,frame=FALSE) + tm_title(text="Birmingham") 
-p2 <- tm_shape(tmp) + tm_dots(fill="Gla_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="Glasgow") 
-p3 <- tm_shape(tmp) + tm_dots(fill="Lon_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = TRUE,frame=FALSE) + tm_title(text="London") 
+p1 <- tm_shape(tmp) + tm_dots(fill="Birm_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show=FALSE,frame=FALSE) + tm_title(text="Birmingham") 
+p2 <- tm_shape(tmp) + tm_dots(fill="Gla_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="Glasgow") 
+p3 <- tm_shape(tmp) + tm_dots(fill="Lon_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = TRUE,frame=FALSE) + tm_title(text="London") 
 tmap_save(tmap_arrange(p3,p1,p2,ncol=3),filename=paste0(folder_name,"chi_selected_sites",u*100,".png"),height=6,width=8)
 tmap_save(tmap_arrange(p3,p1,p2,ncol=3),filename=paste0(folder_name,"chi_selected_sites_",u*100,".pdf"),height=6,width=8)
 
+# 2. plot of chi against distance from the conditioning site ------------------
+Birmingham <- as.numeric(unlist(st_distance(xyUK20_sf[df_sites[3,1],],xyUK20_sf) %>%
+                                  units::set_units(km)))
+Birmingham[df_sites[3,1]] <- NA
+Glasgow <- as.numeric(unlist(st_distance(xyUK20_sf[df_sites[3,2],],xyUK20_sf) %>%
+                               units::set_units(km)))
+Glasgow[df_sites[3,2]] <- NA
+London <- as.numeric(unlist(st_distance(xyUK20_sf[df_sites[3,3],],xyUK20_sf) %>%
+                              units::set_units(km)))
+London[df_sites[3,3]] <- NA
 
-  
+tmp1 <- tmp %>% mutate(Birmingham,Glasgow,London)
+tmp2 <- data.frame("cond_site_dist"=rep(NA,length(Birm_chi)*3),"chi"=rep(NA,length(Birm_chi)*3),"cond_site"=rep(NA,length(Birm_chi)*3))
+tmp2$chi <- tmp1 %>% pivot_longer(cols=c(Birm_chi,Gla_chi,Lon_chi)) %>% pull(value)
+tmp2$cond_site_dist <- tmp1 %>% pivot_longer(cols=c(Birmingham,Glasgow,London)) %>% pull(value)
+tmp2$cond_site <- tmp1 %>% pivot_longer(cols=c(Birmingham,Glasgow,London)) %>% pull(name)
+tmp2 <- tmp2 %>% mutate("cond_site"=factor(tmp2$cond_site,levels=c("London","Birmingham","Glasgow")))
 
-
+ggplot(tmp2) + geom_point(aes(x=cond_site_dist,y=chi)) + facet_wrap(~cond_site) + ylim(c(0,1)) + labs(x="Distance from conditioning site [km]",y=TeX("$\\chi_u$"))
