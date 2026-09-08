@@ -284,7 +284,7 @@ for (u in ui) {
  tmp <- rbind(tmp,p_repeat(u))
 }
 p <- ggplot(tmp) + geom_point(aes(x=u,y=p1),col="#66A64F") + geom_line(aes(x=u,y=p1),col="#66A64F") + geom_point(aes(x=u,y=p2),col="#009ADA") + geom_line(aes(x=u,y=p2),col="#009ADA") + labs(x="Temperature at London exceeding",y="Probability of joint exceedance at Cambridge and Lancaster") +
-  annotate(geom="text", x=36,y=0.01,label="2026",col="#66A64F",size=6) + annotate(geom="text", x=36,y=0.045,size=6,label="2076",col="#009ADA")
+  annotate(geom="text", x=36,y=0.005,label="2026",col="#66A64F",size=6) + annotate(geom="text", x=36,y=0.022,size=6,label="2076",col="#009ADA")
 ggsave(p,filename=paste0(folder_name,"London_p_exceedance.png"),width=6,height=5.5)
 
 
