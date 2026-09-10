@@ -18,6 +18,8 @@ q <- 0.9 # set quantile threshold
 load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose = TRUE) # original parameter estimates
 # load model 3 estimates
 load("data_processed/final_model_3_parameter_estimates.RData",verbose=TRUE)
+deltal <- par_est_model_3[[1]][[2]]$deltal[1]
+deltau <- par_est_model_3[[1]][[2]]$deltal[1]
 
 # 1. diagnostic plots from final iterative model ------------------------------
 plot_diagnostics_final_model <- function(y_mod3,xyUK20_sf,site_i) {
@@ -237,7 +239,7 @@ tmp <- tmp %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_si
 plot_beta_latitude(b=tmp$b_new,given=tmp$given,res=tmp$res,cond_site = tmp$cond_site,east_noeast=tmp$east_noeast,folder_name = folder_name,plot_name = "beta_model_3_all_mean_smooth",comb_sites=TRUE,line_mean="all")
 
 # fit a beta distribution to beta values on the east coast for Birmingham
-NLL_beta_beta <- function(theta,a=NULL,b=NULL,beta=NULL,data_Lap,d_latitude,mu,phi,deltal,deltau,dij,alpha,cond_index,east_coast,res) {
+NLL_beta_beta <- function(theta,a=NULL,b=NULL,beta_par=NULL,data_Lap,d_latitude,mu,phi,deltal,deltau,dij,alpha,cond_index,res) {
 print(theta)
 data_Lapv <- data_Lap %>% filter(data_Lap[,cond_index]>quantile(data_Lap[,cond_index],0.9))
 c <- theta[1]
@@ -250,15 +252,16 @@ gamma2 <- theta[3]
 # if (gamma1<0 | gamma2<0 | c<0 | min((d_latitude-a)/(b-a))<0 | max((d_latitude-a)/(b-a))>1) {return(10e10)}
 if (gamma1<0 | gamma2<0 | c<0 ) {return(10e10)}
 else {
-  if (is.null(beta)) {
-beta <- c*stats::dbeta(x=(d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2)
+  if (is.null(beta_par)) {
+beta_par <- c*stats::dbeta(x=(d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2)
   }
 sigu <- phi[1] + phi[2]*(1-exp(-(phi[3]*dij)))
 sigl <- phi[4] + phi[5]*(1-exp(-(phi[6]*dij)))
-y_res <- sapply(1:length(res),FUN=function(j) {NLL_AGG_onestep(theta=c(),x=data.frame("Y1"=data_Lapv[,cond_index],"Y2"=data_Lapv[,res[j]]),a_hat=alpha[j],b_hat=beta[j],mu_hat = mu[j],sigl_hat = sigl[j],sigu_hat = sigu[j],deltal_hat = deltal[j],deltau_hat = deltau[j]) } )
+y_res <- sapply(1:length(res),FUN=function(j) {NLL_AGG_onestep(theta=c(),x=data.frame("Y1"=data_Lapv[,cond_index],"Y2"=data_Lapv[,res[j]]),a_hat=alpha[j],b_hat=beta_par[j],mu_hat = mu[j],sigl_hat = sigl[j],sigu_hat = sigu[j],deltal_hat = deltal,deltau_hat = deltau) } )
 print(y_res)
 y <- sum(y_res)
-return(y_res)
+print(y)
+return(y)
 }
 }
 
@@ -370,7 +373,7 @@ y <- y %>% dplyr::filter(beta>0.001)
 #x <- optim(par = c(0.5,-4,4,2,2),fn=NLL_beta_beta,data_Lap=data_mod_Lap,phi = phis,east_coast=east_coast,res=y$res,mu=y$mu,deltal=y$deltal,deltau=y$deltau,alpha=y$alpha,dij=y$dij,d_latitude = y$d_latitude,cond_index=y$given[1],control = list(maxit=2000))
 a <- -2
 b <- 4
-x <- optim(par = c(0.5,2,2),fn=NLL_beta_beta,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,east_coast=east_coast,res=y$res,mu=y$mu,deltal=y$deltal,deltau=y$deltau,alpha=y$alpha,dij=y$dij,d_latitude = y$d_latitude,cond_index=y$given[1],control = list(maxit=2000))
+x <- optim(par = c(0.5,2,2),fn=NLL_beta_beta,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,res=y$res,mu=y$mu,deltal=y$deltal,deltau=y$deltau,alpha=y$alpha,dij=y$dij,d_latitude = y$d_latitude,cond_index=y$given[1],control = list(maxit=2000))
 # c <- x$par[1]
 # a <- x$par[2]
 # b <- x$par[3]
@@ -512,6 +515,10 @@ x <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=not_east_coa
 xe <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
 xall <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
 
+# get scaled likelihood values
+print(x$value/(555*length(not_east_coast_sites)))
+print(xe$value/(555*length(east_coast_sites)))
+print(xe$value/(555*length(names(df_sites))))
 
 # plot together as before ----------------------------------------------------
 # calculate parametric beta values
