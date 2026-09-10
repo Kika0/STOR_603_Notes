@@ -61,4 +61,19 @@ tmp2$cond_site_dist <- tmp1 %>% pivot_longer(cols=c(Birmingham,Glasgow,London)) 
 tmp2$cond_site <- tmp1 %>% pivot_longer(cols=c(Birmingham,Glasgow,London)) %>% pull(name)
 tmp2 <- tmp2 %>% mutate("cond_site"=factor(tmp2$cond_site,levels=c("London","Birmingham","Glasgow")))
 
-ggplot(tmp2) + geom_point(aes(x=cond_site_dist,y=chi)) + facet_wrap(~cond_site) + ylim(c(0,1)) + labs(x="Distance from conditioning site [km]",y=TeX("$\\chi_u$"))
+ui <- c(0.9,0.95,0.99)
+tmp3 <- data.frame("Birmingham"=numeric(),"Glasgow"=numeric(),"London"=numeric(),"u"=numeric())
+for (u in ui) {
+  Birm_chi <- sapply(1:ncol(data_mod),FUN=chi_sites,i=df_sites[3,1],u=u)
+  Gla_chi <- sapply(1:ncol(data_mod),FUN=chi_sites,i=df_sites[3,2],u=u)
+  Lon_chi <- sapply(1:ncol(data_mod),FUN=chi_sites,i=df_sites[3,3],u=u)
+  tmp3 <- rbind(tmp3,data.frame("Birmingham"=Birm_chi,"Glasgow"=Gla_chi,"London"=Lon_chi,"u"=u) )
+}
+tmp4 <- tmp3 %>% pivot_longer(c(Birmingham,Glasgow,London),names_to = "cond_site",values_to="chi")
+tmp5 <- tmp4 %>% mutate("cond_site_dist"=rep(tmp2$cond_site_dist,length(ui)))
+tmp5 <- tmp5 %>% mutate("u"=factor(u,levels=c(ui))) %>% mutate(cond_site=factor(cond_site,levels=c("London","Birmingham","Glasgow")))
+point_size <- 0.5
+p <- ggplot(tmp5) + geom_point(aes(x=cond_site_dist,y=chi,col=u),size=point_size) + facet_wrap(~factor(cond_site)) + ylim(c(0,1)) + labs(x="Distance from conditioning site [km]",y=TeX("$\\chi_u$"),col=TeX("$u$")) + scale_color_manual(values=c("#009ADA","#033EB3","#090262"))
+plot_name <- "chi_scatterplot_selected_sites"
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=3)
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=3)
