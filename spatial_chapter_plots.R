@@ -142,8 +142,33 @@ tmap_save(tmap_arrange(t1,t2,t3,ncol=3),filename=paste0(folder_name,plot_name,".
 tmap_save(tmap_arrange(t1,t2,t3,ncol=3),filename=paste0(folder_name,plot_name,".pdf"),height=6,width=8)
 
 # 5. plot of illustration of marginal transform -------------------------------
+Birm_temp <- data_mod_temp[,(df_sites %>% dplyr::select(Birmingham))[3,1]]
+Gla_temp <- data_mod_temp[,(df_sites %>% dplyr::select(Glasgow))[3,1]]
+tmp <- data.frame(Birm_temp,Gla_temp) %>% mutate(year5=factor(rep(seq(1980,2075,by=5),each=90*5)),obsmod="CPM_data")
+# include also observed data
+Birm_temp <- data_obs_all[,(df_sites %>% dplyr::select(Birmingham))[3,1]]
+Gla_temp <- data_obs_all[,(df_sites %>% dplyr::select(Glasgow))[3,1]]
+tmp1 <- data.frame(Birm_temp,Gla_temp) %>% mutate(year5=factor(rep(seq(1960,2020,by=5),each=92*5)[1:length(Birm_temp)]),obsmod="observed")
+tmp2 <- rbind(tmp,tmp1) %>% mutate(year5=factor(year5,levels=seq(1960,2075,by=5)))
+names(tmp2)[1:2] <- c("Birmingham","Glasgow")
+tmp3 <- tmp2 %>% pivot_longer(c(Birmingham,Glasgow),names_to="site",values_to = "temp")
+p <- ggplot(tmp3) + geom_boxplot(aes(x=year5,y=temp,fill=obsmod)) + facet_wrap(~site) + scale_fill_manual(values=c("#C11432","black"),labels=c("CPM data","Observed data")) + labs(fill="",x="",y=TeX("Temperature ($^\\circ C$)"))
+plot_name <- "CPM_observed_Birmingham_Glasgow"
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=16,height=4)
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=16,height=4)
+
 Birm_temp <- data_mod_Lap[,(df_sites %>% dplyr::select(Birmingham))[3,1]]
 Gla_temp <- data_mod_Lap[,(df_sites %>% dplyr::select(Glasgow))[3,1]]
-tmp <- data.frame(Birm_temp,Gla_temp) %>% mutate(year5=factor(rep(seq(1980,2075,by=5),each=90*5)))
-
-ggplot(tmp) + geom_boxplot(aes(x=year5,y=Birm_temp))
+tmp <- data.frame(Birm_temp,Gla_temp) %>% mutate(year5=factor(rep(seq(1980,2075,by=5),each=90*5)),obsmod="Laplace")
+# include also observed data
+Birm_temp <- data_mod_Lap_star[,(df_sites %>% dplyr::select(Birmingham))[3,1]]
+Gla_temp <- data_mod_Lap_star[,(df_sites %>% dplyr::select(Glasgow))[3,1]]
+tmp1 <- data.frame(Birm_temp,Gla_temp) %>% mutate(year5=factor(rep(seq(1980,2075,by=5),each=90*5)),obsmod="double_Laplace")
+tmp2 <- rbind(tmp,tmp1) %>% mutate(year5=factor(year5,levels=seq(1960,2075,by=5)))
+names(tmp2)[1:2] <- c("Birmingham","Glasgow")
+tmp3 <- tmp2 %>% pivot_longer(c(Birmingham,Glasgow),names_to="site",values_to = "temp")
+tmp3 <- tmp3 %>% mutate(obsmod=factor(obsmod,levels=c("Laplace", "double_Laplace")))
+p <- ggplot(tmp3) + geom_boxplot(aes(x=year5,y=temp,fill=obsmod)) + facet_wrap(~site) + scale_fill_manual(values=c("#009ADA","#66A64F"),labels=c("Laplace","Double Laplace"))  + labs(fill="",x="",y="Temperature (Laplace scale)")
+plot_name <- "CPM_Laplace_Birmingham_Glasgow"
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=16,height=4)
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=16,height=4)
