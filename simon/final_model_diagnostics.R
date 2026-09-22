@@ -461,110 +461,166 @@ p <- ggplot() + geom_point(data=y ,aes(x=d_latitude,y=beta),fill="#009ADA") + ge
 plot_name <- "different_beta_function_initial_values_Nelder_Mead_fix_ab_gamma2_bigb4"
 ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4) # wonderful
 
-# plot on a map and compare with Model 3 east ciast beta estimates
-cond_index <- y$given[1]
+# plot on a map and compare with Model 3 east coast beta estimates
+y2 <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=1:13,df_sites=df_sites)
+not_east_coast_sites <- names(df_sites)[!names(df_sites) %in% east_coast_sites]
+east_coast <-   sapply(1:nrow(y2),FUN=function(j_ec) {
+  cp[y2$res[j_ec]]
+})
+y1 <- y2[east_coast,]
+a <- min(y1$d_latitude)
+b <- max(y1$d_latitude)
+for (site_i in 1:ncol(df_sites)) {
+cond_index <- df_sites[3,site_i]
+y <- y1 %>% dplyr::filter(cond_site==names(df_sites)[site_i])
+phis <- as.numeric(((par_est_model_3[[site_i]][[2]] %>% dplyr::select(phi0u,phi1u,phi2u,phi0l,phi1l,phi2l))[1,]))
+x <- optim(par = c(0.5,2,2),fn=NLL_beta_beta,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,res=y$res,mu=y$mu,deltal=y$deltal,deltau=y$deltau,alpha=y$alpha,dij=y$dij,d_latitude = y$d_latitude,cond_index=y$given[1],control = list(maxit=2000))
+c <- x$par[1]
+gamma1 <- x$par[2]
+gamma2 <- x$par[3]
 t1 <- xyUK20_sf %>% mutate("b_model3"=0,"b_parametric"=0)
 t1$b_model3[cond_index] <- t1$b_parametric[cond_index] <- NA
-t1$b_model3[-cond_index][east_coast] <- y$beta
-t1$b_parametric[-cond_index][east_coast] <- c*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+t1$b_model3[y$res] <- y$beta
+t1$b_parametric[y$res] <- c*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
 p2 <- tm_shape(t1) + tm_dots(fill="b_model3",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Model 3 $\\hat{\\beta}$")) 
 p4 <- tm_shape(t1) + tm_dots(fill="b_parametric",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Parametric $\\hat{\\beta}$")) 
-tmap_save(tmap_arrange(p2,p4,ncol=2),filename=paste0(folder_name,"new_beta_model3_parametric_fixed_res_","Birmingham",".png"),height=6,width=6)
+tmap_save(tmap_arrange(p2,p4,ncol=2),filename=paste0(folder_name,"new_beta_model3_parametric_fixed_res_",names(df_sites)[site_i],".png"),height=6,width=6)
+}
 
 # combine estimation for sites not on the east coast ---------------------------------
 # prepare a dataset containing all sites
-y1 <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=1:13,df_sites=df_sites)
+y2 <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=1:13,df_sites=df_sites)
 not_east_coast_sites <- names(df_sites)[!names(df_sites) %in% east_coast_sites]
+east_coast <-   sapply(1:nrow(y2),FUN=function(j_ec) {
+  cp[y2$res[j_ec]]
+})
+y1 <- y2[east_coast,]
 a <- min(y1$d_latitude)
 b <- max(y1$d_latitude)
-NLL_beta_beta_wrapper <- function(theta,cond_names_set,data_Lap,a,b,phi,y) {
+phi_df <- as.data.frame(matrix(ncol=0,nrow=6))
+for (site_i in 1:ncol(df_sites)) {
+phi <- as.numeric(((par_est_model_3[[site_i]][[2]] %>% dplyr::select(phi0u,phi1u,phi2u,phi0l,phi1l,phi2l))[1,]))
+phi_df <- cbind(phi_df,phi)
+}
+names(phi_df) <- names(df_sites)
+
+NLL_beta_beta_wrapper <- function(theta,cond_names_set,data_Lap,a,b,phi_df,y) {
   x <- sapply(cond_names_set,FUN=function(i) { 
+    phi <- as.numeric(phi_df %>% dplyr::select(i) %>% pull(i))
     NLL_beta_beta(theta=theta,data_Lap=data_Lap,a=a,b=b,phi=phi,res=y$res[y$cond_site==i],mu=y$mu[y$cond_site==i],
                 deltal=deltal,deltau=deltau,alpha=y$a[y$cond_site==i],
                 dij=y$dij[y$cond_site==i],d_latitude=y$d_latitude[y$cond_site==i],cond_index=y$given[y$cond_site==i][1])  }
   )
   return(sum(x))}
-x <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=not_east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,east_coast=east_coast,control = list(maxit=2000))
-xe <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
-xall <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
+
+x <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=not_east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
+xe <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
+xall <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
 
 # get scaled likelihood values
-xlik <- x$value/(555*length(not_east_coast_sites))
-xelik <- xe$value/(555*length(east_coast_sites))
-xalllik <- xall$value/(555*length(names(df_sites)))
-
+xlik <- x$value/(nrow(y1 %>% dplyr::filter(cond_site %in% not_east_coast_sites))*length(not_east_coast_sites))
+xelik <- xe$value/(nrow(y1 %>% dplyr::filter(cond_site %in% east_coast_sites))*length(east_coast_sites))
+xalllik <- xall$value/(nrow(y1)*length(names(df_sites)))
+print(c(xlik,xelik,xalllik))
 
 # plot together as before ----------------------------------------------------
 # calculate parametric beta values
-y1 <- my_df %>% mutate("b_par"=-1,"b_par_join"=-1)
+y3 <- y1 %>% mutate("b_par"=-1,"b_par_join"=-1)
 c <- x$par[1]
 gamma1 <- x$par[2]
 gamma2 <- x$par[3]
-y1$b_par[y$cond_site %in% not_east_coast_sites] <- c*stats::dbeta(x=(y1$d_latitude[y1$cond_site %in% not_east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+y3$b_par[y3$cond_site %in% not_east_coast_sites] <- c*stats::dbeta(x=(y3$d_latitude[y3$cond_site %in% not_east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
 c <- xe$par[1]
 gamma1 <- xe$par[2]
 gamma2 <- xe$par[3]
-y1$b_par[y1$cond_site %in% east_coast_sites] <- c*stats::dbeta(x=(y1$d_latitude[y1$cond_site %in% east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+y3$b_par[y3$cond_site %in% east_coast_sites] <- c*stats::dbeta(x=(y3$d_latitude[y3$cond_site %in% east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
 c <- xall$par[1]
 gamma1 <- xall$par[2]
 gamma2 <- xall$par[3]
-y1$b_par_join <- c*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
-y1 <- y1 %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_sites,"east_coast","not_east_coast")))
-# p1 <- ggplot(y1) + geom_point(aes(x=d_latitude,y=beta),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
-#   theme(axis.title.y = element_text(angle = 0,vjust=0.5)) +
-#   geom_line(aes(x=d_latitude,y=b_par,col=east_noeast)) +
-#   geom_line(aes(x=d_latitude,y=b_par_join)) +
-#   scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"))
-
+y3$b_par_join <- c*stats::dbeta(x=(y3$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+y3 <- y3 %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_sites,"east_coast","not_east_coast")))
+p1 <- ggplot(y3) + geom_point(aes(x=d_latitude,y=beta,col=east_noeast),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") +
+  theme(axis.title.y = element_text(angle = 0,vjust=0.5)) +
+  geom_line(aes(x=d_latitude,y=b_par,col=east_noeast)) +
+  geom_line(aes(x=d_latitude,y=b_par_join)) +
+  scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"))
+plot_name <- "beta_parametric_site_subsets_diff_gamma"
+ggsave(p1,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
+ggsave(p1,filename=paste0(folder_name,plot_name,".pdf"),width=5,height=4)
 
 # repeat for fixed gamma1=gamma2
-x12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=not_east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
-xe12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
-xall12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi = phis,y=y1,control = list(maxit=2000))
+x12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=not_east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
+xe12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
+xall12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
 
 # get scaled likelihood values
-x12lik <- x12$value/(555*900)
-xe12lik <- xe12$value/(555*length(east_coast_sites))
-xall12lik <- xall12$value/(555*length(names(df_sites)))
+x12lik <- x12$value/(nrow(y1 %>% dplyr::filter(cond_site %in% not_east_coast_sites))*length(not_east_coast_sites))
+xe12lik <- xe12$value/(nrow(y1 %>% dplyr::filter(cond_site %in% east_coast_sites))*length(east_coast_sites))
+xall12lik <- xall12$value/(nrow(y1)*length(names(df_sites)))
+xcomb12 <- (x12$value + xe12$value)/(nrow(y1)*length(names(df_sites)))
+print(c(x12lik,xe12lik,xall12lik,xcomb12))
 
-y2 <- my_df %>% mutate("b_par"=-1,"b_par_join"=-1)
+y3 <- y1 %>% mutate("b_par"=-1,"b_par_join"=-1)
 c <- x12$par[1]
 gamma1 <- x12$par[2]
 gamma2 <- x12$par[2]
-y2$b_par[y2$cond_site %in% not_east_coast_sites] <- c*stats::dbeta(x=(y2$d_latitude[y2$cond_site %in% not_east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+y3$b_par[y3$cond_site %in% not_east_coast_sites] <- c*stats::dbeta(x=(y3$d_latitude[y3$cond_site %in% not_east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
 c <- xe12$par[1]
 gamma1 <- xe12$par[2]
 gamma2 <- xe12$par[2]
-y2$b_par[y2$cond_site %in% east_coast_sites] <- c*stats::dbeta(x=(y2$d_latitude[y2$cond_site %in% east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+y3$b_par[y3$cond_site %in% east_coast_sites] <- c*stats::dbeta(x=(y3$d_latitude[y3$cond_site %in% east_coast_sites]-a)/(b-a),shape1=gamma1,shape2=gamma2) 
 c <- xall$par[1]
 gamma1 <- xall12$par[2]
 gamma2 <- xall12$par[2]
-y2$b_par_join <- c*stats::dbeta(x=(y2$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
-y2 <- y2 %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_sites,"east_coast","not_east_coast")))
-y2 <- y2 %>% mutate(east_coast=factor(east_coast,levels=c("east_coast","not_east_coast","combined")))
-y3 <- rbind(y1 %>% mutate("g"="two_gamma"))
-
-p1 <- ggplot(y3) + geom_point(aes(x=d_latitude,y=beta),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
+y3$b_par_join <- c*stats::dbeta(x=(y3$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+y3 <- y3 %>% mutate("east_noeast" = factor(ifelse(cond_site %in% east_coast_sites,"east_coast","not_east_coast")))
+p1 <- ggplot(y3) + geom_point(aes(x=d_latitude,y=beta,col=east_noeast),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") +
   theme(axis.title.y = element_text(angle = 0,vjust=0.5)) +
   geom_line(aes(x=d_latitude,y=b_par,col=east_noeast)) +
- # geom_line(aes(x=d_latitude,y=b_par_join)) +
-  scale_color_manual(values=c("#009ADA","#C11432"),labels=c("East coast", "Not east coast"),drop=FALSE)
-# plot_name <- "beta_param_site_subsets_same_gamma"
-# ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
-p2 <- ggplot(y2) + geom_point(aes(x=d_latitude,y=beta),size=0.3) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + 
-  theme(axis.title.y = element_text(angle = 0,vjust=0.5)) +
-  geom_line(aes(x=d_latitude,y=b_par,col=east_noeast)) +
-  # geom_line(aes(x=d_latitude,y=b_par_join)) +
-  scale_color_manual(values=c("#009ADA","#C11432"),labels=c("East coast", "Not east coast"),drop=FALSE)
+  geom_line(aes(x=d_latitude,y=b_par_join)) +
+  scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not East coast","Combined"))
+plot_name <- "beta_parametric_site_subsets_same_gamma"
+ggsave(p1,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
+ggsave(p1,filename=paste0(folder_name,plot_name,".pdf"),width=5,height=4)
 
-plot_name <- "beta_param_site_subsets_diff_sites"
-ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=4)
 
 # likelihood ratio test values
 2*(x12$value-x$value)
 2*(xe12$value-xe$value)
-2*(xall12$value-xall$value)
+2*(x12$value+xe12$value)/(nrow(y1)*length(names(df_sites)))+8
+2*(xall12$value)/(nrow(y1)*length(names(df_sites)))+4
 
-# sum up likelihoods of subsets
-xe$value+x$value
-xall$value
+beta_mode <- function(x) {
+  if (length(x$par)==2) {return((1)/(2)*(b-a+1)+a)}
+  if (length(x$par)==3) {return((x$par[2]-1)/(x$par[2]+x$par[3]-2)*(b-a+1)+a)}
+}
+c(beta_mode(x),beta_mode(xe),beta_mode(xall))
+
+# compare Model 3, beta parametric separate at each cond site and xall12 ------
+y2 <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=1:13,df_sites=df_sites)
+not_east_coast_sites <- names(df_sites)[!names(df_sites) %in% east_coast_sites]
+east_coast <-   sapply(1:nrow(y2),FUN=function(j_ec) {
+  cp[y2$res[j_ec]]
+})
+y1 <- y2[east_coast,]
+a <- min(y1$d_latitude)
+b <- max(y1$d_latitude)
+for (site_i in 1:ncol(df_sites)) {
+  cond_index <- df_sites[3,site_i]
+  y <- y1 %>% dplyr::filter(cond_site==names(df_sites)[site_i])
+  phis <- as.numeric(((par_est_model_3[[site_i]][[2]] %>% dplyr::select(phi0u,phi1u,phi2u,phi0l,phi1l,phi2l))[1,]))
+  x <- optim(par = c(0.5,2,2),fn=NLL_beta_beta,data_Lap=data_mod_Lap,a=a,b=b,phi = phis,res=y$res,mu=y$mu,deltal=y$deltal,deltau=y$deltau,alpha=y$alpha,dij=y$dij,d_latitude = y$d_latitude,cond_index=y$given[1],control = list(maxit=2000))
+  c <- x$par[1]
+  gamma1 <- x$par[2]
+  gamma2 <- x$par[3]
+  t1 <- xyUK20_sf %>% mutate("b_model3"=0,"b_parametric"=0,"b_parametric1"=0)
+  t1$b_model3[cond_index] <- t1$b_parametric[cond_index] <- t1$b_parametric1[cond_index] <- NA
+  t1$b_model3[y$res] <- y$beta
+  t1$b_parametric[y$res] <- c*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+  t1$b_parametric1[y$res] <- xall12$par[1]*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=xall12$par[2],shape2=xall12$par[2]) 
+  
+  p2 <- tm_shape(t1) + tm_dots(fill="b_model3",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Model 3 $\\hat{\\beta}$")) 
+  p3 <- tm_shape(t1) + tm_dots(fill="b_parametric",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Parametric $\\hat{\\beta}$ (separate)")) 
+  p4 <- tm_shape(t1) + tm_dots(fill="b_parametric1",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Parametric $\\hat{\\beta}$ (combined)")) 
+  tmap_save(tmap_arrange(p2,p3,p4,ncol=3),filename=paste0(folder_name,"new_combined_beta_model3_parametric_fixed_res_",names(df_sites)[site_i],".png"),height=6,width=9)
+}
