@@ -198,10 +198,12 @@ thresCPM1[j] <-   list_of_files[[j]]$threshold[k1]
 thresobs1[j] <-   list_of_files[[j]]$threshold[i1]
 }
 tmap_mode("plot")
-tm_thres <- xyUK20_sf %>% mutate("CPM" =thresCPM, "observed"=thresobs) %>% pivot_longer(cols=c("CPM","observed"),values_to = "temperature", names_to = "data_source")
-t <- tm_shape(tm_thres) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE)
+tm_thres <- xyUK20_sf %>% mutate("observed"=thresobs,"CPM" =thresCPM ) %>% pivot_longer(cols=c("CPM","observed"),values_to = "temperature", names_to = "data_source")
+t1 <- tm_shape(tm_thres %>% dplyr::filter(data_source=="observed")) + tm_dots(fill="temperature",size=0.5,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu"))  + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE,frame=FALSE) + tm_title("Observed data")
+t2 <- tm_shape(tm_thres %>% dplyr::filter(data_source=="observed")) + tm_dots(fill="temperature",size=0.5,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu"))  + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE,frame=FALSE) + tm_title("CPM data")
 # save map
-tmap_save(t,filename=paste0("../Documents/threshold_explore.png"),width=8,height=6)
+tmap_save(tmap_arrange(t1,t2,ncol=2),filename=paste0("../Documents/threshold_explore.png"),width=8,height=6)
+tmap_save(tmap_arrange(t1,t2,ncol=2),filename=paste0("../Documents/threshold_explore.pdf"),width=8,height=6)
 
 # plot differences
 tm_thres_diff <- xyUK20_sf %>% mutate("CPM_diff" =thresCPM-thresCPM1, "observed_diff"=thresobs-thresobs1) %>% pivot_longer(cols=c("CPM_diff","observed_diff"),values_to = "temperature", names_to = "data_source")
