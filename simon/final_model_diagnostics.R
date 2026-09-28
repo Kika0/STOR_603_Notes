@@ -348,7 +348,7 @@ beta_model_prepare_dataset <- function(data,gridUK=xyUK20_sf,sites_i,df_sites) {
   return(tmp)
 }
 
-# test new function
+# test new function for Birmingham --------------------------------------------
 site_i <- 1
 y1 <- beta_model_prepare_dataset(data=par_est_model_3,sites_i=site_i,df_sites=df_sites)
 phis <- as.numeric(((par_est_model_3[[site_i]][[2]] %>% dplyr::select(phi0u,phi1u,phi2u,phi0l,phi1l,phi2l))[1,]))
@@ -511,16 +511,21 @@ NLL_beta_beta_wrapper <- function(theta,cond_names_set,data_Lap,a,b,phi_df,y) {
                 deltal=deltal,deltau=deltau,alpha=y$a[y$cond_site==i],
                 dij=y$dij[y$cond_site==i],d_latitude=y$d_latitude[y$cond_site==i],cond_index=y$given[y$cond_site==i][1])  }
   )
-  return(sum(x))}
+  if (length(cond_names_set)>8) {
+    y_return <- sum(x[names(df_sites) %in% east_coast_sites]/(nrow(y[y$cond_site %in% east_coast_sites,])) +
+               x[names(df_sites) %in% not_east_coast_sites]/(nrow(y[y$cond_site %in% not_east_coast_sites,])) )
+  }
+  else (y_return <- sum(x))
+  return(y_return)}
 
 x <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=not_east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
 xe <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_sites,data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
 xall <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
 
 # get scaled likelihood values
-xlik <- x$value/(nrow(y1 %>% dplyr::filter(cond_site %in% not_east_coast_sites))*length(not_east_coast_sites))
-xelik <- xe$value/(nrow(y1 %>% dplyr::filter(cond_site %in% east_coast_sites))*length(east_coast_sites))
-xalllik <- xall$value/(nrow(y1)*length(names(df_sites)))
+xlik <- x$value/(nrow(y1[y1$cond_site %in% east_coast_sites,]))
+xelik <- xe$value/(nrow(y1[y1$cond_site %in% not_east_coast_sites,]))
+xalllik <- xall$value
 print(c(xlik,xelik,xalllik))
 
 # plot together as before ----------------------------------------------------
@@ -587,8 +592,10 @@ ggsave(p1,filename=paste0(folder_name,plot_name,".pdf"),width=5,height=4)
 # likelihood ratio test values
 2*(x12$value-x$value)
 2*(xe12$value-xe$value)
-2*(x12$value+xe12$value)/(nrow(y1)*length(names(df_sites)))+8
-2*(xall12$value)/(nrow(y1)*length(names(df_sites)))+4
+2*(x12$value+xe12$value)/(nrow(y1))+8
+2*(x12$value/(71*8) +  xe12$value/(70*5) )+8
+
+2*(xall12$value)/(nrow(y1))+4
 
 beta_mode <- function(x) {
   if (length(x$par)==2) {return((1)/(2)*(b-a+1)+a)}
@@ -605,6 +612,7 @@ east_coast <-   sapply(1:nrow(y2),FUN=function(j_ec) {
 y1 <- y2[east_coast,]
 a <- min(y1$d_latitude)
 b <- max(y1$d_latitude)
+lik_beta <- beta_param <- beta_param_join <- c()
 for (site_i in 1:ncol(df_sites)) {
   cond_index <- df_sites[3,site_i]
   y <- y1 %>% dplyr::filter(cond_site==names(df_sites)[site_i])
@@ -613,14 +621,62 @@ for (site_i in 1:ncol(df_sites)) {
   c <- x$par[1]
   gamma1 <- x$par[2]
   gamma2 <- x$par[3]
+  
   t1 <- xyUK20_sf %>% mutate("b_model3"=0,"b_parametric"=0,"b_parametric1"=0)
   t1$b_model3[cond_index] <- t1$b_parametric[cond_index] <- t1$b_parametric1[cond_index] <- NA
   t1$b_model3[y$res] <- y$beta
   t1$b_parametric[y$res] <- c*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
-  t1$b_parametric1[y$res] <- xall12$par[1]*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=xall12$par[2],shape2=xall12$par[2]) 
+  t1$b_parametric1[y$res] <- xall$par[1]*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=xall12$par[2],shape2=xall12$par[2]) 
   
   p2 <- tm_shape(t1) + tm_dots(fill="b_model3",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Model 3 $\\hat{\\beta}$")) 
   p3 <- tm_shape(t1) + tm_dots(fill="b_parametric",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Parametric $\\hat{\\beta}$ (separate)")) 
   p4 <- tm_shape(t1) + tm_dots(fill="b_parametric1",fill.scale = tm_scale_continuous(limits=limsb,values="Blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=TeX("Parametric $\\hat{\\beta}$ (combined)")) 
   tmap_save(tmap_arrange(p2,p3,p4,ncol=3),filename=paste0(folder_name,"new_combined_beta_model3_parametric_fixed_res_",names(df_sites)[site_i],".png"),height=6,width=9)
+  beta_par <- c*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=gamma1,shape2=gamma2) 
+  beta_par_join <- xall12$par[1]*stats::dbeta(x=(y$d_latitude-a)/(b-a),shape1=xall12$par[2],shape2=xall12$par[2]) 
+  lik_beta <- append(lik_beta,x$value/length(beta_par))
+  beta_param <- append(beta_param,beta_par)
+  beta_param_join <- append(beta_param_join,beta_par_join)
 }
+
+#plot_beta_latitude(b=tmp$b_new,given=tmp$given,res=tmp$res,cond_site = tmp$cond_site,folder_name = folder_name,plot_name = "beta_model_3")
+
+# plot beta separate
+# estimate beta function at each site
+# lik_beta <- beta_param <- c()
+# for (site_i in 1:ncol(df_sites) {
+#   x <- optim(…)
+#   c <- x$par[1]
+#   gamma1 <- x$par[2]
+#   gamma2 <- x$par[3]
+#   beta_par <-c*…d_latitude…
+#   lik_beta <- append(lik_beta,x$value/length(beta_par))
+#   beta_param <- append(beta_param,beta_par)
+# }
+
+# explore likelihood at each site (optional)
+lik_site <- data.frame("lik_weighted"=lik_beta,"cond_site"=names(df_sites))
+p <- ggplot(lik_site) + geom_bar(aes(x=cond_site,y=lik_beta),stat = "identity") + labs(x="Conditioning site",y="Weighted likelihood")
+plot_name <- "separate_beta_parametric_likelihood"
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=20,height=8) 
+
+# plot parametric and Model 3 beta
+c13 <- c(
+  "#009ADA", "#C11432", # red
+           "green4",
+           "#6A3D9A", # purple
+           "#FF7F00", # orange
+           "black", "gold1",
+           "#FB9A99", # lt pink
+           "gray70", 
+           "darkturquoise", "green1", 
+           "darkorange4","#F6A7B8"
+)
+y3 <- y1 %>% mutate("beta_param"=beta_param,"beta_param_join"=beta_param_join) %>% pivot_longer(cols=c(beta_param,beta_param_join),names_to="par_type",values_to="beta_param")
+p <- ggplot(y3) + geom_point(aes(x=d_latitude,y=beta)) + geom_line(aes(x=d_latitude,y=beta_param,linetype=par_type)) + facet_wrap(~cond_site) + scale_color_manual(values=c13) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site",linetype="Parametric method") + theme(axis.title.y = element_text(angle = 0,vjust=0.5)) 
+plot_name <- "separate_beta_parametric_scatter_panels"
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=8) 
+p <- ggplot(y3) + geom_point(aes(x=d_latitude,y=beta,col=cond_site)) + geom_line(aes(x=d_latitude,y=beta_param,col=cond_site)) + scale_color_manual(values=c13) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + theme(axis.title.y = element_text(angle = 0,vjust=0.5)) 
+plot_name <- "separate_beta_parametric_scatter_together"
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=10) 
+
