@@ -559,11 +559,10 @@ xe12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_
 xall12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
 
 # get scaled likelihood values
-x12lik <- x12$value/(nrow(y1 %>% dplyr::filter(cond_site %in% not_east_coast_sites))*length(not_east_coast_sites))
-xe12lik <- xe12$value/(nrow(y1 %>% dplyr::filter(cond_site %in% east_coast_sites))*length(east_coast_sites))
-xall12lik <- xall12$value/(nrow(y1)*length(names(df_sites)))
-xcomb12 <- (x12$value + xe12$value)/(nrow(y1)*length(names(df_sites)))
-print(c(x12lik,xe12lik,xall12lik,xcomb12))
+xlik <- x12$value/(nrow(y1[y1$cond_site %in% east_coast_sites,]))
+xelik <- xe12$value/(nrow(y1[y1$cond_site %in% not_east_coast_sites,]))
+xalllik <- xall$value
+print(c(xlik,xelik,xalllik,xlik+xelik))
 
 y3 <- y1 %>% mutate("b_par"=-1,"b_par_join"=-1)
 c <- x12$par[1]
