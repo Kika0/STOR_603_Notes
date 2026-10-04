@@ -209,6 +209,7 @@ if (comb_sites==TRUE) {
       scale_color_manual(values=c("#009ADA","#C11432","black"),labels=c("East coast", "Not east coast","Combined"))
   }
   ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
+  ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=5,height=4)
 }
 }
 
@@ -238,7 +239,7 @@ plot_beta_latitude(b=tmp$b_old,given=tmp$given,res=tmp$res,cond_site = tmp$cond_
 
 plot_beta_latitude(b=tmp$b_new,given=tmp$given,res=tmp$res,cond_site = tmp$cond_site,folder_name = folder_name,plot_name = "beta_model_3_comb",comb_sites=TRUE)
 
-east_coast_sites <- c("Newcastle","Lowestoft","Cromer","Hull","Inverness")
+east_coast_sites <- c("Lowestoft","Cromer","Hull")
 tmp_ec <- tmp %>% filter(cond_site %in% east_coast_sites)
 tmp_nec <- tmp %>% filter(!cond_site %in% east_coast_sites)
 plot_beta_latitude(b=tmp_ec$b_new,given=tmp_ec$given,res=tmp_ec$res,cond_site = tmp_ec$cond_site,folder_name = folder_name,plot_name = "beta_model_3_east_coast",comb_sites=TRUE)
@@ -511,9 +512,9 @@ NLL_beta_beta_wrapper <- function(theta,cond_names_set,data_Lap,a,b,phi_df,y) {
                 deltal=deltal,deltau=deltau,alpha=y$a[y$cond_site==i],
                 dij=y$dij[y$cond_site==i],d_latitude=y$d_latitude[y$cond_site==i],cond_index=y$given[y$cond_site==i][1])  }
   )
-  if (length(cond_names_set)>8) {
-    y_return <- sum(x[names(df_sites) %in% east_coast_sites]/(nrow(y[y$cond_site %in% east_coast_sites,])) +
-               x[names(df_sites) %in% not_east_coast_sites]/(nrow(y[y$cond_site %in% not_east_coast_sites,])) )
+  if (length(cond_names_set)>11) {
+    y_return <- sum(x[names(df_sites) %in% east_coast_sites]/(nrow(y[y$cond_site %in% east_coast_sites,])),
+               x[names(df_sites) %in% not_east_coast_sites]/nrow(y[y$cond_site %in% not_east_coast_sites,]) )
   }
   else (y_return <- sum(x))
   return(y_return)}
@@ -523,10 +524,10 @@ xe <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_
 xall <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
 
 # get scaled likelihood values
-xlik <- x$value/(nrow(y1[y1$cond_site %in% east_coast_sites,]))
-xelik <- xe$value/(nrow(y1[y1$cond_site %in% not_east_coast_sites,]))
+xlik <- x$value/(nrow(y1[y1$cond_site %in% not_east_coast_sites,]))
+xelik <- xe$value/(nrow(y1[y1$cond_site %in% east_coast_sites,]))
 xalllik <- xall$value
-print(c(xlik,xelik,xalllik))
+print(c(xlik+4,xelik+4,xalllik+8,xlik+xelik+8))
 
 # plot together as before ----------------------------------------------------
 # calculate parametric beta values
@@ -559,10 +560,10 @@ xe12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=east_coast_
 xall12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_sites),data_Lap=data_mod_Lap,a=a,b=b,phi_df = phi_df,y=y1,control = list(maxit=2000))
 
 # get scaled likelihood values
-xlik <- x12$value/(nrow(y1[y1$cond_site %in% east_coast_sites,]))
-xelik <- xe12$value/(nrow(y1[y1$cond_site %in% not_east_coast_sites,]))
-xalllik <- xall$value
-print(c(xlik,xelik,xalllik,xlik+xelik))
+xlik1 <- x12$value/(nrow(y1[y1$cond_site %in% not_east_coast_sites,]))
+xelik1 <- xe12$value/(nrow(y1[y1$cond_site %in% east_coast_sites,]))
+xalllik1 <- xall12$value
+print(c(xlik1+4,xelik1+4,xalllik1+8,xlik1+xelik1+8))
 
 y3 <- y1 %>% mutate("b_par"=-1,"b_par_join"=-1)
 c <- x12$par[1]
@@ -589,13 +590,12 @@ ggsave(p1,filename=paste0(folder_name,plot_name,".pdf"),width=5,height=4)
 
 
 # likelihood ratio test values
-2*(x12$value-x$value)
-2*(xe12$value-xe$value)
-2*(x12$value+xe12$value)/(nrow(y1))+8
+2*(xelik1-xelik) # comparing for C_E subset of cond. sites
+2*(xlik1-xlik) # comparing for C\C_E subset of cond. sites
+2*(xalllik1-xalllik) # comparing for both subsets
 2*(x12$value/(71*8) +  xe12$value/(70*5) )+8
 
-2*(xall12$value)/(nrow(y1))+4
-
+# calculate mode of fitted beta models
 beta_mode <- function(x) {
   if (length(x$par)==2) {return((1)/(2)*(b-a+1)+a)}
   if (length(x$par)==3) {return((x$par[2]-1)/(x$par[2]+x$par[3]-2)*(b-a+1)+a)}
