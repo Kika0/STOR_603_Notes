@@ -527,7 +527,7 @@ xall <- optim(par = c(0.5,2,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_
 xlik <- x$value/(nrow(y1[y1$cond_site %in% not_east_coast_sites,]))
 xelik <- xe$value/(nrow(y1[y1$cond_site %in% east_coast_sites,]))
 xalllik <- xall$value
-print(c(xlik+4,xelik+4,xalllik+8,xlik+xelik+8))
+print(c(xlik+6,xelik+6,xalllik+6,xlik+xelik+12))
 
 # plot together as before ----------------------------------------------------
 # calculate parametric beta values
@@ -563,7 +563,7 @@ xall12 <- optim(par = c(0.5,2),fn=NLL_beta_beta_wrapper,cond_names_set=names(df_
 xlik1 <- x12$value/(nrow(y1[y1$cond_site %in% not_east_coast_sites,]))
 xelik1 <- xe12$value/(nrow(y1[y1$cond_site %in% east_coast_sites,]))
 xalllik1 <- xall12$value
-print(c(xlik1+4,xelik1+4,xalllik1+8,xlik1+xelik1+8))
+print(c(xlik1+4,xelik1+4,xalllik1+4,xlik1+xelik1+8))
 
 y3 <- y1 %>% mutate("b_par"=-1,"b_par_join"=-1)
 c <- x12$par[1]
@@ -593,7 +593,6 @@ ggsave(p1,filename=paste0(folder_name,plot_name,".pdf"),width=5,height=4)
 2*(xelik1-xelik) # comparing for C_E subset of cond. sites
 2*(xlik1-xlik) # comparing for C\C_E subset of cond. sites
 2*(xalllik1-xalllik) # comparing for both subsets
-2*(x12$value/(71*8) +  xe12$value/(70*5) )+8
 
 # calculate mode of fitted beta models
 beta_mode <- function(x) {
