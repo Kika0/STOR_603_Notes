@@ -229,7 +229,7 @@ ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=16,height=4)
 Birm_temp <- data_mod_Lap[,(df_sites %>% dplyr::select(Birmingham))[3,1]]
 Gla_temp <- data_mod_Lap[,(df_sites %>% dplyr::select(Glasgow))[3,1]]
 tmp <- data.frame(Birm_temp,Gla_temp) %>% mutate(year5=factor(rep(seq(1980,2075,by=5),each=90*5)),obsmod="Laplace")
-# include also observed data
+data_mod_Lap_star <- as.data.frame((data_mod_Lap %>% apply(c(2),FUN=row_number))/(nrow(data_mod_Lap)+1)) %>% apply(c(1,2),FUN=unif_laplace_pit) %>% as.data.frame()
 Birm_temp <- data_mod_Lap_star[,(df_sites %>% dplyr::select(Birmingham))[3,1]]
 Gla_temp <- data_mod_Lap_star[,(df_sites %>% dplyr::select(Glasgow))[3,1]]
 tmp1 <- data.frame(Birm_temp,Gla_temp) %>% mutate(year5=factor(rep(seq(1980,2075,by=5),each=90*5)),obsmod="double_Laplace")
@@ -241,3 +241,15 @@ p <- ggplot(tmp3) + geom_boxplot(aes(x=year5,y=temp,fill=obsmod)) + facet_wrap(~
 plot_name <- "CPM_Laplace_Birmingham_Glasgow"
 ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=16,height=4)
 ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=16,height=4)
+
+
+# 10.1 plot comparing Laplace and double Laplace Birmingham and Glasgow ------
+Birm_temp_Lap <- data_mod_Lap[,(df_sites %>% dplyr::select(Birmingham))[3,1]]
+Gla_temp_Lap <- data_mod_Lap[,(df_sites %>% dplyr::select(Glasgow))[3,1]]
+Birm_temp <- data_mod_Lap_star[,(df_sites %>% dplyr::select(Birmingham))[3,1]]
+Gla_temp <- data_mod_Lap_star[,(df_sites %>% dplyr::select(Glasgow))[3,1]]
+tmp4 <- rbind(data.frame("site"="Birmingham","data_Lap"=Birm_temp_Lap,"double_Lap"=Birm_temp),data.frame("site"="Glasgow","data_Lap"=Gla_temp_Lap,"double_Lap"=Gla_temp))
+p <- ggplot(tmp4) + geom_point(aes(x=double_Lap,y=data_Lap,col=site)) + geom_abline(slope=1,intercept=0,linetype="dashed") + scale_color_manual(values=c("#C11432", "#74499C")) + labs(x="Double Laplace",y="Laplace",col="Conditioning site")
+plot_name <- "DoubleLaplace_Laplace_Birmingham_Glasgow"
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=8,height=6)
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=8,height=6)
