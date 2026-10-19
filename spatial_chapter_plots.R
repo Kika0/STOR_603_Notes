@@ -251,5 +251,5 @@ Gla_temp <- data_mod_Lap_star[,(df_sites %>% dplyr::select(Glasgow))[3,1]]
 tmp4 <- rbind(data.frame("site"="Birmingham","data_Lap"=Birm_temp_Lap,"double_Lap"=Birm_temp),data.frame("site"="Glasgow","data_Lap"=Gla_temp_Lap,"double_Lap"=Gla_temp))
 p <- ggplot(tmp4) + geom_point(aes(x=double_Lap,y=data_Lap,col=site)) + geom_abline(slope=1,intercept=0,linetype="dashed") + scale_color_manual(values=c("#C11432", "#74499C")) + labs(x="Double Laplace",y="Laplace",col="Conditioning site")
 plot_name <- "DoubleLaplace_Laplace_Birmingham_Glasgow"
-ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=8,height=6)
-ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=8,height=6)
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=6,height=4)
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=6,height=4)
