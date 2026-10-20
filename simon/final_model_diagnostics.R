@@ -183,22 +183,23 @@ if (is.null(east_noeast)) {
 tmp <- data.frame("b"=b,"cond_site"=cond_site,"lat_diff"=lat_diff,"east_noeast"=east_noeast)
 }
 c13 <- c(
-  "#009ADA", "#C11432", # red
-           "green4",
-           "#6A3D9A", # purple
+  "#C11432", "#74499C", # red
+           "#66A64F",
+           "#0047AB",
            "#FF7F00", # orange
-           "black", "gold1",
+           "black", "#007191",
            "#FB9A99", # lt pink
-           "gray70", 
+           "#009ADA",
            "darkturquoise", "green1", 
            "darkorange4","#F6A7B8"
 )
 if (comb_sites==FALSE) {
-p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b,col=cond_site),size=0.3) + facet_wrap(cond_site) + scale_color_manual(values=c13) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + theme(axis.title.y = element_text(angle = 0,vjust=0.5)) 
-ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=7)
+p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b,col=cond_site),size=0.3) + facet_wrap(cond_site) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% unique(tmp$cond_site)]) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + theme(axis.title.y = element_text(angle = 0,vjust=0.5)) 
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=8)
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=8)
 }
 if (comb_sites==TRUE) {
-  p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b,col=cond_site),size=0.3) + scale_color_manual(values=c13) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + theme(axis.title.y = element_text(angle = 0,vjust=0.5)) 
+  p <- ggplot(tmp) + geom_point(aes(x=lat_diff,y=b,col=cond_site),size=0.3) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% unique(tmp$cond_site)]) + labs(x="Latitude difference",y=TeX("$\\beta$"),col="Conditioning site") + theme(axis.title.y = element_text(angle = 0,vjust=0.5)) 
   if (line_mean==TRUE) {
     p <- p + geom_smooth(aes(y=b,x=lat_diff,col=cond_site),method="loess")
   }
@@ -211,6 +212,7 @@ if (comb_sites==TRUE) {
   ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=5,height=4)
   ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=5,height=4)
 }
+
 }
 
 tmp <- data.frame("b_new"=numeric(),"b_old"=numeric(),"given"=numeric(),"res"=numeric(),"cond_site"=character())
@@ -234,9 +236,11 @@ east_coast <-   sapply(1:nrow(tmp),FUN=function(i) {
 })
 tmp <- tmp %>% mutate("east_coast"=east_coast)
 tmp <- tmp %>% dplyr::filter(east_coast=="TRUE")
+# include only 12 conditioning sites
+df_sites <- df_sites[,1:12]
+tmp <- tmp %>% filter(cond_site %in% names(df_sites))
 plot_beta_latitude(b=tmp$b_new,given=tmp$given,res=tmp$res,cond_site = tmp$cond_site,folder_name = folder_name,plot_name = "beta_model_3")
 plot_beta_latitude(b=tmp$b_old,given=tmp$given,res=tmp$res,cond_site = tmp$cond_site,folder_name = folder_name,plot_name = "beta_model_1")
-
 plot_beta_latitude(b=tmp$b_new,given=tmp$given,res=tmp$res,cond_site = tmp$cond_site,folder_name = folder_name,plot_name = "beta_model_3_comb",comb_sites=TRUE)
 
 east_coast_sites <- c("Lowestoft","Cromer","Hull")
