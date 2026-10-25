@@ -253,3 +253,54 @@ p <- ggplot(tmp4) + geom_point(aes(x=double_Lap,y=data_Lap,col=site)) + geom_abl
 plot_name <- "DoubleLaplace_Laplace_Birmingham_Glasgow"
 ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=6,height=4)
 ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=6,height=4)
+
+# 5.2 try to find keef estimates
+load("data_processed/est_all.RData",verbose=TRUE)
+load("data_processed/paramest.rda",verbose=TRUE)
+load("data_processed/alphaspatial.RData",verbose=TRUE)
+
+# plot alpha and beta against distance
+tmp <- data.frame("b_new"=numeric(),"b_old"=numeric(),"given"=numeric(),"res"=numeric(),"cond_site"=character())
+for (i in 1:length(par_est_model_3)) {
+  tmp <- rbind(tmp,data.frame("b_new"=par_est_model_3[[i]][[3]] %>% filter(iteration==10) %>% pull(b),
+                              "b_old"=par_est_model_3[[i]][[1]] %>% pull(b)  %>% append(NA,after=df_sites[3,i]-1),
+                              "given"=par_est_model_3[[i]][[1]] %>% pull(given) %>% append(NA,after=df_sites[3,i]-1),
+                              "res"=par_est_model_3[[i]][[1]] %>% pull(res) %>% append(NA,after=df_sites[3,i]-1),
+                              "cond_site" = names(df_sites)[i]))
+}
+
+sites_selection <- c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer")
+tmp <- tmp %>% mutate(cond_site=factor(cond_site)) %>% dplyr::filter(cond_site %in% sites_selection)
+
+# repeat estimates no keef constraints
+#spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites_nokeef",q*100),keef=0)
+# load these estimates
+load("data_processed/N9000_sequential2_AGG_all12sites_nokeef90.RData",verbose=TRUE)
+
+# calculate distance from the conditioning site
+get_cond_site_distance <- function(i, grid = xyUK20_sf,sites=df_sites) {
+  cond_site_index <- get_site_index(i)
+  dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index,],grid)%>%
+                                        units::set_units(km)))
+  return(dist_cond_site)
+}
+dij <- unlist(lapply(1:ncol(df_sites),FUN=get_cond_site_distance))
+est_all_sf <- est_all_sf %>% mutate("dij"=dij)
+tmp1 <- est_all_sf %>% dplyr::filter(cond_site %in% sites_selection)
+
+tmp2 <- data.frame("a"=tmp1$a,"cond_site"=tmp1$cond_site,"b"=tmp1$b,"b_keef"=tmp$b_old,"dij"=tmp1$dij)
+
+p1 <- ggplot(tmp2) + geom_point(aes(x=dij,y=a,col=cond_site)) + labs(x="Distance from conditioning site [km]",y=TeX("$\\alpha$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection])
+p2 <- ggplot(tmp2) + geom_point(aes(x=dij,y=b,col=cond_site)) + labs(x="Distance from conditioning site [km]",y=TeX("$\\beta$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection])
+p <- grid.arrange(p1,p2,ncol=2)
+plot_name <- "alpha_beta_scatterplot_selected_sites"
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=12,height=4)
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=12,height=4)
+
+# plot beta values on a map
+
+
+
+# plot alpha on a map hedgehog plot
+
+
