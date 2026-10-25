@@ -13,8 +13,8 @@ theme_replace(
 file.sources = list.files(pattern="*helpers.R")
 sapply(file.sources,source,.GlobalEnv)
 source("spatial_parameter_estimation.R") # for spatial_par_est function
-load("data_processed/temperature_data.RData")
-load("data_processed/spatial_helper.RData")
+load("data_processed/temperature_data.RData",verbose=TRUE)
+load("data_processed/spatial_helper.RData",verbose=TRUE)
 Birmingham <- c(-1.9032,52.4806)
 Glasgow <- c(-4.258109,55.859112)
 London <- c(-0.127676,51.529972)
@@ -32,11 +32,11 @@ df_sites <- data.frame(Birmingham,Glasgow,London,Inverness,Lancaster,Newcastle,C
 #spatial_par_est saves parameter estimates as est_all_sf sf object in ../Documents folder
 q <- 0.9 # quantile threshold
 # load all three parameter estimates sf objects
-load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"))
+load(paste0("data_processed/N9000_sequential2_AGG_all12sites",q*100,".RData"),verbose=TRUE)
 est_all <- as.data.frame(est_all_sf)
 
 # load iterative delta estimates
-load("data_processed/iterative_delta_estimates.RData")
+load("data_processed/iterative_delta_estimates.RData",verbose=TRUE)
 
 # repeat for all other sites -------------------------------------------------
 
