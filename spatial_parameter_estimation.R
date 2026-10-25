@@ -15,7 +15,7 @@
 #' @export
 #'
 #' @examples
-spatial_par_est <- function(data_Lap,cond_sites,cond_site_names=NULL,dayshift=c(0),Ndays_season=90,v=0.9,ab_method="sequential2",res_margin="AGG",grid_uk=xyUK20_sf,title="") {
+spatial_par_est <- function(data_Lap,cond_sites,cond_site_names=NULL,dayshift=c(0),Ndays_season=90,v=0.9,ab_method="sequential2",res_margin="AGG",grid_uk=xyUK20_sf,title="",keef=c(1,2)) {
   est_all <- data.frame("lik" = numeric(), "lika"= numeric(),"likb"= numeric(),"lik2"= numeric(),
                             "a" = numeric(), "b" = numeric(),
                             "mu" = numeric(),"mu_agg" = numeric(),
@@ -31,7 +31,7 @@ spatial_par_est <- function(data_Lap,cond_sites,cond_site_names=NULL,dayshift=c(
     }
     for (j in 1:length(dayshift)) {
       sims_tau <- shift_time(sims=data_Lap,cond_site=cond_site,tau=dayshift[j],Ndays_season = Ndays_season)
-      pe <- par_est(df=sims_tau,v=v,given=cond_site,margin = "Normal", method=ab_method,keef_constraints = c(1,2))
+      pe <- par_est(df=sims_tau,v=v,given=cond_site,margin = "Normal", method=ab_method,keef_constraints = keef)
       # calculate observed residuals
       obsr <- observed_residuals(df=sims_tau,given=cond_site,v = v,a=pe$a,b=pe$b)
       # estimate residual margin parameters
