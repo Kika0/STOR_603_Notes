@@ -289,15 +289,38 @@ est_all_sf <- est_all_sf %>% mutate("dij"=dij)
 tmp1 <- est_all_sf %>% dplyr::filter(cond_site %in% sites_selection)
 
 tmp2 <- data.frame("a"=tmp1$a,"cond_site"=tmp1$cond_site,"b"=tmp1$b,"b_keef"=tmp$b_old,"dij"=tmp1$dij)
-
-p1 <- ggplot(tmp2) + geom_point(aes(x=dij,y=a,col=cond_site)) + labs(x="Distance from conditioning site [km]",y=TeX("$\\alpha$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection])
-p2 <- ggplot(tmp2) + geom_point(aes(x=dij,y=b,col=cond_site)) + labs(x="Distance from conditioning site [km]",y=TeX("$\\beta$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection])
+point_size <- 0.3
+p1 <- ggplot(tmp2) + geom_point(aes(x=dij,y=a,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\alpha$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection])
+p2 <- ggplot(tmp2) + geom_point(aes(x=dij,y=b,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\beta$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection])
 p <- grid.arrange(p1,p2,ncol=2)
 plot_name <- "alpha_beta_scatterplot_selected_sites"
 ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=12,height=4)
 ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=12,height=4)
 
-# plot beta values on a map
+# plot alpha and beta values on a map
+pa <- pb <- list()
+for (i in 1:length(sites_selection)) {
+title_map <- sites_selection[i]
+misscol <- "aquamarine"
+  legend_text_size <- 0.7
+  point_size <- 0.4
+  legend_title_size <- 0.9
+  limsa <- c(0,1)
+  limsb <- c(0,1)
+  nrow_facet <- 1
+  a <- tmp2 %>% dplyr::filter(cond_site %in% sites_selection[i]) %>% pull(a)
+  b <- tmp2 %>% dplyr::filter(cond_site %in% sites_selection[i]) %>% pull(b)
+  estsf <- cbind(xyUK20_sf, data.frame("a"=a,"b"=b))
+
+  pa[[i]] <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=title_map) 
+  pb[[i]] <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=title_map) 
+
+}
+pall <- tmap_arrange(pa[[1]],pb[[1]],pa[[2]],pb[[2]],pa[[3]],pb[[3]],pa[[4]],pb[[4]],pa[[5]],pb[[5]],pa[[6]],pb[[6]],ncol=4)
+tmap_save(pall,filename=paste0(folder_name,"alpha_beta_selected_sites",".png"),height=15,width=13)
+tmap_save(pall,filename=paste0(folder_name,"alpha_beta_selected_sites",".pdf"),height=15,width=13)
+
+# plot also for the rest of the sites
 
 
 
