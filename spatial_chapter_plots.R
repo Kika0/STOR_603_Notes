@@ -16,6 +16,7 @@ load("data_processed/spatial_helper.RData", verbose = TRUE)
 load("data_processed/data_mod_Lap.RData",verbose = TRUE)
 load("data_processed/temperature_data.RData",verbose = TRUE) # for data_mod and data_mod_Lap
 folder_name <- "../Documents/spatial_chapter/"
+df_sites <- df_sites[,1:12]
 
 c13 <- c(
   "#C11432", "#74499C", # red
@@ -260,23 +261,18 @@ load("data_processed/paramest.rda",verbose=TRUE)
 load("data_processed/alphaspatial.RData",verbose=TRUE)
 
 # plot alpha and beta against distance
-tmp <- data.frame("b_new"=numeric(),"b_old"=numeric(),"given"=numeric(),"res"=numeric(),"cond_site"=character())
-for (i in 1:length(par_est_model_3)) {
-  tmp <- rbind(tmp,data.frame("b_new"=par_est_model_3[[i]][[3]] %>% filter(iteration==10) %>% pull(b),
-                              "b_old"=par_est_model_3[[i]][[1]] %>% pull(b)  %>% append(NA,after=df_sites[3,i]-1),
-                              "given"=par_est_model_3[[i]][[1]] %>% pull(given) %>% append(NA,after=df_sites[3,i]-1),
-                              "res"=par_est_model_3[[i]][[1]] %>% pull(res) %>% append(NA,after=df_sites[3,i]-1),
-                              "cond_site" = names(df_sites)[i]))
-}
-
-sites_selection <- c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer")
+# load estimates with keef constraints
+load("data_processed/N9000_sequential2_AGG_all12sites90.RData",verbose=TRUE)
+#sites_selection <- c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer")
+sites_selection <- names(df_sites)[!(names(df_sites) %in% c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer"))]
+tmp <- data.frame("b_keef"=est_all_sf$b,"given"=est_all_sf$given,"res"=est_all_sf$res,"cond_site"=est_all_sf$cond_site)
 tmp <- tmp %>% mutate(cond_site=factor(cond_site)) %>% dplyr::filter(cond_site %in% sites_selection)
 
 # repeat estimates no keef constraints
 #spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites_nokeef",q*100),keef=0)
 # load these estimates
 load("data_processed/N9000_sequential2_AGG_all12sites_nokeef90.RData",verbose=TRUE)
-
+df_sites <- df_sites[ , order(names(df_sites))]
 # calculate distance from the conditioning site
 get_cond_site_distance <- function(i, grid = xyUK20_sf,sites=df_sites) {
   cond_site_index <- get_site_index(i)
@@ -285,18 +281,25 @@ get_cond_site_distance <- function(i, grid = xyUK20_sf,sites=df_sites) {
   return(dist_cond_site)
 }
 dij <- unlist(lapply(1:ncol(df_sites),FUN=get_cond_site_distance))
-est_all_sf <- est_all_sf %>% mutate("dij"=dij)
-tmp1 <- est_all_sf %>% dplyr::filter(cond_site %in% sites_selection)
+est_all_sf <- est_all_sf %>% dplyr::filter(cond_site %in% names(df_sites)) |> arrange(cond_site) %>% mutate("dij"=dij)
+tmp1 <- est_all_sf %>% dplyr::filter(cond_site %in% sites_selection) |> arrange(cond_site)
 
-tmp2 <- data.frame("a"=tmp1$a,"cond_site"=tmp1$cond_site,"b"=tmp1$b,"b_keef"=tmp$b_old,"dij"=tmp1$dij)
+tmp2 <- data.frame("a"=tmp1$a,"cond_site"=tmp1$cond_site,"b"=tmp1$b,"b_keef"=tmp$b_keef,"dij"=tmp1$dij)
 point_size <- 0.3
-p1 <- ggplot(tmp2) + geom_point(aes(x=dij,y=a,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\alpha$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection])
-p2 <- ggplot(tmp2) + geom_point(aes(x=dij,y=b,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\beta$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection])
-p <- grid.arrange(p1,p2,ncol=2)
-plot_name <- "alpha_beta_scatterplot_selected_sites"
-ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=12,height=4)
-ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=12,height=4)
-
+# split by two sets of three
+p1 <- ggplot(tmp2 |> dplyr::filter(cond_site %in% sites_selection[1:3])) + geom_point(aes(x=dij,y=a,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\alpha$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection[1:3]])
+p2 <- ggplot(tmp2|> dplyr::filter(cond_site %in% sites_selection[4:6])) + geom_point(aes(x=dij,y=a,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\alpha$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection[4:6]])
+margin = theme(plot.margin = unit(c(0.5,1,0.5,0.5), "cm"))
+p3 <- grid.arrange(grobs = lapply(list(p1,p2), "+", margin),ncol=2)
+p4 <- ggplot(tmp2 |> dplyr::filter(cond_site %in% sites_selection[1:3])) + geom_point(aes(x=dij,y=b,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\beta$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection[1:3]]) + ylim(c(0,1))
+p5 <- ggplot(tmp2 |> dplyr::filter(cond_site %in% sites_selection[4:6])) + geom_point(aes(x=dij,y=b,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\beta$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection[4:6]]) + ylim(c(0,1))
+p6 <- grid.arrange(grobs = lapply(list(p4,p5), "+", margin),ncol=2)
+plot_name <- "alpha_scatterplot_not_selected_sites" # change for different site selection
+ggsave(p3,filename=paste0(folder_name,plot_name,".png"),width=13,height=4)
+ggsave(p3,filename=paste0(folder_name,plot_name,".pdf"),width=13,height=4)
+plot_name <- "beta_scatterplot_not_selected_sites" # change for different site selection
+ggsave(p6,filename=paste0(folder_name,plot_name,".png"),width=13,height=4)
+ggsave(p6,filename=paste0(folder_name,plot_name,".pdf"),width=13,height=4)
 # plot alpha and beta values on a map
 pa <- pb <- list()
 for (i in 1:length(sites_selection)) {
@@ -317,8 +320,9 @@ misscol <- "aquamarine"
 
 }
 pall <- tmap_arrange(pa[[1]],pb[[1]],pa[[2]],pb[[2]],pa[[3]],pb[[3]],pa[[4]],pb[[4]],pa[[5]],pb[[5]],pa[[6]],pb[[6]],ncol=4)
-tmap_save(pall,filename=paste0(folder_name,"alpha_beta_selected_sites",".png"),height=15,width=13)
-tmap_save(pall,filename=paste0(folder_name,"alpha_beta_selected_sites",".pdf"),height=15,width=13)
+plot_name <- "alpha_beta_selected_sites"
+tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=15,width=13)
+tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=15,width=13)
 
 # plot also for the rest of the sites
 
