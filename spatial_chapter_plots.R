@@ -263,10 +263,10 @@ load("data_processed/alphaspatial.RData",verbose=TRUE)
 # plot alpha and beta against distance
 # load estimates with keef constraints
 load("data_processed/N9000_sequential2_AGG_all12sites90.RData",verbose=TRUE)
-#sites_selection <- c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer")
-sites_selection <- names(df_sites)[!(names(df_sites) %in% c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer"))]
+sites_selection <- c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer")
+#sites_selection <- names(df_sites)[!(names(df_sites) %in% c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer"))]
 tmp <- data.frame("b_keef"=est_all_sf$b,"given"=est_all_sf$given,"res"=est_all_sf$res,"cond_site"=est_all_sf$cond_site)
-tmp <- tmp %>% mutate(cond_site=factor(cond_site)) %>% dplyr::filter(cond_site %in% sites_selection)
+tmp <- tmp %>% mutate(cond_site=factor(cond_site)) %>% dplyr::filter(cond_site %in% sites_selection) |> arrange(cond_site)
 
 # repeat estimates no keef constraints
 #spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites_nokeef",q*100),keef=0)
@@ -320,14 +320,65 @@ misscol <- "aquamarine"
 
 }
 pall <- tmap_arrange(pa[[1]],pb[[1]],pa[[2]],pb[[2]],pa[[3]],pb[[3]],pa[[4]],pb[[4]],pa[[5]],pb[[5]],pa[[6]],pb[[6]],ncol=4)
-plot_name <- "alpha_beta_selected_sites"
+plot_name <- "alpha_beta_selected_sites" # change for different site selection
 tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=15,width=13)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=15,width=13)
 
-# plot also for the rest of the sites
+# compare beta without and with Keef constraints using a density plot
+tmp3 <- rbind(data.frame(a=na.omit(tmp2$a),b=na.omit(tmp2$b),"method"="aoriginal"),data.frame(a=na.omit(tmp2$a),b=na.omit(tmp2$b_keef),"method"="new")) %>% mutate("iteration"=rep(1:length(na.omit(tmp2$a)),2),"cond_site"=rep(tmp2$cond_site[!is.na(tmp2$a)],2))
+plot_ab <- function(tmp) { ggplot(tmp) + 
+    geom_density(aes(x=b,fill=method),alpha=0.5)+
+    xlab(TeX("${\\beta}$")) +
+    ylab("Kernel smoothed density") + 
+    scale_fill_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Without constraints","With Keef constraints"))  + theme(axis.text.y = element_text(angle = 90, vjust = 0.5),legend.title=element_blank()) + labs(col="") + facet_wrap(~cond_site,ncol=3)  + xlim(c(0,1))
+}
+p <- plot_ab(tmp=tmp3)
+plot_name <- "plot_density_b_nokeef_keef_selected"
+
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=6) 
+ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=6) 
 
 
+# plot alpha, beta and beta with Keef constraints on a map hedgehog plot
+plot_ab <- function(tmp) { ggplot(tmp) + 
+    geom_line(aes(x=a,y=b,group=iteration),linewidth=0.1)+
+    geom_point(aes(x=a,y=b,col=method),size=0.3) +
+    xlab(TeX("${\\alpha}$")) +
+    ylab(TeX("${\\beta}$")) + 
+    scale_color_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Without constraints","With Keef constraints")) + coord_fixed() + theme(axis.text.y = element_text(angle = 90, vjust = 0.5)) + labs(col="") + facet_wrap(~cond_site,ncol=3) +ylim(c(0,1)) + xlim(c(0,1)) 
+}
+p <- plot_ab(tmp=tmp3)
+plot_name <- "plot_ab_nokeef_keef_selected"
 
-# plot alpha on a map hedgehog plot
+ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=6) 
+#ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=6) 
+library(png)
+# load .png image
+img <- readPNG(paste0(folder_name,plot_name,".png"))
+# save as pdf
+pdf(paste0(folder_name,plot_name,".pdf"),width=10,height=6)
+grid::grid.raster(img)
+dev.off()
 
+# map beta values with Keef constraints
+pb <- list()
+for (i in 1:length(sites_selection)) {
+  title_map <- sites_selection[i]
+  misscol <- "aquamarine"
+  legend_text_size <- 0.7
+  point_size <- 0.4
+  legend_title_size <- 0.9
+  limsa <- c(0,1)
+  limsb <- c(0,1)
+  nrow_facet <- 1
+  b <- tmp2 %>% dplyr::filter(cond_site %in% sites_selection[i]) %>% pull(b_keef)
+  estsf <- cbind(xyUK20_sf, data.frame("a"=a,"b"=b))
+  pb[[i]] <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=title_map) 
+  
+}
+pall <- tmap_arrange(pb[[1]],pb[[2]],pb[[3]],pb[[4]],pb[[5]],pb[[6]],ncol=6)
+plot_name <- "beta_keef_selected_sites"
+tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=6,width=16)
+tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=6,width=16)
+# plot also for the rest of the sites by changing site selection above
 
