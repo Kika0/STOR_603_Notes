@@ -382,3 +382,5 @@ tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=6,width=16)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=6,width=16)
 # plot also for the rest of the sites by changing site selection above
 
+# estimate parameters at temporal lags
+spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("all12sites_keef_temporal",q*100),keef=c(1,2),res_margin = "Normal")
