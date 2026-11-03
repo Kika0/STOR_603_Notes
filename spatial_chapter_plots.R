@@ -294,10 +294,10 @@ p3 <- grid.arrange(grobs = lapply(list(p1,p2), "+", margin),ncol=2)
 p4 <- ggplot(tmp2 |> dplyr::filter(cond_site %in% sites_selection[1:3])) + geom_point(aes(x=dij,y=b,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\beta$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection[1:3]]) + ylim(c(0,1))
 p5 <- ggplot(tmp2 |> dplyr::filter(cond_site %in% sites_selection[4:6])) + geom_point(aes(x=dij,y=b,col=cond_site),size=point_size) + labs(x="Distance from conditioning site [km]",y=TeX("$\\beta$"),col=c("Conditioning site")) + scale_color_manual(values=c13[1:ncol(df_sites)][names(df_sites) %in% sites_selection[4:6]]) + ylim(c(0,1))
 p6 <- grid.arrange(grobs = lapply(list(p4,p5), "+", margin),ncol=2)
-plot_name <- "alpha_scatterplot_not_selected_sites" # change for different site selection
+plot_name <- "alpha_scatterplot_selected_sites" # change for different site selection
 ggsave(p3,filename=paste0(folder_name,plot_name,".png"),width=13,height=4)
 ggsave(p3,filename=paste0(folder_name,plot_name,".pdf"),width=13,height=4)
-plot_name <- "beta_scatterplot_not_selected_sites" # change for different site selection
+plot_name <- "beta_scatterplot_selected_sites" # change for different site selection
 ggsave(p6,filename=paste0(folder_name,plot_name,".png"),width=13,height=4)
 ggsave(p6,filename=paste0(folder_name,plot_name,".pdf"),width=13,height=4)
 # plot alpha and beta values on a map
@@ -315,8 +315,8 @@ misscol <- "aquamarine"
   b <- tmp2 %>% dplyr::filter(cond_site %in% sites_selection[i]) %>% pull(b)
   estsf <- cbind(xyUK20_sf, data.frame("a"=a,"b"=b))
 
-  pa[[i]] <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=title_map) 
-  pb[[i]] <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=title_map) 
+  pa[[i]] <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsa,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==2)) + tm_title(text=title_map) 
+  pb[[i]] <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==2)) + tm_title(text=title_map) 
 
 }
 pall <- tmap_arrange(pa[[1]],pb[[1]],pa[[2]],pb[[2]],pa[[3]],pb[[3]],pa[[4]],pb[[4]],pa[[5]],pb[[5]],pa[[6]],pb[[6]],ncol=4)
@@ -333,7 +333,7 @@ plot_ab <- function(tmp) { ggplot(tmp) +
     scale_fill_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Without constraints","With Keef constraints"))  + theme(axis.text.y = element_text(angle = 90, vjust = 0.5),legend.title=element_blank()) + labs(col="") + facet_wrap(~cond_site,ncol=3)  + xlim(c(0,1))
 }
 p <- plot_ab(tmp=tmp3)
-plot_name <- "plot_density_b_nokeef_keef_selected"
+plot_name <- "plot_density_b_nokeef_keef_selected" # change for different site selection
 
 ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=6) 
 ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=6) 
@@ -348,7 +348,7 @@ plot_ab <- function(tmp) { ggplot(tmp) +
     scale_color_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Without constraints","With Keef constraints")) + coord_fixed() + theme(axis.text.y = element_text(angle = 90, vjust = 0.5)) + labs(col="") + facet_wrap(~cond_site,ncol=3) +ylim(c(0,1)) + xlim(c(0,1)) 
 }
 p <- plot_ab(tmp=tmp3)
-plot_name <- "plot_ab_nokeef_keef_selected"
+plot_name <- "plot_ab_nokeef_keef_selected" # change for different site selection
 
 ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=6) 
 #ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=6) 
@@ -373,14 +373,42 @@ for (i in 1:length(sites_selection)) {
   nrow_facet <- 1
   b <- tmp2 %>% dplyr::filter(cond_site %in% sites_selection[i]) %>% pull(b_keef)
   estsf <- cbind(xyUK20_sf, data.frame("a"=a,"b"=b))
-  pb[[i]] <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) + tm_title(text=title_map) 
+  pb[[i]] <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==length(sites_selection))) + tm_title(text=title_map) 
   
 }
 pall <- tmap_arrange(pb[[1]],pb[[2]],pb[[3]],pb[[4]],pb[[5]],pb[[6]],ncol=6)
-plot_name <- "beta_keef_selected_sites"
+plot_name <- "beta_keef_selected_sites" # change for different site selection
 tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=6,width=16)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=6,width=16)
 # plot also for the rest of the sites by changing site selection above
 
 # estimate parameters at temporal lags
-spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("all12sites_keef_temporal",q*100),keef=c(1,2),res_margin = "Normal")
+#spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("all12sites_keef_temporal",q*100),keef=c(1,2),res_margin = "Normal")
+
+#load estimates
+load("data_processed/N9000_sequential2_Normal_all12sites_keef_temporal90.RData",verbose=TRUE)
+
+# map alpha and beta at different temporal lags for Birmingham ----------------
+pa <- pb <- list()
+tit_day <- c("days","days","day","days","day","days","days")
+for (i in 1:length(unique(est_all_sf$tau))) {
+  title_map <- paste0(unique(est_all_sf$tau)[i]," ",tit_day[i])
+  misscol <- "aquamarine"
+  legend_text_size <- 0.7
+  point_size <- 0.4
+  legend_title_size <- 0.9
+  limsa <- c(0,1)
+  limsb <- c(0,1)
+  nrow_facet <- 1
+  a <- est_all_sf %>% dplyr::filter(cond_site %in% sites_selection[1],tau %in% unique(est_all_sf$tau)[i]) %>% pull(a)
+  b <- est_all_sf %>% dplyr::filter(cond_site %in% sites_selection[1],tau %in% unique(est_all_sf$tau)[i]) %>% pull(b)
+  estsf <- cbind(xyUK20_sf, data.frame("a"=a,"b"=b))
+  pa[[i]] <- tm_shape(estsf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i == length(unique(est_all_sf$tau)))) + tm_title(text=title_map) 
+  pb[[i]] <- tm_shape(estsf) + tm_dots(fill="b",fill.scale = tm_scale_continuous(limits=limsb,values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\beta$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i == length(unique(est_all_sf$tau)))) + tm_title(text=title_map) 
+  
+}
+pall <- tmap_arrange(pa[[1]],pa[[2]],pa[[3]],pa[[4]],pa[[5]],pa[[6]],pa[[7]],pb[[1]],pb[[2]],pb[[3]],pb[[4]],pb[[5]],pb[[6]],pb[[7]],ncol=7)
+plot_name <- "alpha_beta_keef_temporal_Birmingham"
+tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=12,width=18)
+tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=12,width=18)
+
