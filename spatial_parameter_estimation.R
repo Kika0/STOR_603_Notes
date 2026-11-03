@@ -35,9 +35,15 @@ spatial_par_est <- function(data_Lap,cond_sites,cond_site_names=NULL,dayshift=c(
       # calculate observed residuals
       obsr <- observed_residuals(df=sims_tau,given=cond_site,v = v,a=pe$a,b=pe$b)
       # estimate residual margin parameters
+      if (res_margin=="Normal") {
+        est_all <- rbind(est_all,cbind(pe[,-c(8,10:12,14:15)]) %>% add_row(.before=cond_site) %>%  mutate("cond_site"=cond_site_names[i],tau=as.character(dayshift[j])))
+      }
+      if (res_margin=="AGG") {
       pe_res <- res_margin_par_est(obs_res = obsr,method="AGG")
       est_all <- rbind(est_all,cbind(pe[,-c(8,10:12,14:15)],pe_res) %>% add_row(.before=cond_site) %>%  mutate("cond_site"=cond_site_names[i],tau=as.character(dayshift[j])))
-       }
+      } 
+    }
+    print(paste0(cond_site_names[i]," conditioning site: parameter estimation complete"))
   }
   est_all <- est_all %>% mutate(tau=factor(as.character(tau),levels = as.character(dayshift))) %>% mutate(cond_site=factor(cond_site))
   est_all_sf <- est_join_spatial(tmp_est=est_all,grid_uk=grid_uk)
