@@ -412,3 +412,40 @@ plot_name <- "alpha_beta_keef_temporal_Birmingham"
 tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=12,width=18)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=12,width=18)
 
+# calculate max tau and corresponding alpha value ----------------------------
+est_all_sf <- est_all_sf |> dplyr::filter(cond_site %in% sites_selection) 
+alpha_max <- tau_max <- cond_site <- c()
+for (i in 1:length(sites_selection)) {
+  for (j in 1:nrow(xyUK20_sf)) {
+ alpha_max <- append(alpha_max,est_all_sf |> st_drop_geometry() %>% dplyr::filter(cond_site==sites_selection[i],site_index==j) %>% dplyr::select(a) %>%  pull() %>% max())
+ tau_max <- append(tau_max,if (is.na(alpha_max[length(alpha_max)]))  {factor(NA,levels=unique(est_all_sf$tau))} else{unique(est_all_sf$tau)[est_all_sf |> st_drop_geometry() %>% filter(cond_site==sites_selection[i],site_index==j) %>% dplyr::select(a) %>%  pull() %>% which.max()]})
+ cond_site <- append(cond_site,sites_selection[i])
+  }
+}
+#    est_all_max <- cbind(est_all_max,data.frame(max_map, max_time))
+#   names(est_all_max)[c(ncol(est_all_max)-1,ncol(est_all_max))]<- c(condmodel_params[k],paste0(condmodel_params[k],"_tau"))
+
+#  est_all_m[(n_sites*(i-1)+1):(n_sites*i),] <- est_all_max %>% mutate(cond_site=names(df_sites)[i])
+tmp4 <- cbind(est_all_sf |> dplyr::filter(tau==0) |> dplyr::select(),data.frame("alpha_max"=alpha_max, "tau_max" = tau_max,"cond_site"=cond_site)) 
+# map max alpha and corresponding tau
+palpha_max <- ptau_max <- list()
+for (i in 1:length(sites_selection)) {
+  title_map <- sites_selection[i]
+  misscol <- "aquamarine"
+  legend_text_size <- 0.7
+  point_size <- 0.4
+  legend_title_size <- 0.9
+  limsa <- c(0,1)
+  limsb <- c(0,1)
+  nrow_facet <- 1
+  alpha_max <- tmp4 %>% dplyr::filter(cond_site %in% sites_selection[i]) %>% pull(alpha_max)
+  tau_max <- tmp4 %>% dplyr::filter(cond_site %in% sites_selection[i]) %>% pull(tau_max)
+  estsf <- cbind(xyUK20_sf, data.frame("alpha_max"=alpha_max,"tau_max"=tau_max))
+  palpha_max[[i]] <- tm_shape(estsf) + tm_dots(fill="alpha_max",fill.scale = tm_scale_continuous(limits=limsb,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i == length(sites_selection))) + tm_title(text=title_map) 
+  ptau_max[[i]] <- tm_shape(estsf) + tm_dots(fill="tau_max",fill.scale = tm_scale_ordinal(values="-brewer.rd_bu",labels=levels(tmp4$tau),value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\tau$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i == length(sites_selection))) + tm_title(text=title_map) 
+  
+}
+pall <- tmap_arrange(palpha_max[[1]],palpha_max[[2]],palpha_max[[3]],palpha_max[[4]],palpha_max[[5]],palpha_max[[6]],ptau_max[[1]],ptau_max[[2]],ptau_max[[3]],ptau_max[[4]],ptau_max[[5]],ptau_max[[6]],ncol=6)
+plot_name <- "alpha_max_tau_keef_temporal_Birmingham"
+tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=12,width=16)
+tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=12,width=16)
