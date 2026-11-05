@@ -451,3 +451,47 @@ tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=12,width=16)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=12,width=16)
 
 # calculate q_p and the associated return period
+cond_sites <- c("Birmingham","Inverness","Cromer")
+load("data_processed/N9000_sequential2_Normal_all12sites_keef_temporal90.RData",verbose=TRUE)
+tmp <- est_all_sf %>% filter(cond_site %in% cond_sites)
+y0999 <- unif_laplace_pit(0.999)
+q025 <- q050 <- q075 <- numeric()
+for (tau_i in 1:length(unique(tmp$tau))) {
+  for (i in 1:nrow(tmp_tau)) {
+  cond_site. <- tmp_tau[tmp$tau==as.numeric(as.character((unique(tmp$tau)[tau_i]))),]$site_index[i]
+  sims_tau <- shift_time(sims=data_mod_Lap,cond_site=cond_site.,tau=as.numeric(as.character((unique(tmp$tau)[tau_i]))))
+  # filter value of a and b
+  a <- as.numeric(tmp_tau$a[i])
+  b <- as.numeric(tmp_tau$b[i])
+  if (is.na(a)) {
+    q025 <- append(q025,NA)
+    q050 <- append(q050,NA)
+    q075 <- append(q075,NA)
+    
+  } else {
+    # find residual variable and cond. variable
+    res_site <- tmp_tau$res[i]
+    Y1_Y2 <- sims_tau %>% dplyr::filter(sims_tau[,cond_site.]>quantile(sims_tau[,cond_site.],q))
+    tmp_tau <- tmp |> dplyr::filter(tau==unique(tmp$tau)[tau_i])
+    # calculate Y1 and Yj
+    Y1 <- as.numeric(Y1_Y2[,cond_site.])
+    Y2 <- as.numeric(Y1_Y2[,res_site])
+    # calculate observed residuals
+    z <- (Y2-a*Y1)/(Y1^b)
+    # calculate q025 and q075
+    q025 <- append(q025,a*y0999+y0999^b*quantile(z,0.25))
+    q050 <- append(q050,a*y0999+y0999^b*quantile(z,0.5))
+    q075 <- append(q075,a*y0999+y0999^b*quantile(z,0.75))
+  }
+  }
+}
+
+
+
+#rp025 <- sapply(1:length(q025),function(i){1/(1-pgnorm(q=q025[i]))})
+rp075 <- sapply(1:length(q075),function(i){1/(1-pgnorm(q=q075[i]))})
+tmp <- tmp %>% mutate(rp=rp075)
+tmp025 <- tmp %>% filter(q=="q025")
+tmp075 <- tmp %>% filter(q=="q075")
+tmpdiff <- tmp %>% filter(q=="q025") %>% mutate(rldiff=(rl075-rl025),rlreldiff=(rl075-rl025)/rl075) %>%  select(cond_site,tau,rldiff,rlreldiff)
+
