@@ -457,22 +457,22 @@ tmp <- est_all_sf %>% filter(cond_site %in% cond_sites)
 y0999 <- unif_laplace_pit(0.999)
 q025 <- q050 <- q075 <- numeric()
 for (tau_i in 1:length(unique(tmp$tau))) {
-  for (i in 1:nrow(tmp_tau)) {
-  cond_site. <- tmp_tau[tmp$tau==as.numeric(as.character((unique(tmp$tau)[tau_i]))),]$site_index[i]
-  sims_tau <- shift_time(sims=data_mod_Lap,cond_site=cond_site.,tau=as.numeric(as.character((unique(tmp$tau)[tau_i]))))
-  # filter value of a and b
-  a <- as.numeric(tmp_tau$a[i])
-  b <- as.numeric(tmp_tau$b[i])
-  if (is.na(a)) {
+  tmp_tau <- tmp |> dplyr::filter(tau==unique(tmp$tau)[tau_i])
+  for (i in 1:(nrow(tmp)/length(unique(tmp$tau)))) {
+  cond_site. <- tmp_tau$given[i]
+  if (is.na(cond_site.)) {
     q025 <- append(q025,NA)
     q050 <- append(q050,NA)
     q075 <- append(q075,NA)
     
   } else {
+    sims_tau <- shift_time(sims=data_mod_Lap,cond_site=cond_site.,tau=as.numeric(as.character((unique(tmp$tau)[tau_i]))))
+    # filter value of a and b
+    a <- as.numeric(tmp_tau$a[i])
+    b <- as.numeric(tmp_tau$b[i])
     # find residual variable and cond. variable
     res_site <- tmp_tau$res[i]
     Y1_Y2 <- sims_tau %>% dplyr::filter(sims_tau[,cond_site.]>quantile(sims_tau[,cond_site.],q))
-    tmp_tau <- tmp |> dplyr::filter(tau==unique(tmp$tau)[tau_i])
     # calculate Y1 and Yj
     Y1 <- as.numeric(Y1_Y2[,cond_site.])
     Y2 <- as.numeric(Y1_Y2[,res_site])
@@ -486,12 +486,70 @@ for (tau_i in 1:length(unique(tmp$tau))) {
   }
 }
 
-
+tmp2 <- tmp |> arrange(tau) |>  mutate("q075"=q075) 
+p <- tm_shape(tmp2) + tm_dots(fill="q075",fill.scale = tm_scale_continuous(values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\q_p$"),frame=FALSE)) +  tm_layout(legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) +tm_facets_grid(rows="cond_site",columns="tau")
+plot_name <- "q_p_075_temporal_selected_sites" # change for different site selection
+tmap_save(p,filename=paste0(folder_name,plot_name,".png"),height=9,width=14)
+tmap_save(p,filename=paste0(folder_name,plot_name,".pdf"),height=9,width=14)
 
 #rp025 <- sapply(1:length(q025),function(i){1/(1-pgnorm(q=q025[i]))})
-rp075 <- sapply(1:length(q075),function(i){1/(1-pgnorm(q=q075[i]))})
-tmp <- tmp %>% mutate(rp=rp075)
-tmp025 <- tmp %>% filter(q=="q025")
-tmp075 <- tmp %>% filter(q=="q075")
-tmpdiff <- tmp %>% filter(q=="q025") %>% mutate(rldiff=(rl075-rl025),rlreldiff=(rl075-rl025)/rl075) %>%  select(cond_site,tau,rldiff,rlreldiff)
+rp075 <- sapply(1:length(q075),function(i){1/(1-plaplace(q=q075[i]))})
+tmp2 <- tmp2 %>% mutate("rp"=rp075)
+p <- tm_shape(tmp2) + tm_dots(fill="rp",fill.scale = tm_scale_continuous(values="brewer.blues",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\rp_p$"),frame=FALSE)) +  tm_layout(legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) +tm_facets_grid(rows="cond_site",columns="tau")
+plot_name <- "return_period_temporal_selected_sites" # change for different site selection
+tmap_save(p,filename=paste0(folder_name,plot_name,".png"),height=9,width=14)
+tmap_save(p,filename=paste0(folder_name,plot_name,".pdf"),height=9,width=14)
+
+# 5.3 map of A2GG parameters for different sites
+# estimates with keef constraints
+#spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites_keef",q*100),keef=c(1,2))
+load("data_processed/N9000_sequential2_AGG_all12sites_nokeef90.RData",verbose=TRUE) # temporary without keef constraints
+df_sites <- df_sites[ , order(names(df_sites))]
+# calculate distance from the conditioning site
+get_cond_site_distance <- function(i, grid = xyUK20_sf,sites=df_sites) {
+  cond_site_index <- get_site_index(i)
+  dist_cond_site <- as.numeric(unlist(st_distance(grid[cond_site_index,],grid)%>%
+                                        units::set_units(km)))
+  return(dist_cond_site)
+}
+dij <- unlist(lapply(1:ncol(df_sites),FUN=get_cond_site_distance))
+est_all_sf <- est_all_sf %>% dplyr::filter(cond_site %in% names(df_sites)) |> arrange(cond_site) %>% mutate("dij"=dij)
+tmp1 <- est_all_sf %>% dplyr::filter(cond_site %in% sites_selection) |> arrange(cond_site)
+
+tmp2 <- tmp1 |> dplyr::select(mu_agg,sigl,sigu,deltal,deltau,cond_site)
+
+# plot alpha and beta values on a map
+pmu <- psigl <- psigu <- pdeltal <- pdeltau <- list()
+for (i in 1:length(sites_selection)) {
+  title_map <- sites_selection[i]
+  misscol <- "aquamarine"
+  legend_text_size <- 0.7
+  point_size <- 0.4
+  legend_title_size <- 0.9
+  limsa <- c(0,1)
+  limsb <- c(0,1)
+  nrow_facet <- 1
+  
+  estsf <- tmp2 |> dplyr::filter(cond_site %in% sites_selection[i])
+  limsmu <- c(min(tmp2$mu_agg,na.rm = TRUE),max(tmp2$mu_agg,na.rm = TRUE))
+  limssigl <- c(min(tmp2$sigl,na.rm = TRUE),max(tmp2$sigl,na.rm = TRUE))
+  limssigu <- c(min(tmp2$sigu,na.rm = TRUE),max(tmp2$sigu,na.rm = TRUE))
+  limsdeltal <- c(min(tmp2$deltal,na.rm = TRUE),max(tmp2$deltal,na.rm = TRUE))
+  limsdeltau <- c(min(tmp2$deltau,na.rm = TRUE),max(tmp2$deltau,na.rm = TRUE))
+  
+  pmu[[i]] <- tm_shape(estsf) + tm_dots(fill="mu_agg",fill.scale = tm_scale_continuous(limits=limsmu,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
+  psigl[[i]] <- tm_shape(estsf) + tm_dots(fill="sigl",fill.scale = tm_scale_continuous(limits=limssigl,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_l$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
+  psigu[[i]] <- tm_shape(estsf) + tm_dots(fill="sigu",fill.scale = tm_scale_continuous(limits=limssigu,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
+  pdeltal[[i]] <- tm_shape(estsf) + tm_dots(fill="deltal",fill.scale = tm_scale_continuous(limits=limsdeltal,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\delta_l$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
+  pdeltau[[i]] <- tm_shape(estsf) + tm_dots(fill="deltau",fill.scale = tm_scale_continuous(limits=limsdeltau,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\delta_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
+
+}
+pall <- tmap_arrange(pmu[[1]],pmu[[2]],pmu[[3]],pmu[[4]],pmu[[5]],pmu[[6]],
+                     psigl[[1]],psigl[[2]],psigl[[3]],psigl[[4]],psigl[[5]],psigl[[6]],
+                     psigu[[1]],psigu[[2]],psigu[[3]],psigu[[4]],psigu[[5]],psigu[[6]],
+                     pdeltal[[1]],pdeltal[[2]],pdeltal[[3]],pdeltal[[4]],pdeltal[[5]],pdeltal[[6]],
+                     pdeltau[[1]],pdeltau[[2]],pdeltau[[3]],pdeltau[[4]],pdeltau[[5]],pdeltau[[6]],ncol=6)
+plot_name <- "AGG_separate_selected_sites" # change for different site selection
+tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=24,width=20)
+tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=24,width=20)
 
