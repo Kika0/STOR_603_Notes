@@ -4,6 +4,7 @@ library(gridExtra)
 library(sf)
 library(tmap)
 library(evd)
+library(LaplacesDemon)
 
 theme_set(theme_bw())
 theme_replace(
@@ -263,8 +264,11 @@ ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=6,height=4)
 # plot alpha and beta against distance
 # load estimates with keef constraints
 load("data_processed/N9000_sequential2_AGG_all12sites90.RData",verbose=TRUE)
-#sites_selection <- c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer")
-sites_selection <- names(df_sites)[!(names(df_sites) %in% c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer"))]
+sites_selection <- c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer")
+#sites_selection <- names(df_sites)[!(names(df_sites) %in% c("Birmingham","Glasgow","London", "Inverness","Lancaster","Cromer"))]
+if ("Birmingham" %in% sites_selection) {
+  site_plot_name <- ""
+} else {site_plot_name <- "_not"}
 tmp <- data.frame("b_keef"=est_all_sf$b,"given"=est_all_sf$given,"res"=est_all_sf$res,"cond_site"=est_all_sf$cond_site)
 tmp <- tmp %>% mutate(cond_site=factor(cond_site)) %>% dplyr::filter(cond_site %in% sites_selection) |> arrange(cond_site)
 
@@ -333,7 +337,7 @@ plot_ab <- function(tmp) { ggplot(tmp) +
     scale_fill_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Without constraints","With Keef constraints"))  + theme(axis.text.y = element_text(angle = 90, vjust = 0.5),legend.title=element_blank()) + labs(col="") + facet_wrap(~cond_site,ncol=3)  + xlim(c(0,1))
 }
 p <- plot_ab(tmp=tmp3)
-plot_name <- "plot_density_b_nokeef_keef_not_selected" # change for different site selection
+plot_name <- "plot_density_b_nokeef_keef_selected" # change for different site selection
 
 ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=6) 
 ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=6) 
@@ -348,7 +352,7 @@ plot_ab <- function(tmp) { ggplot(tmp) +
     scale_color_manual(values = c("aoriginal" = "#009ADA", "new" = "#C11432"),labels = c("Without constraints","With Keef constraints")) + coord_fixed() + theme(axis.text.y = element_text(angle = 90, vjust = 0.5)) + labs(col="") + facet_wrap(~cond_site,ncol=3) +ylim(c(0,1)) + xlim(c(0,1)) 
 }
 p <- plot_ab(tmp=tmp3)
-plot_name <- "plot_ab_nokeef_keef_not_selected" # change for different site selection
+plot_name <- "plot_ab_nokeef_keef_selected" # change for different site selection
 
 ggsave(p,filename=paste0(folder_name,plot_name,".png"),width=10,height=6) 
 #ggsave(p,filename=paste0(folder_name,plot_name,".pdf"),width=10,height=6) 
@@ -377,7 +381,7 @@ for (i in 1:length(sites_selection)) {
   
 }
 pall <- tmap_arrange(pb[[1]],pb[[2]],pb[[3]],pb[[4]],pb[[5]],pb[[6]],ncol=6)
-plot_name <- "beta_keef_not_selected_sites" # change for different site selection
+plot_name <- "beta_keef_selected_sites" # change for different site selection
 tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=6,width=16)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=6,width=16)
 # plot also for the rest of the sites by changing site selection above
@@ -446,7 +450,7 @@ for (i in 1:length(sites_selection)) {
   
 }
 pall <- tmap_arrange(palpha_max[[1]],palpha_max[[2]],palpha_max[[3]],palpha_max[[4]],palpha_max[[5]],palpha_max[[6]],ptau_max[[1]],ptau_max[[2]],ptau_max[[3]],ptau_max[[4]],ptau_max[[5]],ptau_max[[6]],ncol=6)
-plot_name <- "alpha_max_tau_keef_temporal_not_selected_sites" # change for different site selection
+plot_name <- "alpha_max_tau_keef_temporal_selected_sites" # change for different site selection
 tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=12,width=16)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=12,width=16)
 
@@ -503,7 +507,7 @@ tmap_save(p,filename=paste0(folder_name,plot_name,".pdf"),height=9,width=14)
 # 5.3 map of A2GG parameters for different sites
 # estimates with keef constraints
 #spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites_keef",q*100),keef=c(1,2))
-load("data_processed/N9000_sequential2_AGG_all12sites_nokeef90.RData",verbose=TRUE) # temporary without keef constraints
+load("data_processed/N9000_sequential2_AGG_all12sites_keef90.RData",verbose=TRUE) # temporary without keef constraints
 df_sites <- df_sites[ , order(names(df_sites))]
 # calculate distance from the conditioning site
 get_cond_site_distance <- function(i, grid = xyUK20_sf,sites=df_sites) {
@@ -518,7 +522,6 @@ tmp1 <- est_all_sf %>% dplyr::filter(cond_site %in% sites_selection) |> arrange(
 
 tmp2 <- tmp1 |> dplyr::select(mu_agg,sigl,sigu,deltal,deltau,cond_site)
 
-# plot alpha and beta values on a map
 pmu <- psigl <- psigu <- pdeltal <- pdeltau <- list()
 for (i in 1:length(sites_selection)) {
   title_map <- sites_selection[i]
@@ -532,11 +535,13 @@ for (i in 1:length(sites_selection)) {
   
   estsf <- tmp2 |> dplyr::filter(cond_site %in% sites_selection[i])
   limsmu <- c(min(tmp2$mu_agg,na.rm = TRUE),max(tmp2$mu_agg,na.rm = TRUE))
-  limssigl <- c(min(tmp2$sigl,na.rm = TRUE),max(tmp2$sigl,na.rm = TRUE))
-  limssigu <- c(min(tmp2$sigu,na.rm = TRUE),max(tmp2$sigu,na.rm = TRUE))
-  limsdeltal <- c(min(tmp2$deltal,na.rm = TRUE),max(tmp2$deltal,na.rm = TRUE))
-  limsdeltau <- c(min(tmp2$deltau,na.rm = TRUE),max(tmp2$deltau,na.rm = TRUE))
+  limssigl <- c(min(tmp2$sigl,tmp2$sigu,na.rm = TRUE),max(tmp2$sigl,tmp2$sigu,na.rm = TRUE))
+  limssigu <- c(min(tmp2$sigl,tmp2$sigu,na.rm = TRUE),max(tmp2$sigl,tmp2$sigu,na.rm = TRUE))
+  limsdeltal <- c(min(tmp2$deltal,tmp2$deltau,na.rm = TRUE),4)
+  limsdeltau <- c(min(tmp2$deltal,tmp2$deltau,na.rm = TRUE),4)
   
+  # filter high values of delta
+  estsf <- estsf |> dplyr::filter((deltal<limsdeltal[2] & deltau<limsdeltau[2]) |is.na(deltal) )
   pmu[[i]] <- tm_shape(estsf) + tm_dots(fill="mu_agg",fill.scale = tm_scale_continuous(limits=limsmu,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
   psigl[[i]] <- tm_shape(estsf) + tm_dots(fill="sigl",fill.scale = tm_scale_continuous(limits=limssigl,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_l$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
   psigu[[i]] <- tm_shape(estsf) + tm_dots(fill="sigu",fill.scale = tm_scale_continuous(limits=limssigu,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
@@ -549,7 +554,7 @@ pall <- tmap_arrange(pmu[[1]],pmu[[2]],pmu[[3]],pmu[[4]],pmu[[5]],pmu[[6]],
                      psigu[[1]],psigu[[2]],psigu[[3]],psigu[[4]],psigu[[5]],psigu[[6]],
                      pdeltal[[1]],pdeltal[[2]],pdeltal[[3]],pdeltal[[4]],pdeltal[[5]],pdeltal[[6]],
                      pdeltau[[1]],pdeltau[[2]],pdeltau[[3]],pdeltau[[4]],pdeltau[[5]],pdeltau[[6]],ncol=6)
-plot_name <- "AGG_separate_selected_sites" # change for different site selection
+plot_name <- paste0("AGG_separate",site_plot_name,"_selected_sites_keef") # change for different site selection
 tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=24,width=20)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=24,width=20)
 
