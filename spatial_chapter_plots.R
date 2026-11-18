@@ -504,7 +504,21 @@ plot_name <- "return_period_temporal_selected_sites" # change for different site
 tmap_save(p,filename=paste0(folder_name,plot_name,".png"),height=9,width=14)
 tmap_save(p,filename=paste0(folder_name,plot_name,".pdf"),height=9,width=14)
 
-# 5.3 map of A2GG parameters for different sites
+# 5.2.3 Spatio-temporal analysis for Birmingham to London transect ------------
+site_start <- (df_sites %>% dplyr::select(Birmingham))[3,1]
+site_end <- (df_sites %>% dplyr::select(London))[3,1]
+uk_diag <- xyUK20_sf %>% mutate(siteID=as.numeric(1:nrow(xyUK20_sf)))
+sites_index_diagonal <- c(192,174,156,157,137,138,118,100) # first is Birmingham and last is London
+site_name_diagonal <- c("Birmingham", paste0("diagonal",1:(length(sites_index_diagonal)-2)),"London")
+spatial_par_est(data_Lap = data_mod_Lap,cond_sites = sites_index_diagonal,cond_site_names = site_name_diagonal,dayshift = c(-3:3),v=q,Ndays_season = 90,title = paste0("diagonal12sites_keef_temporal",q*100),keef=c(1,2),res_margin = "Normal")
+load("data_processed/N9000_sequential2_Normal_diagonal12sites_keef_temporal90.RData",verbose=TRUE) # temporary without keef constraints
+p <- tm_shape(est_all_sf) + tm_dots(fill="a",fill.scale = tm_scale_continuous(values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\alpha$"),frame=FALSE,position = tm_pos_out("right", "center"))) +  tm_layout(legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE) +tm_facets_grid(rows="cond_site",columns="tau")
+plot_name <- "alpha_map_Birmingham_London_temporal" # change for different site selection
+tmap_save(p,filename=paste0(folder_name,plot_name,".png"),height=16,width=12)
+tmap_save(p,filename=paste0(folder_name,plot_name,".pdf"),height=16,width=12)
+
+
+# 5.3 map of A2GG parameters for different sites ------------------------------
 # estimates with keef constraints
 #spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites_keef",q*100),keef=c(1,2))
 load("data_processed/N9000_sequential2_AGG_all12sites_keef90.RData",verbose=TRUE) # temporary without keef constraints
@@ -542,11 +556,11 @@ for (i in 1:length(sites_selection)) {
   
   # filter high values of delta
   estsf <- estsf |> dplyr::filter((deltal<limsdeltal[2] & deltau<limsdeltau[2]) |is.na(deltal) )
-  pmu[[i]] <- tm_shape(estsf) + tm_dots(fill="mu_agg",fill.scale = tm_scale_continuous(limits=limsmu,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
+  pmu[[i]] <- tm_shape(estsf) + tm_dots(fill="mu_agg",fill.scale = tm_scale_continuous(limits=limsmu,values="-RdBu",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
   psigl[[i]] <- tm_shape(estsf) + tm_dots(fill="sigl",fill.scale = tm_scale_continuous(limits=limssigl,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_l$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
-  psigu[[i]] <- tm_shape(estsf) + tm_dots(fill="sigu",fill.scale = tm_scale_continuous(limits=limssigu,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
+  psigu[[i]] <- tm_shape(estsf) + tm_dots(fill="sigu",fill.scale = tm_scale_continuous(limits=limssigu,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
   pdeltal[[i]] <- tm_shape(estsf) + tm_dots(fill="deltal",fill.scale = tm_scale_continuous(limits=limsdeltal,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\delta_l$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
-  pdeltau[[i]] <- tm_shape(estsf) + tm_dots(fill="deltau",fill.scale = tm_scale_continuous(limits=limsdeltau,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\delta_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 10,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
+  pdeltau[[i]] <- tm_shape(estsf) + tm_dots(fill="deltau",fill.scale = tm_scale_continuous(limits=limsdeltau,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\delta_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
 
 }
 pall <- tmap_arrange(pmu[[1]],pmu[[2]],pmu[[3]],pmu[[4]],pmu[[5]],pmu[[6]],
@@ -557,4 +571,6 @@ pall <- tmap_arrange(pmu[[1]],pmu[[2]],pmu[[3]],pmu[[4]],pmu[[5]],pmu[[6]],
 plot_name <- paste0("AGG_separate",site_plot_name,"_selected_sites_keef") # change for different site selection
 tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=24,width=20)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=24,width=20)
+
+est_all_sf |> dplyr::filter(!(cond_site %in% sites_selection)) |>  summary()
 
