@@ -269,6 +269,7 @@ sites_selection <- c("Birmingham","Glasgow","London", "Inverness","Lancaster","C
 if ("Birmingham" %in% sites_selection) {
   site_plot_name <- ""
 } else {site_plot_name <- "_not"}
+
 tmp <- data.frame("b_keef"=est_all_sf$b,"given"=est_all_sf$given,"res"=est_all_sf$res,"cond_site"=est_all_sf$cond_site)
 tmp <- tmp %>% mutate(cond_site=factor(cond_site)) %>% dplyr::filter(cond_site %in% sites_selection) |> arrange(cond_site)
 
@@ -556,7 +557,7 @@ for (i in 1:length(sites_selection)) {
   
   # filter high values of delta
   estsf <- estsf |> dplyr::filter((deltal<limsdeltal[2] & deltau<limsdeltau[2]) |is.na(deltal) )
-  pmu[[i]] <- tm_shape(estsf) + tm_dots(fill="mu_agg",fill.scale = tm_scale_continuous(limits=limsmu,values="-RdBu",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
+  pmu[[i]] <- tm_shape(estsf) + tm_dots(fill="mu_agg",fill.scale = tm_scale_continuous(limits=limsmu,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
   psigl[[i]] <- tm_shape(estsf) + tm_dots(fill="sigl",fill.scale = tm_scale_continuous(limits=limssigl,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_l$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
   psigu[[i]] <- tm_shape(estsf) + tm_dots(fill="sigu",fill.scale = tm_scale_continuous(limits=limssigu,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
   pdeltal[[i]] <- tm_shape(estsf) + tm_dots(fill="deltal",fill.scale = tm_scale_continuous(limits=limsdeltal,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\delta_l$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=(i==6)) + tm_title(text=title_map) 
@@ -573,4 +574,4 @@ tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=24,width=20)
 tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=24,width=20)
 
 est_all_sf |> dplyr::filter(!(cond_site %in% sites_selection)) |>  summary()
-
+est_all_sf |> dplyr::filter((cond_site %in% sites_selection)) |> dplyr::filter(!(deltal<limsdeltal[2] & deltau<limsdeltau[2]) |is.na(deltal) )  |>  summary()
