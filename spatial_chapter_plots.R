@@ -62,11 +62,11 @@ point_size <- 0.6
 legend_title_size <- 1.2
 lims <- c(0,1)
 nrow_facet <- 1
-p1 <- tm_shape(tmp) + tm_dots(fill="Birm_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show=FALSE,frame=FALSE) + tm_title(text="Birmingham") 
+p1 <- tm_shape(tmp) + tm_dots(fill="Lon_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="London") 
 p2 <- tm_shape(tmp) + tm_dots(fill="Gla_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = FALSE,frame=FALSE) + tm_title(text="Glasgow") 
-p3 <- tm_shape(tmp) + tm_dots(fill="Lon_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show = TRUE,frame=FALSE) + tm_title(text="London") 
-tmap_save(tmap_arrange(p3,p1,p2,ncol=3),filename=paste0(folder_name,"chi_selected_sites",u*100,".png"),height=6,width=8)
-tmap_save(tmap_arrange(p3,p1,p2,ncol=3),filename=paste0(folder_name,"chi_selected_sites_",u*100,".pdf"),height=6,width=8)
+p3 <- tm_shape(tmp) + tm_dots(fill="Birm_chi",fill.scale = tm_scale_continuous(limits=lims,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\chi_u$"),frame=FALSE)) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,legend.show= TRUE,frame=FALSE) + tm_title(text="Birmingham") 
+tmap_save(tmap_arrange(p1,p2,p3,ncol=3),filename=paste0(folder_name,"chi_selected_sites",u*100,".png"),height=6,width=8)
+tmap_save(tmap_arrange(p1,p2,p3,ncol=3),filename=paste0(folder_name,"chi_selected_sites_",u*100,".pdf"),height=6,width=8)
 
 # 2. plot of chi against distance from the conditioning site ------------------
 Birmingham <- as.numeric(unlist(st_distance(xyUK20_sf[df_sites[3,1],],xyUK20_sf) %>%
@@ -518,7 +518,6 @@ plot_name <- "alpha_map_Birmingham_London_temporal" # change for different site 
 tmap_save(p,filename=paste0(folder_name,plot_name,".png"),height=16,width=12)
 tmap_save(p,filename=paste0(folder_name,plot_name,".pdf"),height=16,width=12)
 
-
 # 5.3 map of A2GG parameters for different sites ------------------------------
 # estimates with keef constraints
 #spatial_par_est(data_Lap = data_mod_Lap,cond_sites = df_sites,dayshift = 0,v=q,Ndays_season = 90,title = paste0("all12sites_keef",q*100),keef=c(1,2))
@@ -575,3 +574,90 @@ tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=24,width=20)
 
 est_all_sf |> dplyr::filter(!(cond_site %in% sites_selection)) |>  summary()
 est_all_sf |> dplyr::filter((cond_site %in% sites_selection)) |> dplyr::filter(!(deltal<limsdeltal[2] & deltau<limsdeltau[2]) |is.na(deltal) )  |>  summary()
+
+# 6.1 iterative delta estimates ----------------------------------------------
+# load estimates
+load("data_processed/iterative_delta_estimates.RData",verbose=TRUE)
+deltal <- deltau <-  c()
+for (i in 1:12) {
+  deltal[i] <- result[[i]]$deltal_ite[1]
+  deltau[i] <- result[[i]]$deltau_ite[1]
+}
+load("data_processed/spatial_helper.RData", verbose = TRUE)
+df_sites <- df_sites[,1:12]
+deltaldf <- cbind(data.frame(value=deltal),as.data.frame(t(df_sites))) %>% mutate(parameter="deltal")
+deltaudf <- cbind(data.frame(value=deltau),as.data.frame(t(df_sites))) %>% mutate(parameter="deltau")
+deltasf <- st_as_sf(rbind(deltaldf,deltaudf),coords =c(2:3))
+# plot deltas on a spatial scale
+st_crs(deltasf) <- st_crs(est_all_sf)
+t <- tm_shape(est_all_sf) + tm_dots(size=0.2,fill_alpha=0.3) +  tm_shape(deltasf) + tm_dots(fill="value",size=1) + tm_facets(by="parameter") +
+  tm_layout(legend.position=c("right","top"),legend.height = 12)
+tmap_save(t,filename=paste0("../Documents/all_deltas.png"),width=8,height=6)
+
+uk_diag <- xyUK20_sf %>% mutate(siteID=as.numeric(1:nrow(xyUK20_sf)))
+sites_index <- as.numeric(df_sites[3,1:12])
+sites_name<- names(df_sites)[1:12]
+# plot these points on a map
+uk_diag <- uk_diag %>% mutate(deltal=NA,deltau=NA)
+uk_diag$deltal[sites_index] <- deltal
+uk_diag$deltau[sites_index] <- deltau
+legend_text_size <- 0.72
+limsdelta <- c(1,2.1)
+t1 <- tm_shape(uk_diag) + tm_dots("deltal",size=0.5,fill.scale = tm_scale_continuous(label.na="",values="brewer.blues",limits=limsdelta),fill.legend = tm_legend(title=TeX("$\\delta_l$"),frame=FALSE) ) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=FALSE,legend.show=TRUE,frame=FALSE) + tm_title(text="12 conditioning sites") 
+t2 <- tm_shape(uk_diag) + tm_dots("deltau",size=0.5,fill.scale = tm_scale_continuous(label.na="",values="brewer.blues",limits=limsdelta),fill.legend = tm_legend(title=TeX("$\\delta_u$"),frame=FALSE) ) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=FALSE,legend.show=TRUE,frame=FALSE) + tm_title(text="12 conditioning sites") 
+
+plot_name <- "all_deltas_12_sites"
+tmap_save(tmap_arrange(t1,t2,ncol=2),filename=paste0(folder_name,plot_name,".png"),height=6,width=8)
+tmap_save(tmap_arrange(t1,t2,ncol=3),filename=paste0(folder_name,plot_name,".pdf"),height=6,width=8)
+
+
+# load estimates for Birmingham to Cromer transect
+load("data_processed/iterative_delta_estimates_Birmingham_Cromer_diagonal.RData",verbose=TRUE)
+
+deltal <- deltau <-  c()
+for (i in 1:12) {
+  deltal[i] <- result[[i]]$deltal_ite[1]
+  deltau[i] <- result[[i]]$deltau_ite[1]
+}
+
+uk_diag <- xyUK20_sf %>% mutate(siteID=as.numeric(1:nrow(xyUK20_sf)))
+sites_index_diagonal <- c(192,193,194,195,196,197,218,219,220,221,242,263) # first is Birmingham and last is Cromer
+
+# plot these points on a map
+uk_diag <- uk_diag %>% mutate(deltal=NA,deltau=NA)
+uk_diag$deltal[sites_index_diagonal] <- deltal
+uk_diag$deltau[sites_index_diagonal] <- deltau
+legend_text_size <- 0.72
+limsdelta <- c(1,2.1)
+t1 <- tm_shape(uk_diag) + tm_dots("deltal",size=0.5,fill.scale = tm_scale_continuous(label.na="",values="brewer.blues",limits=limsdelta),fill.legend = tm_legend(title=TeX("$\\delta_l$"),frame=FALSE) ) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=FALSE,legend.show=TRUE,frame=FALSE) + tm_title(text="Birmingham to Cromer transect") 
+t2 <- tm_shape(uk_diag) + tm_dots("deltau",size=0.5,fill.scale = tm_scale_continuous(label.na="",values="brewer.blues",limits=limsdelta),fill.legend = tm_legend(title=TeX("$\\delta_u$"),frame=FALSE) ) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=FALSE,legend.show=TRUE,frame=FALSE) + tm_title(text="Birmingham to Cromer transect") 
+
+plot_name <- "all_deltas_Birmingham_Cromer"
+tmap_save(tmap_arrange(t1,t2,ncol=2),filename=paste0(folder_name,plot_name,".png"),height=6,width=8)
+tmap_save(tmap_arrange(t1,t2,ncol=3),filename=paste0(folder_name,plot_name,".pdf"),height=6,width=8)
+
+# add a map of mu sigmal and sigmau for Birmingham ----------------------------
+load("data_processed/N9000_sequential2_AGG_all12sites_keef90.RData",verbose=TRUE) # temporary without keef constraints
+est_all_sf <- est_all_sf %>% dplyr::filter(cond_site %in% names(df_sites)) |> arrange(cond_site) 
+tmp1 <- est_all_sf %>% dplyr::filter(cond_site %in% "Birmingham") |> arrange(cond_site)
+tmp2 <- tmp1 |> dplyr::select(mu_agg,sigl,sigu,deltal,deltau,cond_site) |> 
+  mutate("mu1"=result[[1]]$mu_agg_ite,"sigl1"=result[[1]]$sigl_ite,"sigu1"=result[[1]]$sigu_ite)
+limsmu <- c(min(tmp2$mu_agg,na.rm = TRUE),max(tmp2$mu_agg,na.rm = TRUE))
+limssig <- c(min(tmp2$sigl,tmp2$sigu,na.rm = TRUE),max(tmp2$sigl,tmp2$sigu,na.rm = TRUE))
+estsf <- tmp2
+title_map <- ""
+pmu[[1]] <- tm_shape(estsf) + tm_dots(fill="mu_agg",fill.scale = tm_scale_continuous(limits=limsmu,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=FALSE) + tm_title(text=title_map) 
+pmu[[2]] <- tm_shape(estsf) + tm_dots(fill="mu1",fill.scale = tm_scale_continuous(limits=limsmu,values="-brewer.rd_bu",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\mu$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=TRUE) + tm_title(text=title_map) 
+psigl[[1]] <- tm_shape(estsf) + tm_dots(fill="sigl",fill.scale = tm_scale_continuous(limits=limssig,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_l$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=FALSE) + tm_title(text=title_map) 
+psigl[[2]] <- tm_shape(estsf) + tm_dots(fill="sigl1",fill.scale = tm_scale_continuous(limits=limssig,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_l$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=TRUE) + tm_title(text=title_map) 
+psigu[[1]] <- tm_shape(estsf) + tm_dots(fill="sigu",fill.scale = tm_scale_continuous(limits=limssig,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=FALSE) + tm_title(text=title_map) 
+psigu[[2]] <- tm_shape(estsf) + tm_dots(fill="sigu1",fill.scale = tm_scale_continuous(limits=limssig,values="viridis",value.na=misscol,label.na = "Conditioning\n site"),size=point_size, fill.legend = tm_legend(title=TeX("$\\sigma_u$"))) +  tm_layout(legend.position=c("right","top"),legend.height = 12,legend.text.size = legend_text_size,legend.title.size=legend_title_size,legend.reverse=TRUE,frame=FALSE,legend.show=TRUE) + tm_title(text=title_map) 
+
+pall <- tmap_arrange(pmu[[1]],pmu[[2]],
+                     psigl[[1]],psigl[[2]],
+                     psigu[[1]],psigu[[2]],
+                     ncol=6)
+plot_name <- paste0("AGG_separate_iterative_delta_Birmingham") # change for different site selection
+tmap_save(pall,filename=paste0(folder_name,plot_name,".png"),height=6,width=18)
+tmap_save(pall,filename=paste0(folder_name,plot_name,".pdf"),height=6,width=18)
+
