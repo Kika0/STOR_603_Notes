@@ -205,6 +205,15 @@ t2 <- tm_shape(tm_thres %>% dplyr::filter(data_source=="CPM")) + tm_dots(fill="T
 tmap_save(tmap_arrange(t1,t2,ncol=2),filename=paste0("../Documents/threshold_explore.png"),width=8,height=6)
 tmap_save(tmap_arrange(t1,t2,ncol=2),filename=paste0("../Documents/threshold_explore.pdf"),width=8,height=6)
 
+library(png)
+# load .png image
+img <- readPNG(paste0("../Documents/threshold_explore.png"))
+# save as pdf
+pdf(paste0("../Documents/threshold_explore.pdf"),width=10,height=6)
+grid::grid.raster(img)
+dev.off()
+
+
 # plot differences
 tm_thres_diff <- xyUK20_sf %>% mutate("CPM_diff" =thresCPM-thresCPM1, "observed_diff"=thresobs-thresobs1) %>% pivot_longer(cols=c("CPM_diff","observed_diff"),values_to = "temperature", names_to = "data_source")
 t <- tm_shape(tm_thres_diff) + tm_dots(fill="temperature",size=0.8,fill.scale =tm_scale_continuous(values="-matplotlib.rd_yl_bu")) + tm_facets(by = c("data_source")) + tm_layout(legend.position=c("right","top"),legend.height = 12,legend.reverse = TRUE)
