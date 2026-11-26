@@ -91,11 +91,12 @@ tmp <- xyUK20_sf %>% mutate(july3_P2q,july3_2026t,july3_2076t)
 
 # 1. plot illustrating 1976 heatwave in the future ----------------------------
 lims <- c(16,42)
-t1 <- tm_shape(tmp) + tm_dots(fill="july3_P2q",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse = TRUE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 1976") 
-t2 <- tm_shape(tmp) + tm_dots(fill="july3_2026t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.show=FALSE,frame=FALSE) + tm_title("July 3, 2026 (projection)") 
-t3 <- tm_shape(tmp) + tm_dots(fill="july3_2076t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE)) + tm_layout(legend.show=FALSE,legend.height = 10,frame=FALSE) + tm_title("July 3, 2076 (projection)") 
+t1 <- tm_shape(tmp) + tm_dots(fill="july3_P2q",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse = TRUE,frame=FALSE)) + tm_layout(legend.position=c(0.57,0.95),legend.height = 10,legend.show=FALSE,frame=FALSE) + tm_title("July 3, 1976") 
+t2 <- tm_shape(tmp) + tm_dots(fill="july3_2026t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE),frame=FALSE) + tm_layout(legend.show=FALSE,frame=FALSE) + tm_title("July 3, 2026 (projection)") 
+t3 <- tm_shape(tmp) + tm_dots(fill="july3_2076t",size=0.5,fill.scale = tm_scale_intervals(values="viridis",breaks=c(16,20,24,28,32,36,40,44)),fill.legend = tm_legend(title = "Temperature",reverse=TRUE),frame=FALSE) + tm_layout(legend.show=FALSE,legend.position=c(0.57,0.95),legend.height = 10,frame=FALSE) + tm_title("July 3, 2076 (projection)") 
 t <- tmap_arrange(t1,t2,t3,ncol=3)
 tmap_save(t,filename=paste0(folder_name,"heatwave1976_future.png"),height=6,width=8)
+tmap_save(t,filename=paste0(folder_name,"heatwave1976_future.pdf"),height=6,width=8)
 
 # 2. plot illustrating conditioning on a variable -----------------------------
 #Birm_index <- find_site_index(site=Cambridge,grid_uk = xyUK20_sf)
